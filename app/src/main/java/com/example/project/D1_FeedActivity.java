@@ -16,8 +16,12 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class D1_FeedActivity extends AppCompatActivity {
 
@@ -66,6 +70,9 @@ public class D1_FeedActivity extends AppCompatActivity {
                     }
                 }
 
+                // Sort the postList by postDate field (most recent first)
+                sortPostsByDate();
+
                 // Notify the adapter to update the RecyclerView
                 postAdapter.notifyDataSetChanged();
             }
@@ -77,6 +84,27 @@ public class D1_FeedActivity extends AppCompatActivity {
             }
         });
     }
+
+    // Method to sort posts by their date (most recent first)
+    private void sortPostsByDate() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+
+        // Sort posts by postDate
+        Collections.sort(postList, (post1, post2) -> {
+            try {
+                // Parse the postDate from each post
+                Date date1 = dateFormat.parse(post1.getDate());
+                Date date2 = dateFormat.parse(post2.getDate());
+
+                // Compare the dates: most recent first
+                return date2.compareTo(date1);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return 0; // If parsing fails, no sorting
+            }
+        });
+    }
+
 
 
     public void onButtonClicked(View view) {
