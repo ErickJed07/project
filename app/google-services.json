@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "68393201635",
+    "firebase_url": "https://phindee-84c17-default-rtdb.firebaseio.com",
+    "project_id": "phindee-84c17",
+    "storage_bucket": "phindee-84c17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68393201635:android:4370f8874585f93d9f3ad6",
+        "android_client_info": {
+          "package_name": "com.example.project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHIfjQlJlP4hftRmuj2hQGV7n4gQCkPtA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

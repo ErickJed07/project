@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="gray">#808080</color>
+    <color name="calendar_day_bg">#D3D3D3</color> <!-- Light gray -->
+    <color name="calendar_day_selected">#333333</color> <!-- Darker selection -->
+    <color name="light_gray">#D3D3D3</color>
+    <color name="red">#FF0000</color>
+    <color name="teal_700">#03A9F4</color>
+
+
+
+</resources>
