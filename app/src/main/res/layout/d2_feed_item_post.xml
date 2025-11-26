@@ -31,10 +31,11 @@
         <ImageView
             android:id="@+id/profile_pic"
             android:layout_width="50dp"
-            android:layout_height="55dp"
+            android:layout_height="40dp"
             android:padding="4dp"
             android:scaleType="fitCenter"
             android:src="@drawable/profile"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/userName_post"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintHorizontal_chainStyle="packed"
@@ -45,12 +46,13 @@
             android:id="@+id/userName_post"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
             android:paddingStart="8dp"
             android:text="Name "
             android:textColor="@color/black"
             android:textSize="20sp"
             android:textStyle="bold"
+            app:layout_constraintBottom_toTopOf="@+id/postdate"
             app:layout_constraintStart_toEndOf="@+id/profile_pic"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -60,9 +62,9 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="2dp"
             android:paddingStart="8dp"
-            android:textColor="@color/black"
             android:text="date"
-            android:textSize="16sp"
+            android:textColor="@color/black"
+            android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/profile_pic"
             app:layout_constraintTop_toBottomOf="@+id/userName_post" />
@@ -192,51 +194,82 @@
         app:layout_constraintTop_toBottomOf="@+id/constraintLayout12">
 
         <ImageView
-            android:id="@+id/liked_post"
-            android:layout_width="27dp"
-            android:layout_height="27dp"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="16dp"
+            android:id="@+id/heart_post"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="5dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:src="@drawable/heart"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/imageView"
-            app:layout_constraintHorizontal_bias="0.5"
-            app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
-            android:id="@+id/imageView"
-            android:layout_width="27dp"
+        <TextView
+            android:id="@+id/hearts_num"
+            android:layout_width="wrap_content"
             android:layout_height="27dp"
-            android:layout_marginEnd="16dp"
-            android:src="@drawable/hanger"
+            android:layout_marginStart="2dp"
+            android:gravity="center"
+            android:text="Text"
+            android:textColor="@color/black"
+            android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/imageView2"
-            app:layout_constraintHorizontal_bias="0.5"
-            app:layout_constraintStart_toEndOf="@+id/liked_post"
+            app:layout_constraintStart_toEndOf="@+id/heart_post"
             app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
-            android:id="@+id/imageView2"
-            android:layout_width="27dp"
-            android:layout_height="27dp"
-            android:layout_marginStart="16dp"
-            android:src="@drawable/plane"
+            android:id="@+id/fav_post"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_marginStart="5dp"
+            android:clickable="true"
+            android:src="@drawable/fav"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/imageView"
+            app:layout_constraintStart_toEndOf="@+id/hearts_num"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/fav_num"
+            android:layout_width="wrap_content"
+            android:layout_height="27dp"
+            android:layout_marginStart="2dp"
+            android:gravity="center"
+            android:text="Text"
+            android:textColor="@color/black"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/fav_post"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/share_post"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="5dp"
+            android:padding="2dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/share"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/fav_num"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.0" />
+            app:layout_constraintVertical_bias="0.50" />
+
+        <TextView
+            android:id="@+id/share_num"
+            android:layout_width="wrap_content"
+            android:layout_height="27dp"
+            android:layout_marginStart="2dp"
+            android:gravity="center"
+            android:text="Text"
+            android:textColor="@color/black"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/share_post"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
-    <!-- Right group: Save (Hanger) -->
-
-
-    <!-- Category section -->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -53,7 +53,7 @@ public class D1_FeedActivity extends AppCompatActivity {
 
     // Fetch data from Firebase and populate the RecyclerView
     private void fetchPostsFromFirebase() {
-        // Reference to the posts in Firebase (all posts, not user-specific)
+        // Reference to the posts in Firebase
         DatabaseReference postsRef = FirebaseDatabase.getInstance().getReference("PostEvents");
 
         postsRef.addValueEventListener(new ValueEventListener() {
@@ -61,16 +61,17 @@ public class D1_FeedActivity extends AppCompatActivity {
             public void onDataChange(DataSnapshot dataSnapshot) {
                 postList.clear(); // Clear existing posts
 
-                // Iterate through each post in the snapshot
+                // Use the correct structure to handle posts stored as a HashMap
                 for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
                     I_PostUpload_Event postEvent = postSnapshot.getValue(I_PostUpload_Event.class);
 
                     if (postEvent != null) {
-                        postList.add(postEvent);  // Add post to list
+                        // Add the post to the list
+                        postList.add(postEvent);
                     }
                 }
 
-                // Sort the postList by postDate field (most recent first)
+                // Sort posts by date (if needed)
                 sortPostsByDate();
 
                 // Notify the adapter to update the RecyclerView
@@ -79,11 +80,11 @@ public class D1_FeedActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                // Handle error
                 Toast.makeText(D1_FeedActivity.this, "Failed to load posts", Toast.LENGTH_SHORT).show();
             }
         });
     }
+
 
     // Method to sort posts by their date (most recent first)
     private void sortPostsByDate() {
@@ -107,6 +108,16 @@ public class D1_FeedActivity extends AppCompatActivity {
 
 
 
+
+
+
+
+
+
+
+
+
+
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
@@ -114,7 +125,7 @@ public class D1_FeedActivity extends AppCompatActivity {
         if (viewId == R.id.home_menu) {
             intent = new Intent(this, D1_FeedActivity.class);
         } else if (viewId == R.id.calendar_menu) {
-            return;
+        intent = new Intent(this, E1_CalendarActivity.class);
         } else if (viewId == R.id.camera_menu) {
             intent = new Intent(this, F1_CameraActivity.class);
         } else if (viewId == R.id.closet_menu) {

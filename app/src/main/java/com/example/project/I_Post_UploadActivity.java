@@ -204,8 +204,8 @@ public class I_Post_UploadActivity extends AppCompatActivity {
                         // Get the caption from the EditText
                         String caption = captionEditText.getText().toString().trim();
 
-                        // Creating a post event object with the dynamic data
-                        I_PostUpload_Event postEvent = new I_PostUpload_Event(username, caption, savedImagePaths, postId, date, userId);
+                        // Create a post event object with the dynamic data
+                        I_PostUpload_Event postEvent = new I_PostUpload_Event(username, caption, savedImagePaths, postId, date, userId , 0, null);
 
                         // Save the post data to Firebase under "PostEvents"
                         FirebaseDatabase.getInstance().getReference("PostEvents")
@@ -237,6 +237,7 @@ public class I_Post_UploadActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select at least one image.", Toast.LENGTH_SHORT).show();
         }
     }
+
 
 
 

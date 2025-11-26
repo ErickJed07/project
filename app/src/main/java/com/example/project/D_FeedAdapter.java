@@ -3,26 +3,40 @@ package com.example.project;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Scroller;
 import android.widget.TextView;
+import android.widget.Toast;
+import java.util.HashMap;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHolder> {
 
@@ -33,8 +47,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
     public D_FeedAdapter(Context context, List<I_PostUpload_Event> postList) {
         this.context = context;
         this.postList = postList;
-        this.handler = new Handler(Looper.getMainLooper()); // Create a handler for the main thread
-        sortPostsByTimeDifference(); // Sort posts by time difference initially
+        this.handler = new Handler(Looper.getMainLooper());
     }
 
     @Override
@@ -54,6 +67,59 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         // Set initial relative time for the post date
         String relativeTime = getRelativeTime(postEvent.getDate());
         holder.dateTextView.setText(relativeTime);
+
+        // Heart button logic
+        holder.heartButton.setOnClickListener(v -> {
+            // Get the current user's ID
+            String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+            // Get the current post's postId (this should come from the postEvent object)
+            String postId = postEvent.getPostId();  // Assuming you have a `getPostId()` method in I_PostUpload_Event
+
+            // Fetch the post from Firebase
+            DatabaseReference postRef = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);
+            postRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists()) {
+                        I_PostUpload_Event post = dataSnapshot.getValue(I_PostUpload_Event.class);
+                        if (post == null) return; // Add a null check for safety
+
+                        Map<String, Boolean> heartLiked = post.getHeartLiked();
+
+                        if (heartLiked == null) {
+                            heartLiked = new HashMap<>();
+                        }
+
+                        if (heartLiked.containsKey(currentUserId)) {
+                            // User has already liked the post, so remove the like
+                            heartLiked.remove(currentUserId);
+                            Toast.makeText(context, "Removed like", Toast.LENGTH_SHORT).show();
+                        } else {
+                            // User hasn't liked the post yet, so add the like
+                            heartLiked.put(currentUserId, true);
+                            Toast.makeText(context, "Liked the post", Toast.LENGTH_SHORT).show();
+                        }
+
+                        // --- START OF FIX ---
+                        // Update the heart count to match the number of likes
+                        post.setHeartCount(heartLiked.size());
+                        // --- END OF FIX ---
+
+                        // Save the updated map and count back to Firebase
+                        post.setHeartLiked(heartLiked);
+                        postRef.setValue(post);
+                    }
+                }
+
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    // Handle error if necessary
+                    Toast.makeText(context, "Failed to update like", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
 
         // Update the date every 10 seconds
         Runnable updateDateRunnable = new Runnable() {
@@ -97,6 +163,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         }
     }
 
+
     @Override
     public int getItemCount() {
         return postList.size();
@@ -105,66 +172,45 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
     // Method to calculate the relative time (e.g., "2 min ago", "1 hour ago")
     private String getRelativeTime(String timestamp) {
         try {
-            // Firebase timestamp format: "2025-11-24T07:18:26Z"
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
             Date postDate = format.parse(timestamp);
-
-            // Get the difference between the current time and post time
             long diffInMillis = System.currentTimeMillis() - postDate.getTime();
             long seconds = diffInMillis / 1000;
             long minutes = seconds / 60;
             long hours = minutes / 60;
             long days = hours / 24;
 
-            // Return relative time in a readable format
             if (seconds < 60) {
-                return seconds + " sec ago";
+                return "Just now";
             } else if (minutes < 60) {
                 return minutes + " min ago";
             } else if (hours < 24) {
-                return hours + " hour ago";
+                return hours + " h";
+            } else if (days == 1) {
+                return "Yesterday";
             } else if (days < 30) {
-                return days + " day ago";
+                return new SimpleDateFormat("MMM d", Locale.US).format(postDate);
             } else if (days < 365) {
-                return days / 30 + " month ago";
+                return new SimpleDateFormat("MMM d", Locale.US).format(postDate);
             } else {
-                return days / 365 + " year ago";
+                return new SimpleDateFormat("MMM d, yyyy", Locale.US).format(postDate);
             }
         } catch (ParseException e) {
             e.printStackTrace();
-            return timestamp; // Fallback to raw timestamp if parsing fails
+            return timestamp;
         }
     }
 
-    // Sort posts by their time difference (most recent first)
-    private void sortPostsByTimeDifference() {
-        Collections.sort(postList, (post1, post2) -> {
-            try {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
-                Date date1 = format.parse(post1.getDate());
-                Date date2 = format.parse(post2.getDate());
 
-                // Compare the time differences
-                return Long.compare(date2.getTime(), date1.getTime()); // Sort in descending order (most recent first)
-            } catch (ParseException e) {
-                e.printStackTrace();
-                return 0; // If parsing fails, no sorting
-            }
-        });
-    }
-
-    // Set smooth scroll for ViewPager2 (duration modification)
+    // Set smooth scroll for ViewPager2
     private void setViewPagerSmoothScroll(ViewPager2 viewPager2) {
         try {
-            // Access the mScroller field using reflection to modify scroll duration
             Field scrollerField = ViewPager2.class.getDeclaredField("mScroller");
             scrollerField.setAccessible(true);
             Scroller scroller = (Scroller) scrollerField.get(viewPager2);
-
-            // Set smooth scrolling speed (lower value means faster scrolling)
             Method setDurationMethod = scroller.getClass().getDeclaredMethod("setDuration", int.class);
             setDurationMethod.setAccessible(true);
-            setDurationMethod.invoke(scroller, 800); // Duration in milliseconds (default is around 300ms)
+            setDurationMethod.invoke(scroller, 800);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -174,6 +220,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         TextView userNameTextView, captionTextView, dateTextView, photoIndicator;
         ViewPager2 viewPager2;
         WormDotsIndicator dotsIndicator;
+        ImageView heartButton;  // Heart and Fav Post icons
 
         public PostViewHolder(View itemView) {
             super(itemView);
@@ -181,8 +228,9 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
             captionTextView = itemView.findViewById(R.id.caption_post);
             dateTextView = itemView.findViewById(R.id.postdate);
             viewPager2 = itemView.findViewById(R.id.post_Pic);
-            photoIndicator = itemView.findViewById(R.id.photoIndicator); // Photo page indicator
-            dotsIndicator = itemView.findViewById(R.id.dotsIndicator);  // Circle dots indicator
+            photoIndicator = itemView.findViewById(R.id.photoIndicator);
+            dotsIndicator = itemView.findViewById(R.id.dotsIndicator); // Find the Fav Post icon
+            heartButton  = itemView.findViewById(R.id.heart_post);
         }
     }
 }

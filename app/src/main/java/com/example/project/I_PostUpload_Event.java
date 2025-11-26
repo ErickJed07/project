@@ -1,6 +1,7 @@
 package com.example.project;
 
 import java.util.List;
+import java.util.Map;
 
 public class I_PostUpload_Event {
     private String username;
@@ -9,20 +10,24 @@ public class I_PostUpload_Event {
     private String postId;
     private String date;
     private String userId;  // Added userId to the post data
+    private int heartCount;  // Field to track the number of hearts (likes)
+    private Map<String, Boolean> heartLiked;  // Map to track which users liked the post
 
     // Default constructor for Firebase to work
     public I_PostUpload_Event() {
-        // Empty constructor
+        // Empty constructor for Firebase
     }
 
     // Constructor with all fields
-    public I_PostUpload_Event(String username, String caption, List<String> imageUrls, String postId, String date, String userId) {
+    public I_PostUpload_Event(String username, String caption, List<String> imageUrls, String postId, String date, String userId, int heartCount, Map<String, Boolean> heartLiked) {
         this.username = username;
         this.caption = caption;
         this.imageUrls = imageUrls;
         this.postId = postId;
         this.date = date;
         this.userId = userId;
+        this.heartCount = heartCount;
+        this.heartLiked = heartLiked;
     }
 
     // Getters and Setters
@@ -72,5 +77,22 @@ public class I_PostUpload_Event {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public int getHeartCount() {
+        return heartCount;
+    }
+
+    public void setHeartCount(int heartCount) {
+        this.heartCount = heartCount;
+    }
+
+
+    public Map<String, Boolean> getHeartLiked() {
+        return heartLiked;
+    }
+
+    public void setHeartLiked(Map<String, Boolean> heartLiked) {
+        this.heartLiked = heartLiked;
     }
 }

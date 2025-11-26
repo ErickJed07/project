@@ -47,7 +47,7 @@
         <activity android:name=".G2_Closet_CategoryActivity" android:exported="true" />
         <activity android:name=".F1_CameraActivity" android:exported="true" />
         <activity android:name=".A_HomeActivity" android:exported="true" />
-        <activity android:name=".B_LoginActivity" android:exported="true" />
+        <activity android:name=".D1_FeedActivity" android:exported="true" />
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".F2_Camera_EditActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
@@ -56,7 +56,7 @@
 
         <!-- 📌 Main Launcher -->
         <activity
-            android:name=".D1_FeedActivity"
+            android:name=".B_LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
