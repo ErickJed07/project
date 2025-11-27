@@ -13,13 +13,13 @@ import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
 
-public class I_Post_ViewPageAdapter extends RecyclerView.Adapter<I_Post_ViewPageAdapter.ImageViewHolder> {
+public class I_NewPost_ViewPageAdapter extends RecyclerView.Adapter<I_NewPost_ViewPageAdapter.ImageViewHolder> {
 
     private Context context;
     private ArrayList<String> imageUris;
 
 
-    public I_Post_ViewPageAdapter(Context context, ArrayList<String> imageUris) {
+    public I_NewPost_ViewPageAdapter(Context context, ArrayList<String> imageUris) {
         this.context = context;
         this.imageUris = imageUris;
 
@@ -28,7 +28,7 @@ public class I_Post_ViewPageAdapter extends RecyclerView.Adapter<I_Post_ViewPage
     @NonNull
     @Override
     public ImageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_image_view, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.i_newpostupload_image_view, parent, false);
         return new ImageViewHolder(view);
     }
 

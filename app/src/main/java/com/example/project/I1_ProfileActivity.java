@@ -68,13 +68,13 @@ public class I1_ProfileActivity extends AppCompatActivity {
         favProf = findViewById(R.id.fav_prof);
 
         // Load default content
-        loadContent(new I2_Profile_UploadContent());
+        loadContent(new I_Profile_UploadContent());
         setUnderline(uploadProf, true);
         setUnderline(likedProf, false);
         setUnderline(favProf, false);
 
         uploadProf.setOnClickListener(v -> {
-            loadContent(new I2_Profile_UploadContent());
+            loadContent(new I_Profile_UploadContent());
             setUnderline(uploadProf, true);
             setUnderline(likedProf, false);
             setUnderline(favProf, false);

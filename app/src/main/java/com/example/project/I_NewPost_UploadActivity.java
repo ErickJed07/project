@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -35,13 +34,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class I_Post_UploadActivity extends AppCompatActivity {
+public class I_NewPost_UploadActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
-    private I_Post_GalleryAdapter galleryAdapter;
+    private I_NewPost_GalleryAdapter galleryAdapter;
     private ArrayList<String> imageUris;
     private ViewPager2 viewPager;
-    private I_Post_ViewPageAdapter imageAdapter;
+    private I_NewPost_ViewPageAdapter imageAdapter;
     private ArrayList<String> selectedImages = new ArrayList<>();  // Holds selected image URIs
 
     private boolean isMultipleSelection = false;  // Flag to track multiple selection mode
@@ -54,7 +53,7 @@ public class I_Post_UploadActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.i_postupload);
+        setContentView(R.layout.i_newpostupload);
 
         // Initialize Firebase Realtime Database
         database = FirebaseDatabase.getInstance().getReference("PostEvents");
@@ -67,7 +66,7 @@ public class I_Post_UploadActivity extends AppCompatActivity {
 
         // Initialize imageUris list and adapter
         imageUris = new ArrayList<>();
-        galleryAdapter = new I_Post_GalleryAdapter(imageUris, selectedImages, imageUri -> {
+        galleryAdapter = new I_NewPost_GalleryAdapter(imageUris, selectedImages, imageUri -> {
             if (isMultipleSelection) {
                 if (selectedImages.contains(imageUri)) {
                     selectedImages.remove(imageUri);
@@ -92,7 +91,7 @@ public class I_Post_UploadActivity extends AppCompatActivity {
         recyclerView.setAdapter(galleryAdapter);
 
         // Set up ViewPager2 with an adapter to display selected images
-        imageAdapter = new I_Post_ViewPageAdapter(this, selectedImages);
+        imageAdapter = new I_NewPost_ViewPageAdapter(this, selectedImages);
         viewPager.setAdapter(imageAdapter);
 
         // Handle permissions for image access
@@ -205,32 +204,32 @@ public class I_Post_UploadActivity extends AppCompatActivity {
                         String caption = captionEditText.getText().toString().trim();
 
                         // Create a post event object with the dynamic data
-                        I_PostUpload_Event postEvent = new I_PostUpload_Event(username, caption, savedImagePaths, postId, date, userId , 0, null);
+                        I_NewPost_Event postEvent = new I_NewPost_Event(username, caption, savedImagePaths, postId, date, userId , 0, null);
 
                         // Save the post data to Firebase under "PostEvents"
                         FirebaseDatabase.getInstance().getReference("PostEvents")
                                 .child(postId)  // Save directly under postId
                                 .setValue(postEvent)
                                 .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(I_Post_UploadActivity.this, "Post saved successfully!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(I_NewPost_UploadActivity.this, "Post saved successfully!", Toast.LENGTH_SHORT).show();
 
                                     // Navigate to FeedActivity after saving the post
-                                    Intent intent = new Intent(I_Post_UploadActivity.this, D1_FeedActivity.class);
+                                    Intent intent = new Intent(I_NewPost_UploadActivity.this, D1_FeedActivity.class);
                                     startActivity(intent);
                                     finish();
                                 })
                                 .addOnFailureListener(e -> {
-                                    Toast.makeText(I_Post_UploadActivity.this, "Failed to save post", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(I_NewPost_UploadActivity.this, "Failed to save post", Toast.LENGTH_SHORT).show();
                                 });
 
                     } else {
-                        Toast.makeText(I_Post_UploadActivity.this, "User not found", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(I_NewPost_UploadActivity.this, "User not found", Toast.LENGTH_SHORT).show();
                     }
                 }
 
                 @Override
                 public void onCancelled(DatabaseError databaseError) {
-                    Toast.makeText(I_Post_UploadActivity.this, "Failed to fetch user data", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(I_NewPost_UploadActivity.this, "Failed to fetch user data", Toast.LENGTH_SHORT).show();
                 }
             });
         } else {

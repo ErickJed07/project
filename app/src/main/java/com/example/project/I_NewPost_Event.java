@@ -3,7 +3,7 @@ package com.example.project;
 import java.util.List;
 import java.util.Map;
 
-public class I_PostUpload_Event {
+public class I_NewPost_Event {
     private String username;
     private String caption;
     private List<String> imageUrls;
@@ -12,14 +12,16 @@ public class I_PostUpload_Event {
     private String userId;  // Added userId to the post data
     private int heartCount;  // Field to track the number of hearts (likes)
     private Map<String, Boolean> heartLiked;  // Map to track which users liked the post
+    private int favCount;
+    private Map<String, Boolean> favList; // Stores userIDs who saved the post
 
     // Default constructor for Firebase to work
-    public I_PostUpload_Event() {
+    public I_NewPost_Event() {
         // Empty constructor for Firebase
     }
 
     // Constructor with all fields
-    public I_PostUpload_Event(String username, String caption, List<String> imageUrls, String postId, String date, String userId, int heartCount, Map<String, Boolean> heartLiked) {
+    public I_NewPost_Event(String username, String caption, List<String> imageUrls, String postId, String date, String userId, int heartCount, Map<String, Boolean> heartLiked) {
         this.username = username;
         this.caption = caption;
         this.imageUrls = imageUrls;
@@ -94,5 +96,20 @@ public class I_PostUpload_Event {
 
     public void setHeartLiked(Map<String, Boolean> heartLiked) {
         this.heartLiked = heartLiked;
+    }
+    // Getters
+    public Map<String, Boolean> getFavList() {
+        return favList;
+    }
+    public int getFavCount() {
+        return favCount;
+    }
+    // Setters
+    public void setFavList(Map<String, Boolean> favList) {
+        this.favList = favList;
+    }
+
+    public void setFavCount(int favCount) {
+        this.favCount = favCount;
     }
 }

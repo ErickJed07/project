@@ -227,17 +227,32 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
-      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_post_item_images.xml">
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload.xml">
         <config>
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
-      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_postupload.xml">
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload_image_view.xml">
         <config>
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
-      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/item_image_view.xml">
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload_item_images.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_detail.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridimage.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridview.xml">
         <config>
           <theme>@style/Theme.Project</theme>
         </config>
@@ -249,40 +264,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9381cc0d-49e9-43ab-88d8-f1c323f9fb0d" name="Changes" comment="updated">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridAdapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridViewer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridimage.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridview.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/D1_FeedActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/D1_FeedActivity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedAdapter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_PostUpload_Event.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_PostUpload_Event.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Post_UploadActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Post_UploadActivity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/hat1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/hat2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/hat3.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/hat4.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/hat5.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/heart.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/heart.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/pant1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/pant2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/pant3.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/pant4.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/pant5.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shirt1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shirt2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shirt3.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shirt4.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shirt5.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeleft1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeleft2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeleft3.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeleft4.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeleft5.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeright1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeright2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeright3.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeright4.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/shoeright5.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I1_ProfileActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I1_ProfileActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I2_Profile_UploadContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_UploadContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_PostUpload_Event.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_Event.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Post_GalleryAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_GalleryAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Post_UploadActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_UploadActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Post_ViewPageAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_ViewPageAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/plus.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/plus.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/d2_feed_item_post.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/d2_feed_item_post.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i2_upload_content.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i2_upload_content.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_post_item_images.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload_item_images.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_postupload.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/item_image_view.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload_image_view.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -340,7 +341,7 @@
   }
 }</component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="ProjectErrors" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
@@ -483,12 +484,12 @@
       <map>
         <entry key="com.example.project">
           <value>
-            <CheckInfo lastCheckTimestamp="1764132337369" />
+            <CheckInfo lastCheckTimestamp="1764219153771" />
           </value>
         </entry>
         <entry key="com.example.project.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1764132337369" />
+            <CheckInfo lastCheckTimestamp="1764219153778" />
           </value>
         </entry>
       </map>

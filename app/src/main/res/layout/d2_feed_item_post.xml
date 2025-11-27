@@ -207,15 +207,17 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/hearts_num"
+            android:id="@+id/heart_num"
             android:layout_width="wrap_content"
             android:layout_height="27dp"
             android:layout_marginStart="2dp"
+            android:layout_marginEnd="12dp"
             android:gravity="center"
             android:text="Text"
             android:textColor="@color/black"
             android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/fav_post"
             app:layout_constraintStart_toEndOf="@+id/heart_post"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -223,11 +225,11 @@
             android:id="@+id/fav_post"
             android:layout_width="35dp"
             android:layout_height="35dp"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="12dp"
             android:clickable="true"
             android:src="@drawable/fav"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/hearts_num"
+            app:layout_constraintStart_toEndOf="@+id/heart_num"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
@@ -235,11 +237,13 @@
             android:layout_width="wrap_content"
             android:layout_height="27dp"
             android:layout_marginStart="2dp"
+            android:layout_marginEnd="13dp"
             android:gravity="center"
             android:text="Text"
             android:textColor="@color/black"
             android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/share_post"
             app:layout_constraintStart_toEndOf="@+id/fav_post"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -247,7 +251,7 @@
             android:id="@+id/share_post"
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="12dp"
             android:padding="2dp"
             android:scaleType="centerCrop"
             android:src="@drawable/share"

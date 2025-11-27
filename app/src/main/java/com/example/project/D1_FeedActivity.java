@@ -9,7 +9,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -27,7 +26,7 @@ public class D1_FeedActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private D_FeedAdapter postAdapter;
-    private List<I_PostUpload_Event> postList;
+    private List<I_NewPost_Event> postList;
     private DatabaseReference postsRef;
 
     @Override
@@ -63,7 +62,7 @@ public class D1_FeedActivity extends AppCompatActivity {
 
                 // Use the correct structure to handle posts stored as a HashMap
                 for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
-                    I_PostUpload_Event postEvent = postSnapshot.getValue(I_PostUpload_Event.class);
+                    I_NewPost_Event postEvent = postSnapshot.getValue(I_NewPost_Event.class);
 
                     if (postEvent != null) {
                         // Add the post to the list
@@ -105,17 +104,6 @@ public class D1_FeedActivity extends AppCompatActivity {
             }
         });
     }
-
-
-
-
-
-
-
-
-
-
-
 
 
     public void onButtonClicked(View view) {

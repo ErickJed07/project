@@ -15,13 +15,13 @@ import com.bumptech.glide.Glide;
 import java.util.ArrayList;
 import java.util.List;
 
-public class I_Post_GalleryAdapter extends RecyclerView.Adapter<I_Post_GalleryAdapter.ViewHolder> {
+public class I_NewPost_GalleryAdapter extends RecyclerView.Adapter<I_NewPost_GalleryAdapter.ViewHolder> {
 
     private List<String> imageUris;
     private OnItemClickListener onItemClickListener;
     private ArrayList<String> selectedImages;  // Add this to hold selected images
 
-    public I_Post_GalleryAdapter(List<String> imageUris, ArrayList<String> selectedImages, OnItemClickListener onItemClickListener) {
+    public I_NewPost_GalleryAdapter(List<String> imageUris, ArrayList<String> selectedImages, OnItemClickListener onItemClickListener) {
         this.imageUris = imageUris;
         this.selectedImages = selectedImages;  // Initialize selectedImages
         this.onItemClickListener = onItemClickListener;
@@ -31,7 +31,7 @@ public class I_Post_GalleryAdapter extends RecyclerView.Adapter<I_Post_GalleryAd
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View itemView = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.i_post_item_images, parent, false);
+                .inflate(R.layout.i_newpostupload_item_images, parent, false);
         return new ViewHolder(itemView);
     }
 

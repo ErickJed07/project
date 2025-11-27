@@ -43,7 +43,7 @@
         <activity android:name=".E1_CalendarActivity" android:exported="true" />
         <activity android:name=".G1_ClosetActivity" android:exported="true" />
         <activity android:name=".H1_DressActivity" android:exported="true" />
-        <activity android:name=".I_Post_UploadActivity" android:exported="true" />
+        <activity android:name=".I_NewPost_UploadActivity" android:exported="true" />
         <activity android:name=".G2_Closet_CategoryActivity" android:exported="true" />
         <activity android:name=".F1_CameraActivity" android:exported="true" />
         <activity android:name=".A_HomeActivity" android:exported="true" />
@@ -51,12 +51,13 @@
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".F2_Camera_EditActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
-        <activity android:name=".I1_ProfileActivity"/>
+        <activity android:name=".B_LoginActivity"/>
+        <activity android:name=".I_ProfileUploadContent_GridViewer" />
 
 
         <!-- 📌 Main Launcher -->
         <activity
-            android:name=".B_LoginActivity"
+            android:name=".I1_ProfileActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
