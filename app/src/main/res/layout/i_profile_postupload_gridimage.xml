@@ -7,4 +7,4 @@
     android:contentDescription="Grid Image"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
-    android:scaleType="centerCrop" />
+    android:scaleType="fitCenter" />
