@@ -38,12 +38,8 @@ public class I_Profile_UploadContent extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.i2_upload_content, container, false);
 
-        Button uploadButton = rootView.findViewById(R.id.upload_button);
-        if (uploadButton != null) {
-            uploadButton.setVisibility(View.GONE);
-        }
 
-        recyclerView = rootView.findViewById(R.id.profileGridRecyclerView);
+        recyclerView = rootView.findViewById(R.id.favcontentRecyclerView);
 
         if (recyclerView != null && getContext() != null) {
             recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));

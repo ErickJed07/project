@@ -98,9 +98,7 @@ public class I_NewPost_Event {
         this.heartLiked = heartLiked;
     }
     // Getters
-    public Map<String, Boolean> getFavList() {
-        return favList;
-    }
+    public Map<String, Boolean> getFavList() {return favList;}
     public int getFavCount() {
         return favCount;
     }

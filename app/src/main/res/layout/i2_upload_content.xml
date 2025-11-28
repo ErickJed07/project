@@ -12,28 +12,11 @@
 
         <!-- Grid for Images -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/profileGridRecyclerView"
+            android:id="@+id/favcontentRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="5dp"
             android:scrollbars="vertical" />
 
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/upload_description"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingBottom="24dp"
-        android:text="Share Fun Upload you've recorded recently"
-        android:textColor="@android:color/black"
-        android:textSize="18sp"
-        android:textStyle="bold" />
-
-    <Button
-        android:id="@+id/upload_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Upload" />
-
 </LinearLayout>

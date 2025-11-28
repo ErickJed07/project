@@ -81,14 +81,14 @@ public class I1_ProfileActivity extends AppCompatActivity {
         });
 
         likedProf.setOnClickListener(v -> {
-            loadContent(new I4_Profile_LikedContent());
+            loadContent(new I_Profile_LikedContent());
             setUnderline(uploadProf, false);
             setUnderline(likedProf, true);
             setUnderline(favProf, false);
         });
 
         favProf.setOnClickListener(v -> {
-            loadContent(new I5_Profile_FavContent());
+            loadContent(new I_Profile_FavContent());
             setUnderline(uploadProf, false);
             setUnderline(likedProf, false);
             setUnderline(favProf, true);

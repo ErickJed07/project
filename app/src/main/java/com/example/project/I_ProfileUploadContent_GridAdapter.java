@@ -47,7 +47,7 @@ public class I_ProfileUploadContent_GridAdapter extends RecyclerView.Adapter<Rec
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.i_profile_postupload_gridimage, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.i_profile_contents_gridimage, parent, false);
         if (viewType == VIEW_TYPE_ADD) {
             return new AddViewHolder(view);
         } else {

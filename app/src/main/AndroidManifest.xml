@@ -51,13 +51,16 @@
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".F2_Camera_EditActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
-        <activity android:name=".B_LoginActivity"/>
+        <activity android:name=".I1_ProfileActivity"/>
         <activity android:name=".I_ProfileUploadContent_GridViewer" />
+        <activity android:name=".I_ProfileLikedContent_GridViewer" />
+        <activity android:name=".I_ProfileFavContent_GridViewer" />
+
 
 
         <!-- 📌 Main Launcher -->
         <activity
-            android:name=".I1_ProfileActivity"
+            android:name=".B_LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

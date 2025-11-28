@@ -26,18 +26,19 @@ import com.google.firebase.database.ValueEventListener;
 import com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator;
 
 import java.util.ArrayList;
-import java.util.Collections; // Imported for reversing the list
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
+public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
 
     private ViewPager2 mainVerticalViewPager;
     private VerticalPostAdapter verticalAdapter;
 
-    private List<I_NewPost_Event> allUserPosts = new ArrayList<>();
-    private List<String> allUserPostIds = new ArrayList<>();
+    // Changed list names to reflect context (Favorites)
+    private List<I_NewPost_Event> favPosts = new ArrayList<>();
+    private List<String> favPostIds = new ArrayList<>();
 
     private ImageView backButton;
     private String startPostId;
@@ -47,6 +48,7 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Reusing the same layout as the upload/liked viewer since the UI is identical
         setContentView(R.layout.i_profile_contents_gridview);
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -59,81 +61,80 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
             backButton.setOnClickListener(v -> finish());
         }
 
-        // 3. Setup ViewPager for Vertical Scrolling
+        // Setup ViewPager for Vertical Scrolling
         mainVerticalViewPager = findViewById(R.id.postcontentview2);
 
-        // NULL CHECK: Prevents the crash if the View ID is missing or wrong
         if (mainVerticalViewPager != null) {
             mainVerticalViewPager.setOrientation(ViewPager2.ORIENTATION_VERTICAL);
 
-            // --- FIX: UPDATED TRANSFORMER FOR NATURAL SCROLLING ---
+            // Standard page transformer logic
             mainVerticalViewPager.setPageTransformer((page, position) -> {
-                // position < -1 : Page is off-screen to the top
-                // position = 0  : Page is centered (visible)
-                // position > 1  : Page is off-screen to the bottom
-
                 if (position < -1) {
                     page.setAlpha(0f);
                 } else if (position <= 1) {
-                    // This is the visible page or the one entering/leaving
-
-                    // 1. Reset any rotation/scaling that might feel "flipped"
                     page.setAlpha(1f);
                     page.setTranslationY(0f);
                     page.setTranslationX(0f);
                     page.setScaleX(1f);
                     page.setScaleY(1f);
 
-                    // 2. Optional: Simple Fade Effect (Standard)
-                    // As the page moves up (position goes negative), it fades out slightly
-                    // As the page moves down (position goes positive), it fades out slightly
                     float minAlpha = 0.5f;
                     float alpha = Math.max(minAlpha, 1 - Math.abs(position));
                     page.setAlpha(alpha);
-
                 } else {
                     page.setAlpha(0f);
                 }
             });
 
-
-            verticalAdapter = new VerticalPostAdapter(this, allUserPosts, allUserPostIds, currentUserId);
+            verticalAdapter = new VerticalPostAdapter(this, favPosts, favPostIds, currentUserId);
             mainVerticalViewPager.setAdapter(verticalAdapter);
         }
 
         if (!currentUserId.isEmpty()) {
-            loadAllUserPosts();
+            loadFavPosts();
         }
     }
 
-    private void loadAllUserPosts() {
+    private void loadFavPosts() {
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference("PostEvents");
 
-        ref.orderByChild("userId").equalTo(currentUserId).addListenerForSingleValueEvent(new ValueEventListener() {
+        ref.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                allUserPosts.clear();
-                allUserPostIds.clear();
+                favPosts.clear();
+                favPostIds.clear();
 
                 for (DataSnapshot ds : snapshot.getChildren()) {
                     I_NewPost_Event post = ds.getValue(I_NewPost_Event.class);
+
                     if (post != null) {
-                        allUserPosts.add(post);
-                        allUserPostIds.add(ds.getKey());
+                        // 1. Check if the current user Favorites (Saved) the post
+                        Map<String, Boolean> favs = post.getFavList();
+                        boolean isFav = (favs != null && Boolean.TRUE.equals(favs.get(currentUserId)));
+
+                        // 2. Check if the current user Created the post
+                        boolean isCreator = (post.getUserId() != null && post.getUserId().equals(currentUserId));
+
+                        // 3. Add if isFav is TRUE AND isCreator is FALSE.
+                        // This matches the logic used in "Liked" content to avoid showing own posts.
+                        if (isFav && !isCreator) {
+                            favPosts.add(post);
+                            favPostIds.add(ds.getKey());
+                        }
                     }
                 }
 
-                // --- KEY FIX: REVERSE THE LIST ---
-                // This swaps the "Up" and "Down" posts.
-                Collections.reverse(allUserPosts);
-                Collections.reverse(allUserPostIds);
+                // Reverse to show newest favorites first
+                Collections.reverse(favPosts);
+                Collections.reverse(favPostIds);
 
                 if (verticalAdapter != null) {
                     verticalAdapter.notifyDataSetChanged();
                 }
 
+                // Handle jumping to a specific post if passed via intent
                 if (startPostId != null && mainVerticalViewPager != null) {
-                    int startIndex = allUserPostIds.indexOf(startPostId);
+                    int startIndex = favPostIds.indexOf(startPostId);
                     if (startIndex != -1) {
                         mainVerticalViewPager.setCurrentItem(startIndex, false);
                     }
@@ -142,11 +143,12 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(I_ProfileUploadContent_GridViewer.this, "Error loading posts", Toast.LENGTH_SHORT).show();
+                Toast.makeText(I_ProfileFavContent_GridViewer.this, "Error loading favorites", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    // Using a static inner class for the adapter, identical to the LikedViewer but independent
     public static class VerticalPostAdapter extends RecyclerView.Adapter<VerticalPostAdapter.PostViewHolder> {
 
         private List<I_NewPost_Event> posts;
@@ -173,26 +175,22 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
             I_NewPost_Event post = posts.get(position);
             String postId = postIds.get(position);
 
+            // --- Image Slider Setup ---
             if (holder.imagesViewPager != null) {
-                // 1. Set up the Adapter
                 ImageSliderAdapter imageAdapter = new ImageSliderAdapter(context, post.getImageUrls());
                 holder.imagesViewPager.setAdapter(imageAdapter);
                 holder.imagesViewPager.setOrientation(ViewPager2.ORIENTATION_HORIZONTAL);
 
-                // --- INDICATOR LOGIC ADDED HERE ---
                 int totalPhotos = imageAdapter.getItemCount();
 
-                // Bind Dots Indicator
                 if (holder.dotsIndicator != null) {
                     holder.dotsIndicator.setViewPager2(holder.imagesViewPager);
                 }
 
-                // Initial Page Number Display
                 if (holder.photoIndicator != null) {
                     holder.photoIndicator.setText("1/" + totalPhotos);
                 }
 
-                // Page Change Callback for Number Display
                 holder.imagesViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
                     @Override
                     public void onPageSelected(int position) {
@@ -202,7 +200,6 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
                     }
                 });
 
-                // Visibility Logic
                 if (totalPhotos <= 1) {
                     if (holder.dotsIndicator != null) holder.dotsIndicator.setVisibility(View.GONE);
                     if (holder.photoIndicator != null) holder.photoIndicator.setVisibility(View.GONE);
@@ -212,18 +209,27 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
                 }
             }
 
+            // --- Interaction Buttons ---
+
             if (holder.heartButton != null) {
                 updateHeartIcon(holder.heartButton, post.getHeartLiked(), currentUserId);
-                holder.heartButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Heart"));
+                holder.heartButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Heart", position));
             }
 
             if (holder.favButton != null) {
                 updateFavIcon(holder.favButton, post.getFavList(), currentUserId);
-                holder.favButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Fav"));
+                holder.favButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Fav", position));
             }
 
+            // --- Delete Button Logic ---
             if (holder.deleteButton != null) {
-                holder.deleteButton.setOnClickListener(v -> deletePost(position, postId));
+                // Only allow deletion if the current user OWNS the post
+                if (post.getUserId() != null && post.getUserId().equals(currentUserId)) {
+                    holder.deleteButton.setVisibility(View.VISIBLE);
+                    holder.deleteButton.setOnClickListener(v -> deletePost(position, postId));
+                } else {
+                    holder.deleteButton.setVisibility(View.GONE);
+                }
             }
 
             if (holder.shareButton != null) {
@@ -252,11 +258,12 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
                     notifyItemRemoved(position);
                     notifyItemRangeChanged(position, posts.size());
                 } catch (IndexOutOfBoundsException e) {
+                    // Handle race condition
                 }
             });
         }
 
-        private void toggleInteraction(PostViewHolder holder, I_NewPost_Event post, String postId, String type) {
+        private void toggleInteraction(PostViewHolder holder, I_NewPost_Event post, String postId, String type, int position) {
             DatabaseReference postRef = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);
 
             if (type.equals("Heart")) {
@@ -279,6 +286,8 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
 
                 if (favs.containsKey(currentUserId)) {
                     favs.remove(currentUserId);
+                    // Optional: remove from list immediately if un-favorited in this view
+                    // posts.remove(position); postIds.remove(position); notifyItemRemoved(position);
                     Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show();
                 } else {
                     favs.put(currentUserId, true);
@@ -295,7 +304,7 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
         private void updateHeartIcon(ConstraintLayout btn, Map<String, Boolean> map, String uid) {
             if (btn == null || btn.getChildCount() == 0) return;
             ImageView icon = (ImageView) btn.getChildAt(0);
-            if (map != null && map.containsKey(uid)) {
+            if (map != null && Boolean.TRUE.equals(map.get(uid))) {
                 icon.setImageResource(R.drawable.heart2);
             } else {
                 icon.setImageResource(R.drawable.heart);
@@ -305,7 +314,7 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
         private void updateFavIcon(ConstraintLayout btn, Map<String, Boolean> map, String uid) {
             if (btn == null || btn.getChildCount() == 0) return;
             ImageView icon = (ImageView) btn.getChildAt(0);
-            if (map != null && map.containsKey(uid)) {
+            if (map != null && Boolean.TRUE.equals(map.get(uid))) {
                 icon.setImageResource(R.drawable.fav2);
             } else {
                 icon.setImageResource(R.drawable.fav);
@@ -317,7 +326,6 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
             ConstraintLayout heartButton, favButton, shareButton;
             ImageButton deleteButton;
 
-            // Indicators
             WormDotsIndicator dotsIndicator;
             TextView photoIndicator;
 
@@ -329,12 +337,10 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
                 shareButton = itemView.findViewById(R.id.Sharebutton);
                 deleteButton = itemView.findViewById(R.id.deletebutton);
 
-                // Fixed the caret issue here:
                 dotsIndicator = itemView.findViewById(R.id.dotindicatoruploadcontent);
                 photoIndicator = itemView.findViewById(R.id.photoindicatoruploadcontent);
             }
         }
-
     }
 
     private static class ImageSliderAdapter extends RecyclerView.Adapter<ImageSliderAdapter.ImageViewHolder> {
