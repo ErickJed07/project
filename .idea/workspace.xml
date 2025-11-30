@@ -117,6 +117,11 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/profile_upload.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/d1_feed.xml">
         <config>
           <theme>@style/Theme.Project</theme>
@@ -242,6 +247,11 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_addmodel.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridimage.xml">
         <config>
           <theme>@style/Theme.Project</theme>
@@ -257,6 +267,26 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_fuser.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_muser.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_user.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfanlist.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
     </layouts>
   </component>
   <component name="AutoImportSettings">
@@ -264,26 +294,34 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9381cc0d-49e9-43ab-88d8-f1c323f9fb0d" name="Changes" comment="updated">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileFavContent_GridAdapter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileFavContent_GridViewer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileLikedContent_GridAdapter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileLikedContent_GridViewer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_LikedContent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileModelFan_Adapter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileModelFan_List2.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileModelFans_List.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_AddModels.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_addmodel.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_user.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfanlist.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/C_SignInActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/C_SignInActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedAdapter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I1_ProfileActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I1_ProfileActivity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I4_Profile_LikedContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I5_Profile_FavContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_FavContent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_Event.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_Event.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_UploadActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_UploadActivity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridViewer.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridViewer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_UploadContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_UploadContent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i2_upload_content.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i2_upload_content.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i3_liked_content.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i3_liked_content.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i4_fav_content.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i4_fav_content.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridimage.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridimage.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridview.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridview.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_verticalgridview.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_verticalgridview.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/fav.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/fav.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/fav2.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/fav2.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/profile_upload.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/profile_upload.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/d2_feed_item_post.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/d2_feed_item_post.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/d_feed_item_image.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/d_feed_item_image.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i1_profile.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i1_profile.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridimage.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridimage.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridview.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridview.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_verticalgridview.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_verticalgridview.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/libs.versions.toml" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/libs.versions.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -484,12 +522,12 @@
       <map>
         <entry key="com.example.project">
           <value>
-            <CheckInfo lastCheckTimestamp="1764305596194" />
+            <CheckInfo lastCheckTimestamp="1764487033058" />
           </value>
         </entry>
         <entry key="com.example.project.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1764305596194" />
+            <CheckInfo lastCheckTimestamp="1764487033057" />
           </value>
         </entry>
       </map>

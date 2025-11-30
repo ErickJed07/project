@@ -3,6 +3,7 @@
     android:id="@+id/gridImageView"
     android:layout_width="match_parent"
     android:layout_height="200dp"
+    android:layout_margin="1dp"
     android:clickable="true"
     android:contentDescription="Grid Image"
     android:focusable="true"

@@ -188,7 +188,15 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
                     if (dataSnapshot.exists()) {
-                        // Fetch the username from Firebase
+                        // Retrieve current post count, default to 0 if null
+                        Integer currentPostCount = dataSnapshot.child("posts").getValue(Integer.class);
+                        if (currentPostCount == null) {
+                            currentPostCount = 0;
+                        }
+                        // Increment the post count
+                        userRef.child("posts").setValue(currentPostCount + 1);
+
+                                // Fetch the username from Firebase
                         String username = dataSnapshot.child("username").getValue(String.class);
                         if (username == null) {
                             username = "Anonymous"; // Fallback if username is not found

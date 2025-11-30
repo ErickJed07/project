@@ -46,21 +46,25 @@
         <activity android:name=".I_NewPost_UploadActivity" android:exported="true" />
         <activity android:name=".G2_Closet_CategoryActivity" android:exported="true" />
         <activity android:name=".F1_CameraActivity" android:exported="true" />
-        <activity android:name=".A_HomeActivity" android:exported="true" />
+        <activity android:name=".B_LoginActivity" android:exported="true" />
         <activity android:name=".D1_FeedActivity" android:exported="true" />
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".F2_Camera_EditActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
-        <activity android:name=".I1_ProfileActivity"/>
-        <activity android:name=".I_ProfileUploadContent_GridViewer" />
-        <activity android:name=".I_ProfileLikedContent_GridViewer" />
-        <activity android:name=".I_ProfileFavContent_GridViewer" />
+        <activity android:name=".A_HomeActivity"/>
+        <activity android:name=".I_ProfileUploadContent_GridViewer"/>
+        <activity android:name=".I_ProfileLikedContent_GridViewer"/>
+        <activity android:name=".I_ProfileFavContent_GridViewer"/>
+        <activity android:name=".I_Profile_AddModels" />
+        <activity android:name=".I_ProfileModelFans_List" />
+
+
 
 
 
         <!-- 📌 Main Launcher -->
         <activity
-            android:name=".B_LoginActivity"
+            android:name=".I1_ProfileActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -16,6 +16,7 @@ firebaseDatabase = "21.0.0"
 viewpager2 = "1.1.0"
 exifinterface = "1.4.1"
 firebaseFirestore = "26.0.2"
+carUiLib = "2.6.0"
 
 [libraries]
 cardview = { module = "androidx.cardview:cardview", version.ref = "cardview" }
@@ -34,6 +35,7 @@ firebase-database = { group = "com.google.firebase", name = "firebase-database",
 viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
+car-ui-lib = { group = "com.android.car.ui", name = "car-ui-lib", version.ref = "carUiLib" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
