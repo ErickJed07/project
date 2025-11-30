@@ -4,6 +4,8 @@
     <shared>
       <config>
         <device id="_device_class_phone" />
+        <pickBest>false</pickBest>
+        <target>android-34</target>
       </config>
     </shared>
     <layouts>
@@ -107,12 +109,27 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_luncher.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/image_border.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/post_circular_dot.xml">
         <config>
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/post_round_background.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/c_signin.xml">
         <config>
           <theme>@style/Theme.Project</theme>
         </config>
@@ -157,7 +174,17 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/f1_camera_act.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/f2_camera_edit.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/f3_camera_edit_dialog_save_image.xml">
         <config>
           <theme>@style/Theme.Project</theme>
         </config>
@@ -257,6 +284,21 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/image_border.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
     </layouts>
   </component>
   <component name="AutoImportSettings">
@@ -264,26 +306,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9381cc0d-49e9-43ab-88d8-f1c323f9fb0d" name="Changes" comment="updated">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileFavContent_GridAdapter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileFavContent_GridViewer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileLikedContent_GridAdapter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileLikedContent_GridViewer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_LikedContent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/drawable/ic_placeholder_2.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/drawable/ic_placeholder_round.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/drawable/image_border.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/src/main/res/drawable/sign_in_bg.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I1_ProfileActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I1_ProfileActivity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I4_Profile_LikedContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I5_Profile_FavContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_FavContent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_Event.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_Event.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridAdapter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridViewer.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileUploadContent_GridViewer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_UploadContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_UploadContent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i2_upload_content.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i2_upload_content.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i3_liked_content.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i3_liked_content.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i4_fav_content.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i4_fav_content.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridimage.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridimage.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_gridview.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_gridview.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_postupload_verticalgridview.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_contents_verticalgridview.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/F1_CameraActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/F1_CameraActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_placeholder.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/ic_placeholder.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/c_signin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/c_signin.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/f1_camera.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle/libs.versions.toml" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/libs.versions.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -293,7 +330,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[DeviceId(pluginId=PhysicalDevice, isTemplate=false, identifier=serial=142915555K111767)]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[DeviceId(pluginId=PhysicalDevice, isTemplate=false, identifier=serial=C6RO9T5L59Z589G6)]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -302,12 +339,33 @@
   <component name="ExternalProjectsManager">
     <system id="GRADLE">
       <state>
+        <task path="$PROJECT_DIR$/app">
+          <activation />
+        </task>
         <projects_view>
           <tree_state>
             <expand>
               <path>
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="project" type="f1a62948:ProjectNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="project" type="f1a62948:ProjectNode" />
+                <item name="app" type="2d1252cf:ModuleNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="project" type="f1a62948:ProjectNode" />
+                <item name="app" type="2d1252cf:ModuleNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="project" type="f1a62948:ProjectNode" />
+                <item name="app" type="2d1252cf:ModuleNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+                <item name="other" type="c8890929:TasksNode$1" />
               </path>
             </expand>
             <select />
@@ -319,9 +377,9 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="resourceFile" />
-        <option value="layoutResourceFile" />
         <option value="Class" />
+        <option value="layoutResourceFile" />
+        <option value="resourceFile" />
       </list>
     </option>
   </component>
@@ -336,48 +394,50 @@
 }</component>
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/NEU2025/project.git&quot;,
-    &quot;accountId&quot;: &quot;b9452728-992c-4aba-a23a-41725a71e2fe&quot;
+    &quot;url&quot;: &quot;https://github.com/ErickJed07/project.git&quot;,
+    &quot;accountId&quot;: &quot;263fb3e2-0d84-49bc-bc46-7c3c7e02b508&quot;
   }
 }</component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 8
+  &quot;associatedIndex&quot;: 5
 }</component>
   <component name="ProjectId" id="31B5bP8fxfhMoRTOOTf5Gg16dHy" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Android App.app.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;com.google.services.firebase.aqiPopupShown&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Guess/AndroidStudioProjects/project&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.17&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.tabs&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Android App.app.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.google.services.firebase.aqiPopupShown": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/keziel valencia/Documents/project/app/src/main/res/drawable",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.17",
+    "project.structure.side.proportion": "0.2",
+    "run.code.analysis.last.selected.profile": "pProject Default",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\keziel valencia\Documents\project\app\src\main\res\drawable" />
+      <recent name="C:\Users\keziel valencia\Documents\project\app\src\main\res\layout" />
       <recent name="C:\Users\Guess\AndroidStudioProjects\capstone1\project\app\src\main\res\drawable" />
       <recent name="C:\Users\Guess\AndroidStudioProjects\capstone1\project\app\src\main\res" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\keziel valencia\Documents\project\app\src\main\res\drawable" />
       <recent name="C:\Users\Guess\AndroidStudioProjects\capstone1\project\app\src\main\res\drawable" />
     </key>
   </component>
@@ -476,6 +536,9 @@
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
+    <ignored-roots>
+      <path value="$PROJECT_DIR$/project" />
+    </ignored-roots>
     <MESSAGE value="updated" />
     <option name="LAST_COMMIT_MESSAGE" value="updated" />
   </component>
@@ -484,12 +547,12 @@
       <map>
         <entry key="com.example.project">
           <value>
-            <CheckInfo lastCheckTimestamp="1764305596194" />
+            <CheckInfo lastCheckTimestamp="1764529324772" />
           </value>
         </entry>
         <entry key="com.example.project.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1764305596194" />
+            <CheckInfo lastCheckTimestamp="1764529324774" />
           </value>
         </entry>
       </map>

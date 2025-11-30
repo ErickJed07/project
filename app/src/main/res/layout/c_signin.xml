@@ -3,14 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/signin"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
 
     <androidx.cardview.widget.CardView
         android:id="@+id/logoholder"
         android:layout_width="140dp"
         android:layout_height="135dp"
-        android:background="#181918"
-        app:cardBackgroundColor="#181918"
+        android:background="#000000"
+        app:cardBackgroundColor="#000000"
         app:cardCornerRadius="90dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -21,8 +22,9 @@
         <ImageView
             android:id="@+id/logo"
             android:layout_width="match_parent"
-            android:layout_height="135dp"
-            app:srcCompat="@drawable/ic_placeholder" />
+            android:layout_height="match_parent"
+
+            app:srcCompat="@drawable/ic_placeholder_2" />
 
     </androidx.cardview.widget.CardView>
 
@@ -194,11 +196,11 @@
         <Button
             android:id="@+id/signinbutton"
             app:cornerRadius="10dp"
-            app:strokeColor="#9C27B0"
+            app:strokeColor="@color/pure_color"
             app:strokeWidth="2dp"
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:backgroundTint="#9C27B0"
+            android:backgroundTint="@color/pure_color"
             android:text="SIGN IN"
             android:textColor="#000000"
             android:textSize="18dp"

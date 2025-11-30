@@ -52,12 +52,18 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-storage")
+
+    implementation("com.google.firebase:firebase-auth:21.0.1")
+    implementation("com.google.firebase:firebase-database:20.0.5")
     implementation(libs.firebase.firestore)
 
     // CameraX Dependencies
-    implementation("androidx.camera:camera-camera2:1.4.0-alpha02")
-    implementation("androidx.camera:camera-lifecycle:1.4.0-alpha02")
-    implementation("androidx.camera:camera-view:1.4.0-alpha02")
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+
+    // Remove BG For camera
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Image Loading Libraries (Glide or Picasso)
     implementation("com.github.bumptech.glide:glide:4.16.0") // Glide for image loading + caching
@@ -73,6 +79,6 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     implementation ("com.github.bumptech.glide:glide:4.12.0")
     annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0'")
-    implementation ("com.tbuonomo:dotsindicator:4.2")
+    implementation ("com.tbuonomo:dotsindicator:5.0")
 
 }
