@@ -104,6 +104,12 @@ public class C_SignInActivity extends AppCompatActivity {
                             Map<String, Object> userMap = new HashMap<>();
                             userMap.put("email", email);
                             userMap.put("username", username);
+                            // Added fields for followers, following, and posts, initialized to 0
+                            userMap.put("Fans", 0);
+                            userMap.put("Models", 0);
+                            userMap.put("FansList", new HashMap<>());
+                            userMap.put("ModelsList", new HashMap<>());
+                            userMap.put("posts", 0);
 
                             // Save the info under your unique ID
                             databaseRef.child(uid).setValue(userMap)

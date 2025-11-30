@@ -244,17 +244,54 @@ public class I_ProfileUploadContent_GridViewer extends AppCompatActivity {
 
         private void deletePost(int position, String postId) {
             DatabaseReference ref = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);
+
+            // Remove from PostEvents
             ref.removeValue().addOnSuccessListener(aVoid -> {
                 Toast.makeText(context, "Post Deleted", Toast.LENGTH_SHORT).show();
+
+                // 1. Update the UI List
                 try {
                     posts.remove(position);
                     postIds.remove(position);
                     notifyItemRemoved(position);
                     notifyItemRangeChanged(position, posts.size());
                 } catch (IndexOutOfBoundsException e) {
+                    // Handle potential index errors
                 }
+
+                // 2. Update Firebase User Post Count (-1)
+                if (currentUserId != null && !currentUserId.isEmpty()) {
+                    DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(currentUserId);
+
+                    userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                // Get current count
+                                Integer currentCount = snapshot.child("posts").getValue(Integer.class);
+
+                                // Safety check for null
+                                if (currentCount == null) {
+                                    currentCount = 0;
+                                }
+
+                                // Decrement only if greater than 0
+                                if (currentCount > 0) {
+                                    userRef.child("posts").setValue(currentCount - 1);
+                                }
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            // Handle database error if necessary
+                        }
+                    });
+                }
+                context.finish();
             });
         }
+
 
         private void toggleInteraction(PostViewHolder holder, I_NewPost_Event post, String postId, String type) {
             DatabaseReference postRef = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);

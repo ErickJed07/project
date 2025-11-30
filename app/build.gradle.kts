@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.project"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -66,7 +66,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Image Loading Libraries (Glide or Picasso)
-    implementation("com.github.bumptech.glide:glide:4.16.0") // Glide for image loading + caching
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation(libs.car.ui.lib) // Glide for image loading + caching
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     implementation("com.squareup.picasso:picasso:2.8") // If you prefer Picasso (or use both)
 

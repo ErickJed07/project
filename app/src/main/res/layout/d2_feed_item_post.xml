@@ -31,7 +31,7 @@
         <ImageView
             android:id="@+id/profile_pic"
             android:layout_width="50dp"
-            android:layout_height="40dp"
+            android:layout_height="50dp"
             android:padding="4dp"
             android:scaleType="fitCenter"
             android:src="@drawable/profile"
@@ -50,7 +50,7 @@
             android:paddingStart="8dp"
             android:text="Name "
             android:textColor="@color/black"
-            android:textSize="20sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             app:layout_constraintBottom_toTopOf="@+id/postdate"
             app:layout_constraintStart_toEndOf="@+id/profile_pic"
@@ -85,98 +85,48 @@
         android:layout_marginStart="10dp"
         android:layout_marginTop="5dp"
         android:layout_marginEnd="10dp"
-        android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@id/constraintLayout14"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/constraintLayout8">
 
         <TextView
             android:id="@+id/caption_post"
-            android:layout_width="wrap_content"
+            android:layout_width="350dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="TextView"
-            android:textSize="16sp"
             android:textColor="@color/black"
+            android:textSize="16sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout14"
-        android:layout_width="0dp"
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/post_Pic"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@id/constraintLayout12"
-        app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/constraintLayout13">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/constraintLayout10"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_margin="10dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintDimensionRatio="1:1"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/post_Pic"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintDimensionRatio="1:1"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.0"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
-                android:id="@+id/photoIndicator"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:gravity="center"
-                android:text="1/5"
-                android:textColor="@android:color/black"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <!-- Circle Indicator (dots for image pager) -->
-
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout12"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="10dp"
         app:layout_constraintBottom_toTopOf="@+id/constraintLayout11"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/constraintLayout14">
+        app:layout_constraintTop_toBottomOf="@+id/constraintLayout13" />
 
-        <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator
-            android:id="@+id/dotsIndicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="10dp"
-            app:dotsColor="@color/black"
-            app:dotsSize="10dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    <TextView
+        android:id="@+id/photoIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:gravity="center"
+        android:text="1/5"
+        android:textColor="@color/teal_700"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="@+id/post_Pic"
+        app:layout_constraintTop_toTopOf="@+id/post_Pic" />
 
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -184,20 +134,18 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="8dp"
         android:layout_marginEnd="10dp"
-        android:layout_marginBottom="10dp"
+        android:paddingBottom="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.49"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/constraintLayout12">
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent">
 
         <ImageView
             android:id="@+id/heart_post"
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:layout_marginStart="5dp"
+            android:layout_marginStart="12dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
@@ -210,8 +158,7 @@
             android:id="@+id/heart_num"
             android:layout_width="wrap_content"
             android:layout_height="27dp"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="12dp"
+            android:layout_marginStart="8dp"
             android:gravity="center"
             android:text="Text"
             android:textColor="@color/black"
@@ -219,13 +166,14 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/fav_post"
             app:layout_constraintStart_toEndOf="@+id/heart_post"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.333" />
 
         <ImageView
             android:id="@+id/fav_post"
-            android:layout_width="35dp"
-            android:layout_height="35dp"
-            android:layout_marginStart="12dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="15dp"
             android:clickable="true"
             android:src="@drawable/fav"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -236,42 +184,62 @@
             android:id="@+id/fav_num"
             android:layout_width="wrap_content"
             android:layout_height="27dp"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="13dp"
+            android:layout_marginStart="8dp"
             android:gravity="center"
             android:text="Text"
             android:textColor="@color/black"
             android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/share_post"
             app:layout_constraintStart_toEndOf="@+id/fav_post"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
-            android:id="@+id/share_post"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginStart="12dp"
-            android:padding="2dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/share"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/fav_num"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.50" />
-
-        <TextView
-            android:id="@+id/share_num"
+        <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator
+            android:id="@+id/dotsIndicator"
             android:layout_width="wrap_content"
-            android:layout_height="27dp"
-            android:layout_marginStart="2dp"
-            android:gravity="center"
-            android:text="Text"
-            android:textColor="@color/black"
-            android:textSize="12sp"
+            android:layout_height="wrap_content"
+            app:dotsColor="@color/black"
+            app:dotsSize="10dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/share_post"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.50"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.50" >
+
+        </com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/sharebutton"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginEnd="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toEndOf="@+id/dotsIndicator"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/share_post"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="5dp"
+                android:padding="2dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/share"
+                app:layout_constraintEnd_toStartOf="@+id/share_num" />
+
+            <TextView
+                android:id="@+id/share_num"
+                android:layout_width="wrap_content"
+                android:layout_height="27dp"
+                android:gravity="center"
+                android:text="Share"
+                android:textColor="@color/black"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

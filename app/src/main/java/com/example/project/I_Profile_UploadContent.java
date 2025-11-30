@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.TextView; // Import TextView
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -33,11 +33,21 @@ public class I_Profile_UploadContent extends Fragment {
     private List<I_NewPost_Event> postList;
     private DatabaseReference databaseReference;
 
+    // Define TextViews for stats
+    private TextView postsNum, followersNum, followingsNum;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.i2_upload_content, container, false);
 
+        // Initialize TextViews
+        postsNum = rootView.findViewById(R.id.posts_num);
+        followersNum = rootView.findViewById(R.id.followers_num);
+        followingsNum = rootView.findViewById(R.id.followings_num);
+
+        // Fetch User Stats
+        fetchUserStats();
 
         recyclerView = rootView.findViewById(R.id.favcontentRecyclerView);
 
@@ -71,6 +81,41 @@ public class I_Profile_UploadContent extends Fragment {
         }
 
         return rootView;
+    }
+
+    private void fetchUserStats() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+
+        String userId = currentUser.getUid();
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId);
+
+        userRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // Get values as Objects first to handle both Integer and String types safely
+                    Object postsObj = snapshot.child("posts").getValue();
+                    Object followersObj = snapshot.child("followers").getValue();
+                    Object followingObj = snapshot.child("following").getValue();
+
+                    // Convert to String or default to "0"
+                    String postsCount = (postsObj != null) ? String.valueOf(postsObj) : "0";
+                    String followersCount = (followersObj != null) ? String.valueOf(followersObj) : "0";
+                    String followingCount = (followingObj != null) ? String.valueOf(followingObj) : "0";
+
+                    // Update UI
+                    if (postsNum != null) postsNum.setText(postsCount);
+                    if (followersNum != null) followersNum.setText(followersCount);
+                    if (followingsNum != null) followingsNum.setText(followingCount);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Handle potential errors if needed
+            }
+        });
     }
 
     private void fetchUserImages() {
