@@ -68,6 +68,8 @@ dependencies {
     // RecyclerView for displaying gallery images
     implementation(libs.recyclerview)
 
+    implementation("com.cloudinary:cloudinary-android:2.3.1")
+
     // Testing Libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
