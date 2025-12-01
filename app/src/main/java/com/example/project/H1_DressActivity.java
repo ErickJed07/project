@@ -8,6 +8,7 @@ import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,6 +25,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -31,13 +33,13 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
-import android.graphics.drawable.Drawable;
-import androidx.annotation.Nullable;
-
-
+import com.cloudinary.android.MediaManager;
+import com.cloudinary.android.callback.ErrorInfo;
+import com.cloudinary.android.callback.UploadCallback;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
@@ -53,9 +55,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -77,13 +77,19 @@ public class H1_DressActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.h1_dresser);
 
+        // Initialize Cloudinary if not already done (safe to call multiple times if handled correctly in app)
+        initCloudinary();
+
         outfitView = findViewById(R.id.outfitView);
         btnSave = findViewById(R.id.btnSave);
         btnBack = findViewById(R.id.btnBack);
         btnToggleCarousel = findViewById(R.id.btnToggleCarousel);
         btnRotate = findViewById(R.id.btnrotate);
 
-        uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        // Ensure user is logged in
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        }
 
         btnRotate.setVisibility(View.GONE);
 
@@ -114,7 +120,7 @@ public class H1_DressActivity extends AppCompatActivity {
             if (bitmap != null) {
                 String path = saveBitmapToFile(bitmap);
                 if (path != null) {
-                    saveToPermanentCategory(path);  // Save image in permanent category
+                    saveToPermanentCategory(path);  // Save image in permanent category (local logic kept)
                     showSavePopup(path);  // Show save popup for event scheduling
                 } else {
                     Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show();
@@ -123,6 +129,18 @@ public class H1_DressActivity extends AppCompatActivity {
                 Toast.makeText(this, "Nothing to save", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void initCloudinary() {
+        try {
+            Map<String, Object> config = new HashMap<>();
+            config.put("cloud_name", BuildConfig.CLOUDINARY_CLOUD_NAME);
+            config.put("api_key", BuildConfig.CLOUDINARY_API_KEY);
+            config.put("api_secret", BuildConfig.CLOUDINARY_API_SECRET);
+            MediaManager.init(this, config);
+        } catch (Exception e) {
+            // Already initialized
+        }
     }
 
     /**
@@ -188,9 +206,6 @@ public class H1_DressActivity extends AppCompatActivity {
     /**
      * Save photo in the "PermanentCategory" folder
      */
-    /**
-     * Save photo in the "PermanentCategory" folder
-     */
     private void saveToPermanentCategory(String photoPath) {
         if (uid == null) return;
 
@@ -213,20 +228,28 @@ public class H1_DressActivity extends AppCompatActivity {
                 }
 
                 // ---------------------------------------------------------
-                // UPDATE: Changed path to "Users" -> uid -> "closetData"
-                // to match G1_ClosetActivity structure
+                // UPDATE: Path excludes "closetData"
+                // NEW: Users -> uid -> categories
                 // ---------------------------------------------------------
                 DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
                         .child(uid)
-                        .child("closetData")
-                        .child("categories")
+                        .child("categories") // Moved directly under uid
                         .child("permanent_category_id")
                         .child("photos");
 
                 String pushId = dbRef.push().getKey();
                 if (pushId != null) {
-                    // SAVE ONLY THE PATH STRING (Required for H5 Adapter)
-                    dbRef.child(pushId).setValue(destFile.getAbsolutePath());
+                    // ---------------------------------------------------------
+                    // UPDATE: Save as Object to match other activities
+                    // Object structure: { url: "...", tagCloth: "...", tagColor: "..." }
+                    // ---------------------------------------------------------
+                    Map<String, Object> photoData = new HashMap<>();
+                    photoData.put("url", destFile.getAbsolutePath());
+                    // Add default tags for outfit composition
+                    photoData.put("tagCloth", "Outfit");
+                    photoData.put("tagColor", "Mixed");
+
+                    dbRef.child(pushId).setValue(photoData);
                 }
 
                 Toast.makeText(this, "Saved to Permanent Category", Toast.LENGTH_SHORT).show();
@@ -237,230 +260,7 @@ public class H1_DressActivity extends AppCompatActivity {
         }
     }
 
-
-
-    /**
-     * BottomSheet with categories + photos
-     */
-    private void showDresserBottomSheet() {
-        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
-        View sheetView = getLayoutInflater().inflate(R.layout.h2_dresser_bottomsheet, null);
-        bottomSheetDialog.setContentView(sheetView);
-
-        RecyclerView sheetCategories = sheetView.findViewById(R.id.recyclerCategories);
-        RecyclerView sheetPhotos = sheetView.findViewById(R.id.recyclerPhotos);
-
-        sheetCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        sheetPhotos.setLayoutManager(new GridLayoutManager(this, 3));
-
-        H5_Dress_PhotoAdapter sheetPhotoAdapter = new H5_Dress_PhotoAdapter(
-                this,
-                new ArrayList<>(),
-                photoPath -> {
-                    if (photoPath != null) {
-                        // FIX: Use Glide to load the image as a Bitmap first.
-                        // This handles both Local Files and Cloudinary URLs correctly.
-                        Glide.with(H1_DressActivity.this)
-                                .asBitmap()
-                                .load(photoPath)
-                                .into(new CustomTarget<Bitmap>() {
-                                    @Override
-                                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                                        // Add the loaded Bitmap to the OutfitView
-                                        // Ensure H2_Dresser_OutfitView has an addImage(Bitmap) method!
-                                        ImageView iv = outfitView.addImage(resource);
-                                        outfitView.setSelectedView(iv);
-                                        bottomSheetDialog.dismiss();
-                                    }
-
-                                    @Override
-                                    public void onLoadCleared(@Nullable Drawable placeholder) {
-                                        // No cleanup needed here
-                                    }
-                                });
-                    }
-                }
-        );
-        sheetPhotos.setAdapter(sheetPhotoAdapter);
-
-        H4_DressAdapter sheetCategoryAdapter = new H4_DressAdapter(
-                this,
-                new ArrayList<>(),
-                categoryName -> loadPhotosForCategory(categoryName, sheetPhotoAdapter)
-        );
-        sheetCategories.setAdapter(sheetCategoryAdapter);
-
-        loadCategoriesFromFirebase(sheetCategoryAdapter, sheetPhotoAdapter);
-
-        bottomSheetDialog.show();
-    }
-
-
-    private void loadCategoriesFromFirebase(final H4_DressAdapter categoryAdapter,
-                                            final H5_Dress_PhotoAdapter photoAdapter) {
-        if (uid == null) return;
-
-// Inside loadCategoriesFromFirebase...
-        DatabaseReference ref = FirebaseDatabase
-                .getInstance()
-                .getReference("Users") // Change "closetData" to "Users"
-                .child(uid)
-                .child("closetData")
-                .child("categories");
-
-
-        ref.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                List<String> categoryNames = new ArrayList<>();
-                List<String> categoryThumbs = new ArrayList<>();
-
-                for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
-                    String categoryId = categorySnapshot.getKey();
-                    String name = categorySnapshot.child("name").getValue(String.class);
-
-                    // 1. Handle "PermanentCategory" which might not have a name field
-                    if (name == null && "permanent_category_id".equals(categoryId)) {
-                        name = "PermanentCategory";
-                    }
-
-                    // 2. If we have a valid name, find the first photo for the thumbnail
-                    if (name != null) {
-                        categoryNames.add(name);
-
-                        String latestUrl = null;
-
-                        // Check if "photos" exists
-                        if (categorySnapshot.hasChild("photos")) {
-                            DataSnapshot photosSnapshot = categorySnapshot.child("photos");
-
-                            // Iterate through photos to find the last one (or first one)
-                            for (DataSnapshot photoChild : photosSnapshot.getChildren()) {
-                                Object val = photoChild.getValue();
-
-                                // Handle String (URL/Path)
-                                if (val instanceof String) {
-                                    String url = (String) val;
-                                    if (url != null && !url.isEmpty()) {
-                                        latestUrl = url;
-                                        // In G1 you 'break' to get the first.
-                                        // In H1 usually we want the latest, so we keep looping.
-                                        // If you want the first one like G1, uncomment the next line:
-                                        // break;
-                                    }
-                                }
-                                // Handle Legacy Map objects if any
-                                else if (val instanceof Map) {
-                                    Map map = (Map) val;
-                                    if (map.containsKey("url")) {
-                                        Object urlObj = map.get("url");
-                                        if (urlObj instanceof String) {
-                                            latestUrl = (String) urlObj;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        categoryThumbs.add(latestUrl);
-                    }
-                }
-
-                // 3. Update the UI Adapter
-                categoryAdapter.updateData(categoryNames, categoryThumbs);
-
-                // 4. Automatically load photos for the first category
-                if (!categoryNames.isEmpty()) {
-                    loadPhotosForCategory(categoryNames.get(0), photoAdapter);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.w("H1_DressActivity", "Failed to load categories", error.toException());
-            }
-        });
-    }
-
-
-
-
-    private void loadPhotosForCategory(String categoryName, H5_Dress_PhotoAdapter adapter) {
-        if (uid == null) return;
-
-        // 1. FIX: Use the correct path 'Users' to match loadCategoriesFromFirebase
-        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users")
-                .child(uid)
-                .child("closetData")
-                .child("categories");
-
-        com.google.firebase.database.Query query;
-
-        // 2. FIX: Handle "PermanentCategory" specifically
-        if ("PermanentCategory".equals(categoryName)) {
-            // Query by KEY so the result structure matches the loop below
-            query = ref.orderByKey().equalTo("permanent_category_id");
-        } else {
-            // Query by NAME for custom categories
-            query = ref.orderByChild("name").equalTo(categoryName);
-        }
-
-        query.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                List<String> photoUrls = new ArrayList<>();
-
-                if (snapshot.exists()) {
-                    // Iterate results (usually just 1 category found)
-                    for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
-
-                        // Access the 'photos' node
-                        DataSnapshot photosSnapshot = categorySnapshot.child("photos");
-
-                        for (DataSnapshot photoChild : photosSnapshot.getChildren()) {
-                            Object val = photoChild.getValue();
-
-                            // Handle String (URL/Path)
-                            if (val instanceof String) {
-                                String url = (String) val;
-                                if (url != null && !url.isEmpty()) {
-                                    photoUrls.add(url);
-                                }
-                            }
-                            // Handle Legacy Map objects
-                            else if (val instanceof Map) {
-                                Map map = (Map) val;
-                                if (map.containsKey("url")) {
-                                    Object urlObj = map.get("url");
-                                    if (urlObj instanceof String) {
-                                        photoUrls.add((String) urlObj);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 3. Update adapter
-                if (!photoUrls.isEmpty()) {
-                    Collections.reverse(photoUrls); // Show newest first
-                    adapter.setPhotos(photoUrls);
-                } else {
-                    adapter.setPhotos(new ArrayList<>());
-                    // Optional: Only show toast if it's not the initial load
-                    // Toast.makeText(H1_DressActivity.this, "No images in " + categoryName, Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("H1_DressActivity", "Failed to load photos", error.toException());
-            }
-        });
-    }
-
-
-
-    private void showSavePopup(String imagePath) {
+    private void showSavePopup(String localImagePath) {
         View popupView = getLayoutInflater().inflate(R.layout.h5_dresser_save_popup, null);
 
         EditText etTitle = popupView.findViewById(R.id.etTitle);
@@ -536,33 +336,279 @@ public class H1_DressActivity extends AppCompatActivity {
                 return;
             }
 
-            DatabaseReference userRef = FirebaseDatabase.getInstance()
-                    .getReference("CalendarEvents")
-                    .child(uid);
+            // Prevent double clicks / show loading
+            btnSave.setEnabled(false);
+            Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
 
-            String eventKey = userRef.push().getKey();
-            if (eventKey == null) {
-                eventKey = UUID.randomUUID().toString();
-            }
+            // Upload to Cloudinary first, then save the event
+            MediaManager.get().upload(localImagePath)
+                    .option("folder", "ClosetImages/" + uid + "/Events")
+                    .callback(new UploadCallback() {
+                        @Override
+                        public void onStart(String requestId) {}
 
-            E2_Calendar_Event event = new E2_Calendar_Event(
-                    eventKey,
-                    title,
-                    dateString,
-                    time == null ? "" : time,
-                    imagePath,
-                    reminder == null ? E3_Calendar_ReminderUtils.NONE : reminder
-            );
+                        @Override
+                        public void onProgress(String requestId, long bytes, long totalBytes) {}
 
-            userRef.child(eventKey).setValue(event);
+                        @Override
+                        public void onSuccess(String requestId, Map resultData) {
+                            String cloudUrl = (String) resultData.get("secure_url");
 
-            Toast.makeText(this, "Event saved!", Toast.LENGTH_SHORT).show();
+                            runOnUiThread(() -> {
+                                saveEventToFirebase(title, dateString, time, reminder, cloudUrl);
+                                dialog.dismiss();
+                            });
+                        }
 
-            Intent intent = new Intent(H1_DressActivity.this, E1_CalendarActivity.class);
-            startActivity(intent);
-            dialog.dismiss();
+                        @Override
+                        public void onError(String requestId, ErrorInfo error) {
+                            runOnUiThread(() -> {
+                                btnSave.setEnabled(true);
+                                Toast.makeText(H1_DressActivity.this, "Image upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+                            });
+                        }
+
+                        @Override
+                        public void onReschedule(String requestId, ErrorInfo error) {}
+                    })
+                    .dispatch();
         });
 
         dialog.show();
+    }
+
+    private void saveEventToFirebase(String title, String dateString, String time, String reminder, String imageUrl) {
+        DatabaseReference userRef = FirebaseDatabase.getInstance()
+                .getReference("CalendarEvents")
+                .child(uid);
+
+        String eventKey = userRef.push().getKey();
+        if (eventKey == null) {
+            eventKey = UUID.randomUUID().toString();
+        }
+
+        E2_Calendar_Event event = new E2_Calendar_Event(
+                eventKey,
+                title,
+                dateString,
+                time == null ? "" : time,
+                imageUrl, // Use Cloudinary URL here
+                reminder == null ? E3_Calendar_ReminderUtils.NONE : reminder
+        );
+
+        userRef.child(eventKey).setValue(event);
+
+        Toast.makeText(this, "Event saved!", Toast.LENGTH_SHORT).show();
+
+        Intent intent = new Intent(H1_DressActivity.this, E1_CalendarActivity.class);
+        startActivity(intent);
+        finish();
+    }
+
+    /**
+     * BottomSheet with categories + photos
+     */
+    private void showDresserBottomSheet() {
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
+        View sheetView = getLayoutInflater().inflate(R.layout.h2_dresser_bottomsheet, null);
+        bottomSheetDialog.setContentView(sheetView);
+
+        RecyclerView sheetCategories = sheetView.findViewById(R.id.recyclerCategories);
+        RecyclerView sheetPhotos = sheetView.findViewById(R.id.recyclerPhotos);
+
+        sheetCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        sheetPhotos.setLayoutManager(new GridLayoutManager(this, 3));
+
+        H5_Dress_PhotoAdapter sheetPhotoAdapter = new H5_Dress_PhotoAdapter(
+                this,
+                new ArrayList<>(),
+                photoPath -> {
+                    if (photoPath != null) {
+                        // FIX: Use Glide to load the image as a Bitmap first.
+                        Glide.with(H1_DressActivity.this)
+                                .asBitmap()
+                                .load(photoPath)
+                                .into(new CustomTarget<Bitmap>() {
+                                    @Override
+                                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                                        // Add the loaded Bitmap to the OutfitView
+                                        ImageView iv = outfitView.addImage(resource);
+                                        outfitView.setSelectedView(iv);
+                                        bottomSheetDialog.dismiss();
+                                    }
+
+                                    @Override
+                                    public void onLoadCleared(@Nullable Drawable placeholder) {
+                                        // No cleanup needed here
+                                    }
+                                });
+                    }
+                }
+        );
+        sheetPhotos.setAdapter(sheetPhotoAdapter);
+
+        H4_DressAdapter sheetCategoryAdapter = new H4_DressAdapter(
+                this,
+                new ArrayList<>(),
+                categoryName -> loadPhotosForCategory(categoryName, sheetPhotoAdapter)
+        );
+        sheetCategories.setAdapter(sheetCategoryAdapter);
+
+        loadCategoriesFromFirebase(sheetCategoryAdapter, sheetPhotoAdapter);
+
+        bottomSheetDialog.show();
+    }
+
+    private void loadCategoriesFromFirebase(final H4_DressAdapter categoryAdapter,
+                                            final H5_Dress_PhotoAdapter photoAdapter) {
+        if (uid == null) return;
+
+        // ---------------------------------------------------------
+        // UPDATE: Path excludes "closetData"
+        // NEW: Users -> uid -> categories
+        // ---------------------------------------------------------
+        DatabaseReference ref = FirebaseDatabase
+                .getInstance()
+                .getReference("Users")
+                .child(uid)
+                .child("categories"); // Moved directly under uid
+
+        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<String> categoryNames = new ArrayList<>();
+                List<String> categoryThumbs = new ArrayList<>();
+
+                for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
+                    String categoryId = categorySnapshot.getKey();
+                    String name = categorySnapshot.child("name").getValue(String.class);
+
+                    // 1. Handle "PermanentCategory" which might not have a name field
+                    if (name == null && "permanent_category_id".equals(categoryId)) {
+                        name = "PermanentCategory";
+                    }
+
+                    // 2. If we have a valid name, find the first photo for the thumbnail
+                    if (name != null) {
+                        categoryNames.add(name);
+
+                        String latestUrl = null;
+
+                        // Check if "photos" exists
+                        if (categorySnapshot.hasChild("photos")) {
+                            DataSnapshot photosSnapshot = categorySnapshot.child("photos");
+
+                            // Iterate through photos to find the last one (or first one)
+                            for (DataSnapshot photoChild : photosSnapshot.getChildren()) {
+                                // Handle new Object structure
+                                if (photoChild.hasChild("url")) {
+                                    latestUrl = photoChild.child("url").getValue(String.class);
+                                }
+                                // Handle legacy string or Map logic
+                                else {
+                                    Object val = photoChild.getValue();
+                                    if (val instanceof String) {
+                                        latestUrl = (String) val;
+                                    } else if (val instanceof Map) {
+                                        Map map = (Map) val;
+                                        if (map.containsKey("url")) {
+                                            latestUrl = (String) map.get("url");
+                                        }
+                                    }
+                                }
+                                if (latestUrl != null && !latestUrl.isEmpty()) break; // Found one
+                            }
+                        }
+                        categoryThumbs.add(latestUrl);
+                    }
+                }
+
+                // 3. Update the UI Adapter
+                categoryAdapter.updateData(categoryNames, categoryThumbs);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(H1_DressActivity.this, "Failed to load categories", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // Placeholder for loading photos specific to a category
+    private void loadPhotosForCategory(String categoryName, H5_Dress_PhotoAdapter adapter) {
+        if (uid == null) return;
+
+        // ---------------------------------------------------------
+        // UPDATE: Path excludes "closetData"
+        // NEW: Users -> uid -> categories
+        // ---------------------------------------------------------
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid)
+                .child("categories"); // Moved directly under uid
+
+        ref.orderByChild("name").equalTo(categoryName).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<String> photoPaths = new ArrayList<>();
+
+                for (DataSnapshot catSnapshot : snapshot.getChildren()) {
+                    DataSnapshot photosSnapshot = catSnapshot.child("photos");
+                    for (DataSnapshot photoSnap : photosSnapshot.getChildren()) {
+
+                        // Check Object structure first
+                        if (photoSnap.hasChild("url")) {
+                            String url = photoSnap.child("url").getValue(String.class);
+                            if (url != null) photoPaths.add(url);
+                        }
+                        // Check legacy structure
+                        else {
+                            Object val = photoSnap.getValue();
+                            if (val instanceof String) {
+                                photoPaths.add((String) val);
+                            } else if (val instanceof Map) {
+                                Map map = (Map) val;
+                                if (map.containsKey("url")) {
+                                    photoPaths.add((String) map.get("url"));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Also handle Permanent Category special case if name is "PermanentCategory"
+                if (photoPaths.isEmpty() && "PermanentCategory".equals(categoryName)) {
+                    ref.child("permanent_category_id").child("photos").addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snap) {
+                            List<String> permPhotos = new ArrayList<>();
+                            for (DataSnapshot p : snap.getChildren()) {
+                                if (p.hasChild("url")) {
+                                    String url = p.child("url").getValue(String.class);
+                                    if (url != null) permPhotos.add(url);
+                                } else {
+                                    Object val = p.getValue();
+                                    if (val instanceof String) permPhotos.add((String) val);
+                                    else if (val instanceof Map && ((Map) val).containsKey("url")) {
+                                        permPhotos.add((String) ((Map) val).get("url"));
+                                    }
+                                }
+                            }
+                            adapter.updatePhotos(permPhotos);
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                        }
+                    });
+                } else {
+                    adapter.updatePhotos(photoPaths);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Handle error
+            }
+        });
     }
 }

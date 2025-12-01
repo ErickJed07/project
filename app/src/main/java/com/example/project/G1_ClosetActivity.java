@@ -13,6 +13,7 @@ import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
@@ -71,8 +72,10 @@ public class G1_ClosetActivity extends AppCompatActivity {
 
         String uid = mAuth.getCurrentUser().getUid();
 
-        // Read from Users -> uid -> closetData -> categories
-        dbRef.child(uid).child("closetData").child("categories").addValueEventListener(new ValueEventListener() {
+        // ---------------------------------------------------------
+        // UPDATE: Removed "closetData" -> Now directly under "categories"
+        // ---------------------------------------------------------
+        dbRef.child(uid).child("categories").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 // Clear existing views to prevent duplication during updates
@@ -82,38 +85,69 @@ public class G1_ClosetActivity extends AppCompatActivity {
                 categoryViews.clear();
                 existingCategoryIds.clear();
 
-                addPermanentCategoryToUI();
+                // Removed separate call to addPermanentCategoryToUI() here to avoid duplication
+                // We will handle it inside the loop or check for its existence after.
 
-                // ... inside loadCategoriesFromFirebase method ...
+                boolean permanentCategoryFound = false;
 
                 for (DataSnapshot child : snapshot.getChildren()) {
                     String categoryId = child.getKey();
                     String name = child.child("name").getValue(String.class);
 
+                    // Fallback if name is missing, use ID
+                    if (name == null) {
+                        if ("permanent_category_id".equals(categoryId)) {
+                            name = "PermanentCategory";
+                        } else {
+                            name = categoryId;
+                        }
+                    }
+
+                    if ("permanent_category_id".equals(categoryId)) {
+                        permanentCategoryFound = true;
+                    }
+
                     String firstImageUrl = "";
 
-                    // CHECK: Make sure "photos" exists and has children
+                    // ---------------------------------------------------------
+                    // UPDATE: Parsing Logic for new Object Structure
+                    // Structure: photos -> autoID -> { url: "...", tagCloth: "...", tagColor: "..." }
+                    // ---------------------------------------------------------
                     if (child.hasChild("photos")) {
-                        // We iterate through the generated keys (e.g. -OfOds83...)
                         for (DataSnapshot photoSnap : child.child("photos").getChildren()) {
-                            // GET VALUE: The value at that key is the URL string
-                            Object value = photoSnap.getValue();
 
-                            if (value instanceof String) {
-                                String url = (String) value;
+                            // 1. Check for the new Object structure with "url" key
+                            if (photoSnap.hasChild("url")) {
+                                String url = photoSnap.child("url").getValue(String.class);
                                 if (url != null && !url.isEmpty()) {
                                     firstImageUrl = url;
                                     break; // Stop after finding the first valid URL
                                 }
                             }
+                            // 2. Legacy fallback: Check if the value itself is just a String
+                            else {
+                                Object value = photoSnap.getValue();
+                                if (value instanceof String) {
+                                    String url = (String) value;
+                                    if (url != null && !url.isEmpty()) {
+                                        firstImageUrl = url;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    if (categoryId != null && name != null && !categoryId.equals("permanent_category_id")) {
+                    if (categoryId != null && name != null) {
                         addCategoryToUI(categoryId, name, firstImageUrl);
                     }
                 }
 
+                // If the loop finished and we didn't find the permanent category (e.g. it has no data yet),
+                // add it manually with an empty image.
+                if (!permanentCategoryFound) {
+                    addCategoryToUI("permanent_category_id", "PermanentCategory", "");
+                }
 
                 // Ensure "Add Button" is always at the end
                 gridLayout.removeView(addButtonView);
@@ -147,19 +181,39 @@ public class G1_ClosetActivity extends AppCompatActivity {
     private void saveCategoryToFirebase(String categoryName, String imageUrl) {
         String uid = mAuth.getCurrentUser().getUid();
 
-        // Save to Users -> uid -> closetData -> categories
-        DatabaseReference userCategoryRef = dbRef.child(uid).child("closetData").child("categories").push();
-        String categoryId = userCategoryRef.getKey();
+        // Sanitize the category name to be safe for Firebase paths (no . # $ [ ])
+        String sanitizedName = categoryName.replaceAll("[.#$\\[\\]]", "");
+
+        if (sanitizedName.isEmpty()) {
+            Toast.makeText(this, "Invalid Category Name", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // ---------------------------------------------------------
+        // UPDATE: ID is now "categoryName" + "_id"
+        // ---------------------------------------------------------
+        String safeId = sanitizedName + "_id";
+
+        DatabaseReference userCategoryRef = dbRef.child(uid).child("categories").child(safeId);
 
         Map<String, Object> catData = new HashMap<>();
-        catData.put("id", categoryId);
+        catData.put("id", safeId);
         catData.put("name", categoryName);
-        // Note: We don't save "imageUrl" directly on the category object anymore,
-        // images live in the "photos" sub-node, but we pass it here for UI consistency.
 
-        userCategoryRef.setValue(catData);
+        // Check if exists first to avoid silent overwrites (optional but recommended)
+        userCategoryRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Toast.makeText(G1_ClosetActivity.this, "Category already exists", Toast.LENGTH_SHORT).show();
+                } else {
+                    userCategoryRef.setValue(catData);
+                }
+            }
 
-        // UI update will happen automatically via the ValueEventListener in loadCategoriesFromFirebase
+            @Override
+            public void onCancelled(DatabaseError error) { }
+        });
     }
 
     private void addCategoryToUI(String categoryId, String categoryName, String imageUrl) {
@@ -226,6 +280,12 @@ public class G1_ClosetActivity extends AppCompatActivity {
         });
 
         card.setOnLongClickListener(v -> {
+            // Don't allow deleting the permanent category
+            if ("permanent_category_id".equals(categoryId)) {
+                Toast.makeText(this, "Cannot delete Permanent Category", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+
             new AlertDialog.Builder(this)
                     .setTitle("Delete Category")
                     .setMessage("Are you sure you want to delete \"" + categoryName + "\"?")
@@ -235,9 +295,10 @@ public class G1_ClosetActivity extends AppCompatActivity {
                         existingCategoryIds.remove(categoryId);
                         categoryViews.remove(categoryId);
 
-                        // Remove from Firebase
+                        // ---------------------------------------------------------
+                        // UPDATE: Removed "closetData" from delete path
+                        // ---------------------------------------------------------
                         dbRef.child(mAuth.getCurrentUser().getUid())
-                                .child("closetData")
                                 .child("categories")
                                 .child(categoryId)
                                 .removeValue();
@@ -257,8 +318,10 @@ public class G1_ClosetActivity extends AppCompatActivity {
         String permanentCategoryName = "PermanentCategory";
         String permanentCategoryId = "permanent_category_id";
 
+        // ---------------------------------------------------------
+        // UPDATE: Removed "closetData"
+        // ---------------------------------------------------------
         DatabaseReference categoryRef = dbRef.child(mAuth.getCurrentUser().getUid())
-                .child("closetData")
                 .child("categories")
                 .child(permanentCategoryId);
 
@@ -271,7 +334,8 @@ public class G1_ClosetActivity extends AppCompatActivity {
                     catData.put("name", permanentCategoryName);
                     categoryRef.setValue(catData);
 
-                    addCategoryToUI(permanentCategoryId, permanentCategoryName, "");
+                    // Only add to UI here if the listener hasn't fired yet (rare race condition check)
+                    // But generally, the addValueEventListener will handle the UI update.
                 }
             }
 
@@ -280,14 +344,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         });
     }
 
-    private void addPermanentCategoryToUI() {
-        String permanentCategoryName = "PermanentCategory";
-        String permanentCategoryId = "permanent_category_id";
-
-        if (!existingCategoryIds.contains(permanentCategoryId)) {
-            addCategoryToUI(permanentCategoryId, permanentCategoryName, "");
-        }
-    }
+    // Removed addPermanentCategoryToUI as it's now integrated into the main loop
 
     public void onButtonClicked(View view) {
         Intent intent = null;

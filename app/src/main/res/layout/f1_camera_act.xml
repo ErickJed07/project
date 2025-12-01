@@ -7,17 +7,35 @@
     android:layout_height="match_parent"
     android:background="#E0E0E0"
     android:fitsSystemWindows="true"
-    tools:context="F1_CameraActivity">
+    tools:context=".F1_CameraActivity">
 
     <!-- Title Bar -->
+
+    <!-- MAIN CAMERA CONTENT AREA -->
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/title_bar"
+        android:id="@+id/main_content"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="@color/white"
-        app:layout_constraintTop_toTopOf="parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- 1. CAMERA PREVIEW (Fills the space) -->
+
+        <!-- 2. PROCESSED IMAGE PREVIEW (Hidden initially) -->
+        <!-- Also fills the space, sits on top of preview when visible -->
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/previewView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.0" />
 
         <ImageView
             android:id="@+id/backButton"
@@ -25,119 +43,102 @@
             android:layout_height="24dp"
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
-            android:src="@drawable/arrowleft"
+            android:adjustViewBounds="false"
+            android:background="@drawable/arrow"
+            android:backgroundTint="@color/design_default_color_background"
             android:contentDescription="Back"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
-        <TextView
-            android:id="@+id/textView48"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:text="Camera Edit"
-            android:textSize="30sp"
-            android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.42"
-            app:layout_constraintStart_toEndOf="@id/backButton"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <View
-            android:id="@+id/separator"
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:background="@color/black"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!-- MAIN CAMERA CONTENT -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/main_content"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/title_bar"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <!-- CAMERA PREVIEW -->
-        <androidx.camera.view.PreviewView
-            android:id="@+id/previewView"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@+id/imagePreview"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintVertical_bias="0.0" />
 
-        <!-- PROCESSED IMAGE PREVIEW -->
         <ImageView
             android:id="@+id/imagePreview"
             android:layout_width="0dp"
-            android:layout_height="600dp"
-            android:scaleType="centerCrop"
+            android:layout_height="0dp"
             android:background="@drawable/image_border"
-            app:layout_constraintTop_toBottomOf="@+id/previewView"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/statusTextView"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
-
-
-        <!-- SAVE BUTTON -->
-        <Button
-            android:id="@+id/btnSave"
+        <!-- STATUS TEXT -->
+        <TextView
+            android:id="@+id/statusTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:layout_marginEnd="32dp"
-            android:layout_marginTop="16dp"
-            android:text="Save to Category"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/orange_complement"
-            android:textSize="18sp"
-            android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/btnTakePhoto"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:hint="Ready"
+            android:shadowColor="@color/design_default_color_primary"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toTopOf="@id/tagsScrollView"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
+        <!-- TAGS CHIP GROUP -->
+        <HorizontalScrollView
+            android:id="@+id/tagsScrollView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:scrollbars="none"
+            app:layout_constraintBottom_toTopOf="@id/btnTakePhoto"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
 
-        <!-- TAKE PHOTO BUTTON (NEW) -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/tagsChipGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:selectionRequired="false"
+                app:singleLine="true"></com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <!-- TAKE PHOTO BUTTON -->
         <Button
             android:id="@+id/btnTakePhoto"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="32dp"
             android:layout_marginEnd="32dp"
-            android:layout_marginBottom="95dp"
+            android:layout_marginBottom="32dp"
+            android:backgroundTint="@color/pure_color"
             android:text="Take Photo"
             android:textColor="@color/white"
-            android:backgroundTint="@color/pure_color"
             android:textSize="18sp"
-            app:layout_constraintBottom_toTopOf="@+id/btnCapture"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- CAPTURE BUTTON (FLOATING) -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/btnCapture"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="30dp"
-            android:contentDescription="Capture"
-            app:backgroundTint="#00000000"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- FLASH TOGGLE -->
-       />
+        <!-- SAVE BUTTON (Replaces Take Photo when image captured) -->
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginBottom="32dp"
+            android:backgroundTint="@color/orange_complement"
+            android:text="Save Custom"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <!-- LOADING SPINNER -->
         <ProgressBar
@@ -146,10 +147,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

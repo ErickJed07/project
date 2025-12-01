@@ -69,13 +69,14 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             return;
         }
 
-        // 2. Set Firebase Reference: Users -> uid -> closetData -> categories -> [id]
-        // If ID is missing (legacy), we might need a fallback, but G1 should pass it.
+        // ---------------------------------------------------------
+        // UPDATE: Path excludes "closetData"
+        // NEW: Users -> uid -> categories -> [id]
+        // ---------------------------------------------------------
         if (categoryId != null) {
             categoryRef = FirebaseDatabase.getInstance().getReference("Users")
                     .child(uid)
-                    .child("closetData")
-                    .child("categories")
+                    .child("categories") // Removed "closetData"
                     .child(categoryId);
         } else {
             Toast.makeText(this, "Error: Category ID missing", Toast.LENGTH_SHORT).show();
@@ -88,15 +89,11 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
         galleryRecyclerView = findViewById(R.id.galleryRecyclerView);
 
-// --- ADD THIS ---
         androidx.recyclerview.widget.GridLayoutManager layoutManager =
                 new androidx.recyclerview.widget.GridLayoutManager(this, 3); // 3 columns
         galleryRecyclerView.setLayoutManager(layoutManager);
 
-
-
         // 3. Initialize Adapter
-        // NOTE: You must update G3_Closet_CategoryAdapter to accept List<String> instead of List<File>
         adapter = new G3_Closet_CategoryAdapter(
                 this,
                 imageUrlList, // Passing Strings now
@@ -130,10 +127,30 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                 for (DataSnapshot photoSnap : snapshot.getChildren()) {
                     // The key (e.g. -OfOd...)
                     String key = photoSnap.getKey();
-                    // The value (e.g. https://cloudinary...)
-                    String url = photoSnap.getValue(String.class);
+                    String url = null;
 
-                    if (url != null) {
+                    // ---------------------------------------------------------
+                    // UPDATE: Handle both Object Structure and Legacy Strings
+                    // ---------------------------------------------------------
+
+                    // 1. Check new Object structure (has "url" child)
+                    if (photoSnap.hasChild("url")) {
+                        url = photoSnap.child("url").getValue(String.class);
+                    }
+                    // 2. Fallback/Legacy: Check if the value itself is a String
+                    else {
+                        Object value = photoSnap.getValue();
+                        if (value instanceof String) {
+                            url = (String) value;
+                        } else if (value instanceof Map) {
+                            Map map = (Map) value;
+                            if (map.containsKey("url")) {
+                                url = (String) map.get("url");
+                            }
+                        }
+                    }
+
+                    if (url != null && !url.isEmpty()) {
                         imageUrlList.add(url);
                         urlToKeyMap.put(url, key);
                     }
@@ -217,14 +234,10 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             String key = urlToKeyMap.get(url);
             if (key != null) {
                 // Remove from Firebase: categories/[id]/photos/[key]
+                // Note: "categoryRef" is already set up in onCreate without "closetData"
                 categoryRef.child("photos").child(key).removeValue();
             }
         }
-
-        // Cloudinary Note:
-        // Ideally, you should also delete the image from Cloudinary using its API
-        // to save storage space, but that usually requires backend logic or a secure server.
-        // For now, we just remove the reference from the Database.
 
         selectedUrls.clear();
         exitMultiSelectMode();
@@ -244,7 +257,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
         if (id == R.id.home_menu) intent = new Intent(this, D1_FeedActivity.class);
         else if (id == R.id.calendar_menu) intent = new Intent(this, E1_CalendarActivity.class);
-        else if (id == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class); // Fixed ID name
+        else if (id == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
         else if (id == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
         else if (id == R.id.profile_menu) intent = new Intent(this, I1_ProfileActivity.class);
 

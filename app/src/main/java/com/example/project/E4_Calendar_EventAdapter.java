@@ -2,9 +2,6 @@ package com.example.project;
 
 import android.app.Dialog;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,11 +13,10 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide; // IMPORT GLIDE
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.FirebaseDatabase;
 
-import java.io.File;
 import java.util.List;
 
 public class E4_Calendar_EventAdapter extends RecyclerView.Adapter<E4_Calendar_EventAdapter.EventViewHolder> {
@@ -50,6 +46,8 @@ public class E4_Calendar_EventAdapter extends RecyclerView.Adapter<E4_Calendar_E
         E2_Calendar_Event event = calendarEventList.get(position);
 
         holder.eventTitle.setText(event.getTitle());
+
+        // Update: Pass the Cloudinary URL
         setImage(holder.eventImage, event.getImagePath(), R.drawable.image1);
 
         View.OnClickListener showDialogListener = v -> showEventDialog(v.getContext(), holder, event);
@@ -62,21 +60,23 @@ public class E4_Calendar_EventAdapter extends RecyclerView.Adapter<E4_Calendar_E
         return calendarEventList.size();
     }
 
+    // -----------------------------------------------------------------------
+    // UPDATE: Switched from BitmapFactory (Local File) to Glide (Remote URL)
+    // -----------------------------------------------------------------------
     private void setImage(ImageView imageView, String path, int placeholderRes) {
         if (path != null && !path.isEmpty()) {
-            if (path.startsWith("android.resource://")) {
-                imageView.setImageURI(Uri.parse(path));
-                return;
-            } else {
-                File imgFile = new File(path);
-                if (imgFile.exists()) {
-                    Bitmap bitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
-                    imageView.setImageBitmap(bitmap);
-                    return;
-                }
+            try {
+                Glide.with(imageView.getContext())
+                        .load(path) // This now handles http/https URLs from Cloudinary
+                        .placeholder(placeholderRes)
+                        .error(placeholderRes) // Fallback if URL is broken
+                        .into(imageView);
+            } catch (Exception e) {
+                imageView.setImageResource(placeholderRes);
             }
+        } else {
+            imageView.setImageResource(placeholderRes);
         }
-        imageView.setImageResource(placeholderRes);
     }
 
     private void showEventDialog(Context context, EventViewHolder holder, E2_Calendar_Event event) {
@@ -104,22 +104,32 @@ public class E4_Calendar_EventAdapter extends RecyclerView.Adapter<E4_Calendar_E
         popupTitle.setText(event.getTitle());
         popupTime.setText("Time: " + event.getTime());
         popupReminder.setText(event.getReminder());
+
+        // Update: Uses Glide via helper method
         setImage(popupImage, event.getImagePath(), R.drawable.image3);
 
         closeButton.setOnClickListener(v -> dialog.dismiss());
 
         deleteButton.setOnClickListener(v -> {
-            E2_Calendar_Event eventToDelete = event; // get directly from onBindViewHolder
+            E2_Calendar_Event eventToDelete = event;
+            if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
             String eventId = eventToDelete.getId();
 
+            // Delete from Firebase Realtime Database
             FirebaseDatabase.getInstance()
                     .getReference("CalendarEvents")
                     .child(userId)
                     .child(eventId)
                     .removeValue()
                     .addOnSuccessListener(unused -> {
-                        // Find index in the adapter list safely
+                        // Notify the Activity listener (optional cleanup)
+                        if (deleteListener != null) {
+                            deleteListener.onEventDeleted(eventToDelete, holder.getAdapterPosition());
+                        }
+
+                        // Remove locally from list to update UI immediately
                         int index = -1;
                         for (int i = 0; i < calendarEventList.size(); i++) {
                             if (calendarEventList.get(i).getId().equals(eventId)) {
@@ -145,8 +155,6 @@ public class E4_Calendar_EventAdapter extends RecyclerView.Adapter<E4_Calendar_E
                                     Toast.LENGTH_LONG).show()
                     );
         });
-
-
 
         dialog.show();
     }
