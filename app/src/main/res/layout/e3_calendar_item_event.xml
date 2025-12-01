@@ -25,7 +25,7 @@
             android:background="@drawable/calendar_inside_roundcorner"
             android:clipToOutline="true"
             android:contentDescription="Event image"
-            android:scaleType="fitXY"
+            android:scaleType="centerCrop"
             app:srcCompat="@drawable/image3" />
 
     </LinearLayout>

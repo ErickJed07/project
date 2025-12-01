@@ -31,6 +31,12 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
+import android.graphics.drawable.Drawable;
+import androidx.annotation.Nullable;
+
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.textfield.TextInputLayout;
@@ -49,6 +55,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -180,8 +188,11 @@ public class H1_DressActivity extends AppCompatActivity {
     /**
      * Save photo in the "PermanentCategory" folder
      */
+    /**
+     * Save photo in the "PermanentCategory" folder
+     */
     private void saveToPermanentCategory(String photoPath) {
-        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (uid == null) return;
 
         // Define the "Permanent" category directory
         File permanentCategoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/PermanentCategory");
@@ -200,7 +211,24 @@ public class H1_DressActivity extends AppCompatActivity {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
-                // Show confirmation that the photo was saved to the permanent category
+
+                // ---------------------------------------------------------
+                // UPDATE: Changed path to "Users" -> uid -> "closetData"
+                // to match G1_ClosetActivity structure
+                // ---------------------------------------------------------
+                DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
+                        .child(uid)
+                        .child("closetData")
+                        .child("categories")
+                        .child("permanent_category_id")
+                        .child("photos");
+
+                String pushId = dbRef.push().getKey();
+                if (pushId != null) {
+                    // SAVE ONLY THE PATH STRING (Required for H5 Adapter)
+                    dbRef.child(pushId).setValue(destFile.getAbsolutePath());
+                }
+
                 Toast.makeText(this, "Saved to Permanent Category", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -208,6 +236,8 @@ public class H1_DressActivity extends AppCompatActivity {
             }
         }
     }
+
+
 
     /**
      * BottomSheet with categories + photos
@@ -228,13 +258,26 @@ public class H1_DressActivity extends AppCompatActivity {
                 new ArrayList<>(),
                 photoPath -> {
                     if (photoPath != null) {
-                        Uri uri = Uri.parse(photoPath);
-                        File f = new File(photoPath);
-                        if (f.exists()) uri = Uri.fromFile(f);
+                        // FIX: Use Glide to load the image as a Bitmap first.
+                        // This handles both Local Files and Cloudinary URLs correctly.
+                        Glide.with(H1_DressActivity.this)
+                                .asBitmap()
+                                .load(photoPath)
+                                .into(new CustomTarget<Bitmap>() {
+                                    @Override
+                                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                                        // Add the loaded Bitmap to the OutfitView
+                                        // Ensure H2_Dresser_OutfitView has an addImage(Bitmap) method!
+                                        ImageView iv = outfitView.addImage(resource);
+                                        outfitView.setSelectedView(iv);
+                                        bottomSheetDialog.dismiss();
+                                    }
 
-                        ImageView iv = outfitView.addImage(uri);
-                        outfitView.setSelectedView(iv);
-                        bottomSheetDialog.dismiss();
+                                    @Override
+                                    public void onLoadCleared(@Nullable Drawable placeholder) {
+                                        // No cleanup needed here
+                                    }
+                                });
                     }
                 }
         );
@@ -252,15 +295,19 @@ public class H1_DressActivity extends AppCompatActivity {
         bottomSheetDialog.show();
     }
 
+
     private void loadCategoriesFromFirebase(final H4_DressAdapter categoryAdapter,
                                             final H5_Dress_PhotoAdapter photoAdapter) {
         if (uid == null) return;
 
+// Inside loadCategoriesFromFirebase...
         DatabaseReference ref = FirebaseDatabase
                 .getInstance()
-                .getReference("ClosetData")
+                .getReference("Users") // Change "closetData" to "Users"
                 .child(uid)
+                .child("closetData")
                 .child("categories");
+
 
         ref.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -268,27 +315,60 @@ public class H1_DressActivity extends AppCompatActivity {
                 List<String> categoryNames = new ArrayList<>();
                 List<String> categoryThumbs = new ArrayList<>();
 
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    String name = child.child("name").getValue(String.class);
+                for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
+                    String categoryId = categorySnapshot.getKey();
+                    String name = categorySnapshot.child("name").getValue(String.class);
+
+                    // 1. Handle "PermanentCategory" which might not have a name field
+                    if (name == null && "permanent_category_id".equals(categoryId)) {
+                        name = "PermanentCategory";
+                    }
+
+                    // 2. If we have a valid name, find the first photo for the thumbnail
                     if (name != null) {
                         categoryNames.add(name);
 
-                        File categoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/" + name);
-                        File[] files = categoryDir.listFiles((dir, fileName) ->
-                                fileName.toLowerCase().endsWith(".jpg") || fileName.toLowerCase().endsWith(".png")
-                        );
+                        String latestUrl = null;
 
-                        String latestPath = null;
-                        if (files != null && files.length > 0) {
-                            Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
-                            latestPath = files[0].getAbsolutePath();
+                        // Check if "photos" exists
+                        if (categorySnapshot.hasChild("photos")) {
+                            DataSnapshot photosSnapshot = categorySnapshot.child("photos");
+
+                            // Iterate through photos to find the last one (or first one)
+                            for (DataSnapshot photoChild : photosSnapshot.getChildren()) {
+                                Object val = photoChild.getValue();
+
+                                // Handle String (URL/Path)
+                                if (val instanceof String) {
+                                    String url = (String) val;
+                                    if (url != null && !url.isEmpty()) {
+                                        latestUrl = url;
+                                        // In G1 you 'break' to get the first.
+                                        // In H1 usually we want the latest, so we keep looping.
+                                        // If you want the first one like G1, uncomment the next line:
+                                        // break;
+                                    }
+                                }
+                                // Handle Legacy Map objects if any
+                                else if (val instanceof Map) {
+                                    Map map = (Map) val;
+                                    if (map.containsKey("url")) {
+                                        Object urlObj = map.get("url");
+                                        if (urlObj instanceof String) {
+                                            latestUrl = (String) urlObj;
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        categoryThumbs.add(latestPath);
+                        categoryThumbs.add(latestUrl);
                     }
                 }
 
+                // 3. Update the UI Adapter
                 categoryAdapter.updateData(categoryNames, categoryThumbs);
 
+                // 4. Automatically load photos for the first category
                 if (!categoryNames.isEmpty()) {
                     loadPhotosForCategory(categoryNames.get(0), photoAdapter);
                 }
@@ -301,24 +381,84 @@ public class H1_DressActivity extends AppCompatActivity {
         });
     }
 
+
+
+
     private void loadPhotosForCategory(String categoryName, H5_Dress_PhotoAdapter adapter) {
         if (uid == null) return;
 
-        File categoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-        File[] files = categoryDir.listFiles((dir, name) ->
-                name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".png")
-        );
+        // 1. FIX: Use the correct path 'Users' to match loadCategoriesFromFirebase
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid)
+                .child("closetData")
+                .child("categories");
 
-        List<String> paths = new ArrayList<>();
-        if (files != null && files.length > 0) {
-            Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
-            for (File f : files) paths.add(f.getAbsolutePath());
-            adapter.setPhotos(paths);
+        com.google.firebase.database.Query query;
+
+        // 2. FIX: Handle "PermanentCategory" specifically
+        if ("PermanentCategory".equals(categoryName)) {
+            // Query by KEY so the result structure matches the loop below
+            query = ref.orderByKey().equalTo("permanent_category_id");
         } else {
-            adapter.setPhotos(new ArrayList<>());
-            Toast.makeText(H1_DressActivity.this, "No images in " + categoryName, Toast.LENGTH_SHORT).show();
+            // Query by NAME for custom categories
+            query = ref.orderByChild("name").equalTo(categoryName);
         }
+
+        query.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<String> photoUrls = new ArrayList<>();
+
+                if (snapshot.exists()) {
+                    // Iterate results (usually just 1 category found)
+                    for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
+
+                        // Access the 'photos' node
+                        DataSnapshot photosSnapshot = categorySnapshot.child("photos");
+
+                        for (DataSnapshot photoChild : photosSnapshot.getChildren()) {
+                            Object val = photoChild.getValue();
+
+                            // Handle String (URL/Path)
+                            if (val instanceof String) {
+                                String url = (String) val;
+                                if (url != null && !url.isEmpty()) {
+                                    photoUrls.add(url);
+                                }
+                            }
+                            // Handle Legacy Map objects
+                            else if (val instanceof Map) {
+                                Map map = (Map) val;
+                                if (map.containsKey("url")) {
+                                    Object urlObj = map.get("url");
+                                    if (urlObj instanceof String) {
+                                        photoUrls.add((String) urlObj);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Update adapter
+                if (!photoUrls.isEmpty()) {
+                    Collections.reverse(photoUrls); // Show newest first
+                    adapter.setPhotos(photoUrls);
+                } else {
+                    adapter.setPhotos(new ArrayList<>());
+                    // Optional: Only show toast if it's not the initial load
+                    // Toast.makeText(H1_DressActivity.this, "No images in " + categoryName, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("H1_DressActivity", "Failed to load photos", error.toException());
+            }
+        });
     }
+
+
 
     private void showSavePopup(String imagePath) {
         View popupView = getLayoutInflater().inflate(R.layout.h5_dresser_save_popup, null);

@@ -9,14 +9,15 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Photo adapter manages a list of local photo file paths (List<String>).
- * Provides setPhotos(List<String>) to replace photos safely.
- * Click listener returns the String path of the clicked photo.
+ * Photo adapter manages a list of photo paths (List<String>).
+ * Handles both local file paths (Permanent Category) and Web URLs (Cloudinary).
  */
 public class H5_Dress_PhotoAdapter extends RecyclerView.Adapter<H5_Dress_PhotoAdapter.ViewHolder> {
 
@@ -44,20 +45,29 @@ public class H5_Dress_PhotoAdapter extends RecyclerView.Adapter<H5_Dress_PhotoAd
     @Override
     public void onBindViewHolder(@NonNull H5_Dress_PhotoAdapter.ViewHolder holder, int position) {
         String path = photos.get(position);
-        Uri uri = null;
-        if (path != null) {
-            File f = new File(path);
-            if (f.exists()) {
-                uri = Uri.fromFile(f);
-            } else {
-                // try parse as Uri string
-                uri = Uri.parse(path);
+
+        if (path != null && !path.isEmpty()) {
+            // Check if it's a web URL (Cloudinary)
+            if (path.startsWith("http") || path.startsWith("https")) {
+                Glide.with(context)
+                        .load(path)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL) // Cache remote images
+                        .placeholder(android.R.drawable.ic_menu_gallery) // Optional placeholder
+                        .into(holder.imgPhoto);
             }
-        }
-        // Use Glide to load into ImageView. Defensive checks applied.
-        if (uri != null) {
-            Glide.with(context).load(uri).into(holder.imgPhoto);
+            // Otherwise, treat as a Local File
+            else {
+                File f = new File(path);
+                Glide.with(context)
+                        .load(f) // Glide handles File objects efficiently
+                        .diskCacheStrategy(DiskCacheStrategy.NONE) // Local files might change, usually safer not to cache heavily or use NONE/DATA
+                        .skipMemoryCache(false)
+                        .placeholder(android.R.drawable.ic_menu_gallery)
+                        .into(holder.imgPhoto);
+            }
         } else {
+            // Clear image if path is null
+            Glide.with(context).clear(holder.imgPhoto);
             holder.imgPhoto.setImageDrawable(null);
         }
 
@@ -73,7 +83,6 @@ public class H5_Dress_PhotoAdapter extends RecyclerView.Adapter<H5_Dress_PhotoAd
 
     /**
      * Replace photos list and refresh the UI.
-     * Using notifyDataSetChanged() because we replace the whole list.
      */
     public void setPhotos(List<String> newPhotos) {
         if (newPhotos == null) {
@@ -81,7 +90,6 @@ public class H5_Dress_PhotoAdapter extends RecyclerView.Adapter<H5_Dress_PhotoAd
         } else {
             this.photos = new ArrayList<>(newPhotos);
         }
-        android.util.Log.d("H5_Dress_PhotoAdapter", "Photos updated: " + this.photos.size());
         notifyDataSetChanged();
     }
 
