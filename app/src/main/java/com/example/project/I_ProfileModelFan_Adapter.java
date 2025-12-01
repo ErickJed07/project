@@ -9,6 +9,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import android.widget.ImageView;
+import com.bumptech.glide.Glide;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -40,6 +42,8 @@ public class I_ProfileModelFan_Adapter extends RecyclerView.Adapter<I_ProfileMod
         return new ViewHolder(view);
     }
 
+// 2. Update onBindViewHolder inside the Adapter class
+
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final String userid = mUsers.get(position);
@@ -51,14 +55,41 @@ public class I_ProfileModelFan_Adapter extends RecyclerView.Adapter<I_ProfileMod
             holder.btn_follow.setVisibility(View.GONE);
         }
 
-        // 1. Load User Info (Username)
+        // 1. Load User Info (Username AND Profile Photo)
         DatabaseReference reference = FirebaseDatabase.getInstance().getReference("Users").child(userid);
         reference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
+                    // Set Username
                     String username = snapshot.child("username").getValue(String.class);
                     holder.username.setText(username);
+
+                    // --- NEW: Get Profile Photo ---
+                    String profilePhotoUrl = null;
+                    if (snapshot.child("profilePhoto").exists()) {
+                        profilePhotoUrl = snapshot.child("profilePhoto").getValue(String.class);
+                    }
+
+                    // Load Image with Glide
+                    if (profilePhotoUrl != null && !profilePhotoUrl.isEmpty() && !profilePhotoUrl.equals("default")) {
+                        try {
+                            Glide.with(mContext)
+                                    .load(profilePhotoUrl)
+                                    .placeholder(R.drawable.ic_placeholder_2)
+                                    .error(R.drawable.ic_placeholder_2)
+                                    .circleCrop()
+                                    .into(holder.img_profile);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        // Load default image if URL is missing or "default"
+                        Glide.with(mContext)
+                                .load(R.drawable.ic_placeholder_2)
+                                .circleCrop()
+                                .into(holder.img_profile);
+                    }
                 }
             }
             @Override
@@ -71,58 +102,48 @@ public class I_ProfileModelFan_Adapter extends RecyclerView.Adapter<I_ProfileMod
         // 3. Handle Click Event (Follow/Unfollow)
         holder.btn_follow.setOnClickListener(v -> {
             if (holder.btn_follow.getText().toString().equalsIgnoreCase("Follow Model")) {
-                // --- ACTION: FOLLOW ---
-
-                // A. Add to my ModelsList (I am following them)
+                // ... (Your existing Follow logic) ...
                 FirebaseDatabase.getInstance().getReference().child("Users").child(firebaseUser.getUid())
                         .child("ModelsList").child(userid).setValue(true);
-
-                // B. Add to their FansList (I am their fan)
                 FirebaseDatabase.getInstance().getReference().child("Users").child(userid)
                         .child("FansList").child(firebaseUser.getUid()).setValue(true);
-
-                // C. Increment my 'Models' count
                 updateCount(firebaseUser.getUid(), "Models", 1);
-
-                // D. Increment their 'Fans' count
                 updateCount(userid, "Fans", 1);
 
             } else {
-                // --- ACTION: UNFOLLOW ---
-
-                // A. Remove from my ModelsList
+                // ... (Your existing Unfollow logic) ...
                 FirebaseDatabase.getInstance().getReference().child("Users").child(firebaseUser.getUid())
                         .child("ModelsList").child(userid).removeValue();
-
-                // B. Remove from their FansList
                 FirebaseDatabase.getInstance().getReference().child("Users").child(userid)
                         .child("FansList").child(firebaseUser.getUid()).removeValue();
-
-                // C. Decrement my 'Models' count
                 updateCount(firebaseUser.getUid(), "Models", -1);
-
-                // D. Decrement their 'Fans' count
                 updateCount(userid, "Fans", -1);
             }
         });
     }
+
 
     @Override
     public int getItemCount() {
         return mUsers.size();
     }
 
+    // 3. Update the ViewHolder class at the bottom of the file
+
     public class ViewHolder extends RecyclerView.ViewHolder {
         public TextView username;
         public Button btn_follow;
+        public ImageView img_profile; // Add this line
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            // Ensure these IDs exist in your user_item.xml
+            // Ensure these IDs exist in your user_item.xml (i_profile_modelfan_user.xml)
             username = itemView.findViewById(R.id.username);
             btn_follow = itemView.findViewById(R.id.btn_follow);
+            img_profile = itemView.findViewById(R.id.img_profile); // Add this line
         }
     }
+
 
     // Check if we are already following this user to set button text
     private void isFollowing(String userid, Button button) {

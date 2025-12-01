@@ -83,22 +83,31 @@
             app:srcCompat="@drawable/search" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- RecyclerView section -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/feedrecyclerView"
+    <!-- SwipeRefreshLayout Section -->
+    <!-- I removed the duplicate RecyclerView that was sitting here outside the refresh layout -->
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@color/light_gray"
-        android:clipToPadding="false"
-        android:overScrollMode="ifContentScrolls"
-        android:paddingTop="8dp"
-        android:paddingBottom="72dp"
-        android:scrollbars="vertical"
-        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/topfeed" />
+        app:layout_constraintTop_toBottomOf="@+id/topfeed">
 
+        <!-- This is the ONLY RecyclerView you should have -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/feedrecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/light_gray"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="72dp"
+            android:scrollbars="vertical"
+            android:overScrollMode="ifContentScrolls"/>
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- Bottom navigation bar -->
     <LinearLayout
