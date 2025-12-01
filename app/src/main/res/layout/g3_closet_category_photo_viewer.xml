@@ -54,18 +54,6 @@
             android:textColor="@android:color/white"
             app:layout_constraintEnd_toStartOf="@+id/btnEdit" />
 
-        <View
-            android:layout_width="16dp"
-            android:layout_height="0dp" />
-
-        <Button
-            android:id="@+id/btnEdit"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:backgroundTint="@color/pure_color"
-            android:text="Edit"
-            android:textColor="@android:color/white" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

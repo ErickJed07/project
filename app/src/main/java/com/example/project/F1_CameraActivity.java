@@ -3,7 +3,6 @@ package com.example.project;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -14,6 +13,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -29,11 +29,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.cloudinary.android.MediaManager;
+import com.cloudinary.android.callback.ErrorInfo;
+import com.cloudinary.android.callback.UploadCallback;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -42,12 +44,11 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
+import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,11 +65,26 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     Bitmap processedBitmap;
 
+    // Initialize Cloudinary Config (Ideally do this in Application class, but works here for quick setup)
+    private void initCloudinary() {
+        try {
+            Map<String, Object> config = new HashMap<>();
+            config.put("cloud_name", "YOUR_CLOUD_NAME"); // TODO: Replace with your Cloud Name
+            config.put("api_key", "YOUR_API_KEY");       // TODO: Replace with your API Key
+            config.put("api_secret", "YOUR_API_SECRET"); // TODO: Replace with your API Secret
+            MediaManager.init(this, config);
+        } catch (Exception e) {
+            // MediaManager might already be initialized
+        }
+    }
+
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.f1_camera_act);
+
+        initCloudinary(); // Ensure Cloudinary is ready
 
         imagePreview = findViewById(R.id.imagePreview);
         backButton = findViewById(R.id.backButton);
@@ -78,6 +94,8 @@ public class F1_CameraActivity extends AppCompatActivity {
 
         btnTakePhoto.setOnClickListener(view -> openCamera());
         btnSave.setOnClickListener(view -> showSaveDialog());
+
+        backButton.setOnClickListener(v -> finish());
     }
 
     private void openCamera() {
@@ -116,40 +134,31 @@ public class F1_CameraActivity extends AppCompatActivity {
     // BACKGROUND REMOVAL TASK
     // --------------------------
     private class RemoveBgTask extends AsyncTask<Bitmap, Void, Bitmap> {
-
         @Override
         protected Bitmap doInBackground(Bitmap... bitmaps) {
-            Bitmap input = bitmaps[0];
-            return removeBackground(input);
+            return removeBackground(bitmaps[0]);
         }
 
         @Override
         protected void onPostExecute(Bitmap result) {
             progressBar.setVisibility(View.GONE);
-
             if (result != null) {
                 processedBitmap = result;
                 imagePreview.setImageBitmap(result);
                 btnSave.setVisibility(View.VISIBLE);
+            } else {
+                Toast.makeText(F1_CameraActivity.this, "Background removal failed", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-
-    // ------------------------------------
-    //   REMOVE.BG API CALL
-    // ------------------------------------
     public Bitmap removeBackground(Bitmap bitmap) {
-
         try {
             OkHttpClient client = new OkHttpClient();
-
-            // Convert bitmap to PNG byte array
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
             byte[] imageBytes = bos.toByteArray();
 
-            // FIXED LINE BELOW: Swapped arguments to (MediaType, byte[])
             RequestBody requestBody = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
                     .addFormDataPart("image_file", "photo.png",
@@ -164,23 +173,23 @@ public class F1_CameraActivity extends AppCompatActivity {
                     .build();
 
             Response response = client.newCall(request).execute();
-
             if (response.isSuccessful()) {
                 InputStream inputStream = response.body().byteStream();
                 return BitmapFactory.decodeStream(inputStream);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return null;
     }
 
-
-
     // ------------------------ SAVE TO CATEGORY DIALOG ------------------------
     private void showSaveDialog() {
+        if (processedBitmap == null) {
+            Toast.makeText(this, "No image to save", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View dialogView = LayoutInflater.from(this).inflate(R.layout.f3_camera_edit_dialog_save_image, null);
         builder.setView(dialogView);
@@ -190,30 +199,41 @@ public class F1_CameraActivity extends AppCompatActivity {
         View btnSaveCategory = dialogView.findViewById(R.id.btnSaveCategory);
 
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-
         AlertDialog dialog = builder.create();
         dialog.show();
 
-        // ---------------- Load categories from Firebase ----------------
+        // 1. Load categories from Firebase: Users -> [uid] -> closetData -> categories
         DatabaseReference categoriesRef = FirebaseDatabase.getInstance()
-                .getReference("ClosetData")
+                .getReference("Users")
                 .child(uid)
+                .child("closetData") // Corrected path based on your data structure
                 .child("categories");
 
+        // Wrapper to hold category IDs to map name -> ID later
+        final List<CategoryItem> categoryList = new ArrayList<>();
+        final List<String> categoryNames = new ArrayList<>();
+
         categoriesRef.get().addOnSuccessListener(snapshot -> {
-            List<String> categories = new ArrayList<>();
+            categoryList.clear();
+            categoryNames.clear();
+
             for (DataSnapshot catSnap : snapshot.getChildren()) {
                 String name = catSnap.child("name").getValue(String.class);
-                if (name != null) categories.add(name);
+                String id = catSnap.getKey(); // Get the Firebase Key (e.g. -OfOaJ...)
+
+                if (name != null) {
+                    categoryList.add(new CategoryItem(id, name));
+                    categoryNames.add(name);
+                }
             }
 
             ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                    android.R.layout.simple_spinner_item, categories);
+                    android.R.layout.simple_spinner_item, categoryNames);
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spinner.setAdapter(adapter);
         }).addOnFailureListener(e -> e.printStackTrace());
 
-        // ---------------- Add new category ----------------
+        // 2. Add new category logic
         btnAddCategory.setOnClickListener(v -> {
             AlertDialog.Builder inputDialog = new AlertDialog.Builder(this);
             EditText input = new EditText(this);
@@ -221,90 +241,150 @@ public class F1_CameraActivity extends AppCompatActivity {
             inputDialog.setView(input);
 
             inputDialog.setPositiveButton("Add", (d, which) -> {
-                String newCat = input.getText().toString().trim();
-                if (!newCat.isEmpty()) {
-                    // Save category to Firebase
-                    String categoryId = categoriesRef.push().getKey();
-                    if (categoryId != null) {
-                        Map<String, Object> categoryData = new HashMap<>();
-                        categoryData.put("id", categoryId);
-                        categoryData.put("name", newCat);
-                        categoriesRef.child(categoryId).setValue(categoryData)
-                                .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(this, "Category added", Toast.LENGTH_SHORT).show();
-                                    // Update spinner
-                                    ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinner.getAdapter();
-                                    adapter.add(newCat);
-                                    adapter.notifyDataSetChanged();
-                                    spinner.setSelection(adapter.getPosition(newCat));
-                                })
-                                .addOnFailureListener(Throwable::printStackTrace);
-                    }
-                } else {
-                    Toast.makeText(this, "Category name empty", Toast.LENGTH_SHORT).show();
+                String newCatName = input.getText().toString().trim();
+                if (!newCatName.isEmpty()) {
+                    String newCatId = categoriesRef.push().getKey();
+                    Map<String, Object> catData = new HashMap<>();
+                    catData.put("id", newCatId);
+                    catData.put("name", newCatName);
+
+                    categoriesRef.child(newCatId).setValue(catData).addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Category Added", Toast.LENGTH_SHORT).show();
+                        // Refresh list manually for UX
+                        categoryList.add(new CategoryItem(newCatId, newCatName));
+                        categoryNames.add(newCatName);
+                        ((ArrayAdapter) spinner.getAdapter()).notifyDataSetChanged();
+                        spinner.setSelection(categoryNames.size() - 1);
+                    });
                 }
             });
-
-            inputDialog.setNegativeButton("Cancel", (d, which) -> d.dismiss());
+            inputDialog.setNegativeButton("Cancel", (d, w) -> d.dismiss());
             inputDialog.show();
         });
 
-        // ---------------- Save image locally under selected category ----------------
+        // 3. Save to Cloudinary + Firebase
         btnSaveCategory.setOnClickListener(v -> {
-            String selectedCategory = (String) spinner.getSelectedItem();
-            if (selectedCategory == null || selectedCategory.isEmpty()) {
+            int selectedPos = spinner.getSelectedItemPosition();
+            if (selectedPos < 0 || categoryList.isEmpty()) {
                 Toast.makeText(this, "Please select a category", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // Save locally
-            File categoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/" + selectedCategory);
-            if (!categoryDir.exists()) categoryDir.mkdirs();
+            // Get the specific Category ID from our list
+            String selectedCategoryId = categoryList.get(selectedPos).id;
+            String selectedCategoryName = categoryList.get(selectedPos).name;
 
-            String photoPath = getIntent().getStringExtra("photo_path");
-            if (photoPath != null && !photoPath.isEmpty()) {
-                File sourceFile = new File(photoPath);
-                File destFile = new File(categoryDir, sourceFile.getName());
+            progressBar.setVisibility(View.VISIBLE);
+            dialog.dismiss(); // Close dialog while uploading
 
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    }
-                    Toast.makeText(this, "Saved to category: " + selectedCategory, Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show();
-                }
+            // Convert Bitmap to File for Cloudinary Upload
+            File fileToUpload = bitmapToFile(processedBitmap, "temp_closet_image.png");
+
+            if (fileToUpload != null) {
+                uploadToCloudinary(fileToUpload, uid, selectedCategoryId);
+            } else {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, "Error preparing image", Toast.LENGTH_SHORT).show();
             }
-
-            dialog.dismiss();
         });
     }
 
-    // ------------------------ HELPERS ------------------------
-    private void saveCategoryLocally(Context context, String categoryName, String uid) {
-        if (categoryName == null || categoryName.trim().isEmpty() || uid == null) return;
-        File categoryDir = new File(context.getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-        if (!categoryDir.exists()) categoryDir.mkdirs();
+    // ------------------------ CLOUDINARY UPLOAD ------------------------
+    private void uploadToCloudinary(File file, String uid, String categoryId) {
+        String requestId = MediaManager.get().upload(file.getAbsolutePath())
+                .option("folder", "ClosetImages/" + uid) // Organize in Cloudinary folders
+                .callback(new UploadCallback() {
+                    @Override
+                    public void onStart(String requestId) {
+                        Log.d("Cloudinary", "Upload started");
+                    }
+
+                    @Override
+                    public void onProgress(String requestId, long bytes, long totalBytes) {
+                        // Update progress if needed
+                    }
+
+                    @Override
+                    public void onSuccess(String requestId, Map resultData) {
+                        String secureUrl = (String) resultData.get("secure_url");
+                        Log.d("Cloudinary", "Upload success: " + secureUrl);
+
+                        // Now save URL to Firebase
+                        saveImageUrlToFirebase(uid, categoryId, secureUrl);
+                    }
+
+                    @Override
+                    public void onError(String requestId, ErrorInfo error) {
+                        runOnUiThread(() -> {
+                            progressBar.setVisibility(View.GONE);
+                            Toast.makeText(F1_CameraActivity.this, "Upload Failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+                        });
+                    }
+
+                    @Override
+                    public void onReschedule(String requestId, ErrorInfo error) {}
+                })
+                .dispatch();
     }
 
-    private void saveCategoryToFirebaseWithID(String categoryName, String uid) {
-        if (categoryName == null || categoryName.trim().isEmpty() || uid == null) return;
-
-        DatabaseReference ref = FirebaseDatabase.getInstance()
-                .getReference("ClosetData")
+    // ------------------------ FIREBASE SAVE ------------------------
+    private void saveImageUrlToFirebase(String uid, String categoryId, String imageUrl) {
+        DatabaseReference categoryRef = FirebaseDatabase.getInstance()
+                .getReference("Users")
                 .child(uid)
-                .child("categories");
+                .child("closetData")
+                .child("categories")
+                .child(categoryId);
 
-        String categoryId = ref.push().getKey();
-        if (categoryId == null) return;
+        // Target the "photos" node inside the specific category
+        // push() creates a unique ID, and we set the value directly to the URL string
+        // This creates the structure: photos -> [uniqueID]: "https://..."
+        categoryRef.child("photos").push().setValue(imageUrl)
+                .addOnSuccessListener(aVoid -> {
+                    runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(F1_CameraActivity.this, "Image Saved to Closet!", Toast.LENGTH_SHORT).show();
 
-        Map<String, Object> categoryData = new HashMap<>();
-        categoryData.put("id", categoryId);
-        categoryData.put("name", categoryName);
+                        // Close the activity and return to previous screen
+                        finish();
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(F1_CameraActivity.this, "Database Save Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+                });
+    }
 
-        ref.child(categoryId).setValue(categoryData)
-                .addOnSuccessListener(aVoid -> {})
-                .addOnFailureListener(e -> e.printStackTrace());
+    // Helper to convert Bitmap to File
+    private File bitmapToFile(Bitmap bitmap, String fileName) {
+        try {
+            File f = new File(getCacheDir(), fileName);
+            f.createNewFile();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 0, bos);
+            byte[] bitmapdata = bos.toByteArray();
+
+            FileOutputStream fos = new FileOutputStream(f);
+            fos.write(bitmapdata);
+            fos.flush();
+            fos.close();
+            return f;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Helper Class to store ID and Name for Spinner
+    private static class CategoryItem {
+        String id;
+        String name;
+
+        CategoryItem(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
     }
 }
