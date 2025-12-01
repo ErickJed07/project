@@ -149,10 +149,11 @@ public class F1_CameraActivity extends AppCompatActivity {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
             byte[] imageBytes = bos.toByteArray();
 
+            // FIXED LINE BELOW: Swapped arguments to (MediaType, byte[])
             RequestBody requestBody = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
                     .addFormDataPart("image_file", "photo.png",
-                            RequestBody.create(imageBytes, MediaType.parse("image/png")))
+                            RequestBody.create(MediaType.parse("image/png"), imageBytes))
                     .addFormDataPart("size", "auto")
                     .build();
 
@@ -175,6 +176,7 @@ public class F1_CameraActivity extends AppCompatActivity {
 
         return null;
     }
+
 
 
     // ------------------------ SAVE TO CATEGORY DIALOG ------------------------

@@ -185,6 +185,7 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
     }
 
     // 1. Start the Upload Process
+    // 1. Start the Upload Process
     private void savePostData() {
         if (!selectedImages.isEmpty()) {
             // Disable button to prevent multiple clicks
@@ -198,6 +199,7 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
             // Loop through selected images and upload each to Cloudinary
             for (String imageUri : selectedImages) {
                 MediaManager.get().upload(Uri.parse(imageUri))
+                        .option("folder", "Posts") // <--- ADDED: Uploads to 'Posts' folder in Cloudinary
                         .callback(new UploadCallback() {
                             @Override
                             public void onStart(String requestId) {
@@ -242,6 +244,7 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select at least one image.", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     // 2. Save Post Metadata to Firebase (Called only after images are uploaded)
     private void saveToFirebase(List<String> cloudImageUrls) {
