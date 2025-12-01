@@ -52,7 +52,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="right"
         android:layout_marginTop="16dp"
-        android:backgroundTint="@color/black"
+        android:backgroundTint="@color/pure_color"
         android:text="Save" />
 
 </LinearLayout>

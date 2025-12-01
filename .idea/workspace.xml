@@ -187,6 +187,11 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/f3_camera_edit_dialog_save_image.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/g1_closet.xml">
         <config>
           <theme>@style/Theme.Project</theme>
@@ -305,15 +310,9 @@
   <component name="ChangeListManager">
     <list default="true" id="9381cc0d-49e9-43ab-88d8-f1c323f9fb0d" name="Changes" comment="Merge branch 'main' of https://github.com/ErickJed07/project&#10;&#10;# Conflicts:&#10;#&#9;.idea/workspace.xml">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/box_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/box_background.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/c_signinprofilephoto.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/c_signinprofilephoto.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/d2_feed_item_post.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/d2_feed_item_post.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/e1_calendar.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/e1_calendar.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/g1_closet.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/g1_closet.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/g2_closet_gallery.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/g2_closet_gallery.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/f3_camera_edit_dialog_save_image.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/f3_camera_edit_dialog_save_image.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_newpostupload.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_user.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_user.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
