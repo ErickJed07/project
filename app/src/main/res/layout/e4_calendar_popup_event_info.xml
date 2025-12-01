@@ -55,6 +55,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
+                android:fontFamily="@font/inter"
                 android:text="Event Title"
                 android:textColor="@color/black"
                 android:textSize="18sp"
@@ -66,6 +67,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:textColor="@color/black"
+                android:fontFamily="@font/inter"
                 android:text="Time: 08:30 AM"
                 android:textSize="16sp"
                 android:textStyle="bold"/>
@@ -76,6 +78,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:text="Reminder:"
+                android:fontFamily="@font/inter"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -92,7 +95,7 @@
                 android:id="@+id/closeButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:backgroundTint="@color/black"
+                android:backgroundTint="@color/pure_color"
                 android:text="Close"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -103,7 +106,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:backgroundTint="@color/black"
+                android:backgroundTint="@color/orange_complement"
                 android:text="Delete"
                 app:layout_constraintEnd_toStartOf="@id/closeButton"
                 app:layout_constraintTop_toTopOf="@id/closeButton" />

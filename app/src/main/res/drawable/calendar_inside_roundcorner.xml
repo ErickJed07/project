@@ -6,7 +6,7 @@
         android:topRightRadius="16dp" /> <!-- Set the corner radius smaller than the outer radius -->
 
     <stroke
-        android:color="#A9A9A9"
+        android:color="@color/nav"
         android:width="3dp" />
 
 </shape>

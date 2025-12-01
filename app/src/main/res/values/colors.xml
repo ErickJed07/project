@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="nav">#8FF2DFFF</color>
     <color name="pure_color">#B200FF</color>
     <color name="Contrast">#48F6FF</color>
     <color name="orange_complement">#FF8168</color>
