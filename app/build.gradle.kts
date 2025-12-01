@@ -1,3 +1,13 @@
+import java.util.Properties
+
+// 1. Load local.properties securely
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -15,6 +25,17 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 2. Inject Cloudinary credentials into BuildConfig
+        // These values must exist in your local.properties file
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("CLOUDINARY_API_KEY")}\"")
+        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("CLOUDINARY_API_SECRET")}\"")
+    }
+
+    // 3. Enable the BuildConfig feature so the generated class is created
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

@@ -136,7 +136,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="#EEEEEE"
+        android:background="@color/nav"
         android:padding="4dp"
         android:weightSum="5"
         app:layout_constraintBottom_toBottomOf="parent"

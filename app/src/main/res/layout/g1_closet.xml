@@ -193,7 +193,7 @@
         android:id="@+id/bottomBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="#EEEEEE"
+        android:background="@color/nav"
         android:orientation="horizontal"
         android:padding="4dp"
         android:weightSum="5"
@@ -217,7 +217,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/home" />
+                android:src="@drawable/home_1" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -309,7 +309,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/profile" />
+                android:src="@drawable/user_1" />
 
             <TextView
                 android:layout_width="wrap_content"

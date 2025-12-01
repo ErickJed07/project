@@ -33,14 +33,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Choose from Gallery"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginBottom="10dp"
+        android:backgroundTint="@color/pure_color"/>
+
 
     <Button
         android:id="@+id/btn_save_photo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="10dp"
-        android:backgroundTint="#4CAF50"
+        android:backgroundTint="@color/orange_complement"
         android:text="Save"
         android:textColor="#FFFFFF"
         android:visibility="gone" />
@@ -50,7 +52,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Skip for now"
-        android:backgroundTint="#757575"
+        android:backgroundTint="@color/pink"
         android:textColor="#FFFFFF"/>
 
 </LinearLayout>
