@@ -1,6 +1,7 @@
 package com.example.project;
 
 import android.content.Context;
+import android.content.Intent; // Added Import
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
@@ -53,7 +54,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         View view = LayoutInflater.from(context).inflate(R.layout.d2_feed_item_post, parent, false);
         return new PostViewHolder(view);
     }
-
+    
     @Override
     public void onBindViewHolder(PostViewHolder holder, int position) {
         I_NewPost_Event postEvent = postList.get(position);
@@ -70,6 +71,43 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         }
         final String finalCurrentUserId = currentUserId;
         String postId = postEvent.getPostId();
+        String postAuthorId = postEvent.getUserId(); // Get the author's ID
+
+        // --- FETCH PROFILE PHOTO FROM FIREBASE USERS NODE ---
+        if (postAuthorId != null && !postAuthorId.isEmpty()) {
+            DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(postAuthorId);
+            userRef.child("profilePhoto").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    if (snapshot.exists()) {
+                        String profilePhotoUrl = snapshot.getValue(String.class);
+
+                        // Check if URL is valid (not null, empty, or "default")
+                        if (profilePhotoUrl != null && !profilePhotoUrl.isEmpty() && !profilePhotoUrl.equals("default")) {
+                            try {
+                                Glide.with(context)
+                                        .load(profilePhotoUrl)
+                                        .placeholder(R.drawable.ic_placeholder_2) // Make sure you have a placeholder drawable
+                                        .error(R.drawable.ic_placeholder_2)
+                                        .circleCrop()
+                                        .into(holder.profilePic);
+                            } catch (Exception e) {
+                                // Context might be destroyed if user navigated away quickly
+                                e.printStackTrace();
+                            }
+                        } else {
+                            // Load default image if URL is missing or "default"
+                            Glide.with(context).load(R.drawable.ic_placeholder_2).circleCrop().into(holder.profilePic);
+                        }
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    // Handle error if needed
+                }
+            });
+        }
 
         // --- 3. DYNAMIC IMAGE RESIZING (WARP CONTENT LOGIC) ---
         if (postEvent.getImageUrls() != null && !postEvent.getImageUrls().isEmpty()) {
@@ -168,6 +206,17 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
         // --- 5. Click Listeners ---
 
+        // Profile Picture Click Listener
+        holder.profilePic.setOnClickListener(v -> {
+            if (postAuthorId != null && !postAuthorId.isEmpty()) {
+                Intent intent = new Intent(context, I1_ProfileActivity.class);
+                // Pass the user ID so ProfileActivity knows whose profile to show
+                // Note: You may need to update I1_ProfileActivity to read this intent extra
+                intent.putExtra("USER_ID", postAuthorId);
+                context.startActivity(intent);
+            }
+        });
+
         // Heart Button
         holder.heartButton.setOnClickListener(v -> {
             if (postId == null || finalCurrentUserId.isEmpty()) return;
@@ -258,6 +307,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         });
     }
 
+
     // --- HELPER METHODS ---
 
     private void updateHeartIcon(ImageView heartButton, Map<String, Boolean> heartLiked, String userId) {
@@ -308,6 +358,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
     }
 
     public static class PostViewHolder extends RecyclerView.ViewHolder {
+        ImageView profilePic; // Added profilePic
         TextView userNameTextView, captionTextView, dateTextView, photoIndicator;
         TextView favNumTextView, heartNumTextView;
         ViewPager2 viewPager2;
@@ -316,6 +367,8 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
         public PostViewHolder(View itemView) {
             super(itemView);
+            profilePic = itemView.findViewById(R.id.profile_pic); // Bind to ID
+
             userNameTextView = itemView.findViewById(R.id.userName_post);
             captionTextView = itemView.findViewById(R.id.caption_post);
             dateTextView = itemView.findViewById(R.id.postdate);

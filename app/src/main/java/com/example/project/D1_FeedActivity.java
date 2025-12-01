@@ -8,6 +8,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -28,83 +29,90 @@ public class D1_FeedActivity extends AppCompatActivity {
     private D_FeedAdapter postAdapter;
     private List<I_NewPost_Event> postList;
     private DatabaseReference postsRef;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.d1_feed); // Ensure your layout is correct
+        setContentView(R.layout.d1_feed);
 
-        // Initialize the RecyclerView
+        // Initialize SwipeRefreshLayout
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
+
         recyclerView = findViewById(R.id.feedrecyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(layoutManager);
 
-        // Initialize the list and adapter
         postList = new ArrayList<>();
         postAdapter = new D_FeedAdapter(this, postList);
         recyclerView.setAdapter(postAdapter);
 
-        // Initialize Firebase reference
+        // --- REMOVED THE MANUAL SCROLL LISTENER ---
+        // Modern SwipeRefreshLayout automatically detects when RecyclerView is at the top.
+        // Manually enabling/disabling it causes the "sticky" scroll feeling.
+
         postsRef = FirebaseDatabase.getInstance().getReference("PostEvents");
 
-        // Fetch the posts from Firebase
+        // Set up the Refresh Listener
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            fetchPostsFromFirebase();
+        });
+
+        // Optional: Set a distance to trigger to avoid accidental refreshes
+        // This requires a slightly longer pull to activate
+        swipeRefreshLayout.setDistanceToTriggerSync(300);
+
         fetchPostsFromFirebase();
     }
 
-    // Fetch data from Firebase and populate the RecyclerView
     private void fetchPostsFromFirebase() {
-        // Reference to the posts in Firebase
-        DatabaseReference postsRef = FirebaseDatabase.getInstance().getReference("PostEvents");
-
         postsRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                postList.clear(); // Clear existing posts
+                postList.clear();
 
-                // Use the correct structure to handle posts stored as a HashMap
                 for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
                     I_NewPost_Event postEvent = postSnapshot.getValue(I_NewPost_Event.class);
-
                     if (postEvent != null) {
-                        // Add the post to the list
                         postList.add(postEvent);
                     }
                 }
 
-                // Sort posts by date (if needed)
                 sortPostsByDate();
-
-                // Notify the adapter to update the RecyclerView
                 postAdapter.notifyDataSetChanged();
+
+                // Stop the refreshing animation when data loads
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
                 Toast.makeText(D1_FeedActivity.this, "Failed to load posts", Toast.LENGTH_SHORT).show();
+
+                // Stop animation even if it fails
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
             }
         });
     }
 
-
-    // Method to sort posts by their date (most recent first)
     private void sortPostsByDate() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
 
-        // Sort posts by postDate
         Collections.sort(postList, (post1, post2) -> {
             try {
-                // Parse the postDate from each post
                 Date date1 = dateFormat.parse(post1.getDate());
                 Date date2 = dateFormat.parse(post2.getDate());
-
-                // Compare the dates: most recent first
                 return date2.compareTo(date1);
             } catch (Exception e) {
                 e.printStackTrace();
-                return 0; // If parsing fails, no sorting
+                return 0;
             }
         });
     }
-
 
     public void onButtonClicked(View view) {
         Intent intent = null;
@@ -113,7 +121,7 @@ public class D1_FeedActivity extends AppCompatActivity {
         if (viewId == R.id.home_menu) {
             intent = new Intent(this, D1_FeedActivity.class);
         } else if (viewId == R.id.calendar_menu) {
-        intent = new Intent(this, E1_CalendarActivity.class);
+            intent = new Intent(this, E1_CalendarActivity.class);
         } else if (viewId == R.id.camera_menu) {
             intent = new Intent(this, F1_CameraActivity.class);
         } else if (viewId == R.id.closet_menu) {

@@ -110,20 +110,24 @@ public class I_Profile_AddModels extends AppCompatActivity {
         DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("Users");
 
         usersRef.addValueEventListener(new ValueEventListener() {
+
             @Override
             public void onDataChange(@androidx.annotation.NonNull DataSnapshot snapshot) {
                 userList.clear();
                 for (DataSnapshot ds : snapshot.getChildren()) {
                     User user = ds.getValue(User.class);
 
-                    // FIX: Manually set the ID using the node key
                     if (user != null) {
                         user.setId(ds.getKey());
 
-                        // LOGIC: Remove if already following OR if it's me
-                        if (firebaseUser != null && !user.getId().equals(firebaseUser.getUid())) {
+                        // --- FIX IS HERE ---
+                        // Just get the String URL here. Do not use Glide or circleCrop here.
+                        if (ds.child("profilePhoto").exists()) {
+                            user.setProfileImageUrl(ds.child("profilePhoto").getValue(String.class));
+                        }
 
-                            // ** KEY CHANGE: Only add to list if NOT in myFollowingList **
+                        // Logic: Remove if already following OR if it's me
+                        if (firebaseUser != null && !user.getId().equals(firebaseUser.getUid())) {
                             if (!myFollowingList.contains(user.getId())) {
                                 userList.add(user);
                             }
@@ -135,10 +139,10 @@ public class I_Profile_AddModels extends AppCompatActivity {
 
             @Override
             public void onCancelled(@androidx.annotation.NonNull DatabaseError error) {
-                // Handle errors
             }
         });
     }
+
 
     // --- FIXED FILTER LIST METHOD ---
     private void filterList(String text, List<User> originalList, UserAdapter adapter) {
@@ -216,15 +220,34 @@ public class I_Profile_AddModels extends AppCompatActivity {
             holder.btn_follow.setVisibility(View.VISIBLE);
             holder.btn_follow.setText("Follow Model");
 
-            // Load Profile Image if available (Safety check)
-            if (user.getProfileImageUrl() != null && !user.getProfileImageUrl().isEmpty()) {
-                Glide.with(mContext).load(user.getProfileImageUrl()).into(holder.image_profile);
-            } else {
-                holder.image_profile.setImageResource(R.drawable.profile); // Default placeholder
-            }
+                // --- NEW GLIDE LOGIC HERE ---
+                String profilePhotoUrl = user.getProfileImageUrl();
 
-            // --- NEW LOGIC: CHECK POSTS & LOAD PREVIEWS ---
-            checkPostsAndLoadPreviews(user.getId(), holder);
+                if (profilePhotoUrl != null && !profilePhotoUrl.isEmpty() && !profilePhotoUrl.equals("default")) {
+                    try {
+                        Glide.with(mContext)
+                                .load(profilePhotoUrl)
+                                .placeholder(R.drawable.ic_placeholder_2) // Ensure you have this drawable or use R.drawable.profile
+                                .error(R.drawable.ic_placeholder_2)
+                                .circleCrop() // This makes the image round
+                                .into(holder.image_profile);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    // Load default image if URL is missing or "default"
+                    Glide.with(mContext)
+                            .load(R.drawable.ic_placeholder_2)
+                            .circleCrop()
+                            .into(holder.image_profile);
+                }
+
+                // --- Post Previews Logic ---
+                checkPostsAndLoadPreviews(user.getId(), holder);
+
+                // ... (Rest of your follow button logic) ...
+
+
 
 
             // Handle Follow Button Click
@@ -335,13 +358,12 @@ public class I_Profile_AddModels extends AppCompatActivity {
         public static class ViewHolder extends RecyclerView.ViewHolder {
 
             public TextView username;
-            public com.google.android.material.imageview.ShapeableImageView image_profile;
             public android.widget.Button btn_follow;
 
             // CHANGED: Now referencing the CardView wrapper
             public com.google.android.material.card.MaterialCardView card_post_previews;
 
-            public ImageView post_img_1, post_img_2, post_img_3, post_img_4;
+            public ImageView post_img_1, post_img_2, post_img_3, post_img_4,image_profile;
 
             public ViewHolder(@androidx.annotation.NonNull android.view.View itemView) {
                 super(itemView);
