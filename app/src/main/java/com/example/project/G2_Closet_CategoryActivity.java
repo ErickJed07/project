@@ -1,210 +1,241 @@
 package com.example.project;
 
-import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
     private RecyclerView galleryRecyclerView;
     private G3_Closet_CategoryAdapter adapter;
-    private final List<File> imageFileList = new ArrayList<>();
-    private final Set<File> selectedFiles = new HashSet<>();
+
+    // CHANGED: Now storing URLs (Strings) instead of Files
+    private final List<String> imageUrlList = new ArrayList<>();
+
+    // CHANGED: Map to link URL -> Firebase Key (needed for deletion)
+    private final Map<String, String> urlToKeyMap = new HashMap<>();
+
+    // CHANGED: Selection set now stores URLs
+    private final Set<String> selectedUrls = new HashSet<>();
+
     private boolean isMultiSelectMode = false;
     private FloatingActionButton deleteFab;
     private String categoryName;
+    private String categoryId; // New: We need ID to query Firebase
 
     private FirebaseAuth mAuth;
-    private DatabaseReference dbRef;
-    private String uid; // ✅ store current user's UID
+    private DatabaseReference categoryRef; // Points to specific category
+    private String uid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.g2_closet_gallery);
 
+        // 1. Get Data from Intent
         categoryName = getIntent().getStringExtra("CATEGORY_NAME");
+        categoryId = getIntent().getStringExtra("CATEGORY_ID");
+
         TextView titleView = findViewById(R.id.categoryTitle);
         if (categoryName != null) titleView.setText(categoryName);
 
         mAuth = FirebaseAuth.getInstance();
         uid = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
 
-        // ✅ Firebase reference per user
-        if (uid != null) {
-            dbRef = FirebaseDatabase.getInstance().getReference("ClosetData").child(uid);
+        if (uid == null) {
+            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // 2. Set Firebase Reference: Users -> uid -> closetData -> categories -> [id]
+        // If ID is missing (legacy), we might need a fallback, but G1 should pass it.
+        if (categoryId != null) {
+            categoryRef = FirebaseDatabase.getInstance().getReference("Users")
+                    .child(uid)
+                    .child("closetData")
+                    .child("categories")
+                    .child(categoryId);
         } else {
-            dbRef = FirebaseDatabase.getInstance().getReference("ClosetData");
+            Toast.makeText(this, "Error: Category ID missing", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
         }
 
         deleteFab = findViewById(R.id.fabDelete);
         deleteFab.hide();
 
         galleryRecyclerView = findViewById(R.id.galleryRecyclerView);
-        galleryRecyclerView.setLayoutManager(new GridLayoutManager(this, 3));
 
+// --- ADD THIS ---
+        androidx.recyclerview.widget.GridLayoutManager layoutManager =
+                new androidx.recyclerview.widget.GridLayoutManager(this, 3); // 3 columns
+        galleryRecyclerView.setLayoutManager(layoutManager);
+
+
+
+        // 3. Initialize Adapter
+        // NOTE: You must update G3_Closet_CategoryAdapter to accept List<String> instead of List<File>
         adapter = new G3_Closet_CategoryAdapter(
                 this,
-                imageFileList,
+                imageUrlList, // Passing Strings now
                 this::onImageClicked,
                 this::onImageLongClicked,
-                this::isFileSelected,
+                this::isUrlSelected,
                 this::isMultiSelectMode
         );
 
         galleryRecyclerView.setAdapter(adapter);
-        loadImagesForCategory();
+        // 4. Load Images from Firebase
+        loadImagesFromFirebase();
 
+        // 5. Delete Logic
         deleteFab.setOnClickListener(v -> {
-            for (File file : selectedFiles) {
-                file.delete();
-            }
-            selectedFiles.clear();
-            exitMultiSelectMode();
-            loadImagesForCategory();
-            Toast.makeText(this, "Photos deleted", Toast.LENGTH_SHORT).show();
+            deleteSelectedImages();
         });
     }
 
-    private void onImageClicked(File file) {
-        if (isMultiSelectMode) {
-            toggleSelection(file);
-        } else {
-            ArrayList<String> imagePaths = new ArrayList<>();
-            for (File f : imageFileList) imagePaths.add(f.getAbsolutePath());
-            int index = imageFileList.indexOf(file);
+    // ---------------------------------------------------------
+    // FIREBASE LOADING
+    // ---------------------------------------------------------
+    private void loadImagesFromFirebase() {
+        // Listen to the "photos" node inside this category
+        categoryRef.child("photos").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                imageUrlList.clear();
+                urlToKeyMap.clear();
 
+                for (DataSnapshot photoSnap : snapshot.getChildren()) {
+                    // The key (e.g. -OfOd...)
+                    String key = photoSnap.getKey();
+                    // The value (e.g. https://cloudinary...)
+                    String url = photoSnap.getValue(String.class);
+
+                    if (url != null) {
+                        imageUrlList.add(url);
+                        urlToKeyMap.put(url, key);
+                    }
+                }
+
+                adapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(G2_Closet_CategoryActivity.this, "Failed to load images", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // ---------------------------------------------------------
+    // INTERACTION LOGIC (Updated for URLs)
+    // ---------------------------------------------------------
+    private void onImageClicked(String url) {
+        if (isMultiSelectMode) {
+            toggleSelection(url);
+        } else {
+            // Pass list of URLs to the viewer
             Intent intent = new Intent(this, G4_Closet_Category_PhotoViewerActivity.class);
-            intent.putStringArrayListExtra("IMAGES", imagePaths);
+            intent.putStringArrayListExtra("IMAGES", (ArrayList<String>) imageUrlList);
+
+            // Find index of clicked URL
+            int index = imageUrlList.indexOf(url);
             intent.putExtra("START_INDEX", index);
-            // DEBUG: show how many images are being passed
-            Toast.makeText(this, "Opening viewer: " + imagePaths.size() + " images", Toast.LENGTH_SHORT).show();
+
             startActivity(intent);
         }
     }
 
-    private void onImageLongClicked(File file) {
+    private void onImageLongClicked(String url) {
         if (!isMultiSelectMode) {
             isMultiSelectMode = true;
-            selectedFiles.add(file);
+            selectedUrls.add(url);
             adapter.notifyDataSetChanged();
-        // DEBUG: show how many images were loaded and the directory
-        try {
-            File categoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-            Toast.makeText(this, "Found " + imageFileList.size() + " images in " + categoryDir.getAbsolutePath(), Toast.LENGTH_LONG).show();
-        } catch (Exception e) { /* ignore debug toast failures */ }
-        
             deleteFab.show();
         } else {
-            toggleSelection(file);
+            toggleSelection(url);
         }
     }
 
-    private void toggleSelection(File file) {
-        if (selectedFiles.contains(file)) {
-            selectedFiles.remove(file);
+    private void toggleSelection(String url) {
+        if (selectedUrls.contains(url)) {
+            selectedUrls.remove(url);
         } else {
-            selectedFiles.add(file);
+            selectedUrls.add(url);
         }
 
-        if (selectedFiles.isEmpty()) {
+        if (selectedUrls.isEmpty()) {
             exitMultiSelectMode();
         }
-
         adapter.notifyDataSetChanged();
-        // DEBUG: show how many images were loaded and the directory
-        try {
-            File categoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-            Toast.makeText(this, "Found " + imageFileList.size() + " images in " + categoryDir.getAbsolutePath(), Toast.LENGTH_LONG).show();
-        } catch (Exception e) { /* ignore debug toast failures */ }
-        
     }
 
     private void exitMultiSelectMode() {
         isMultiSelectMode = false;
-        selectedFiles.clear();
+        selectedUrls.clear();
         adapter.notifyDataSetChanged();
-        // DEBUG: show how many images were loaded and the directory
-        try {
-            File categoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-            Toast.makeText(this, "Found " + imageFileList.size() + " images in " + categoryDir.getAbsolutePath(), Toast.LENGTH_LONG).show();
-        } catch (Exception e) { /* ignore debug toast failures */ }
-        
         deleteFab.hide();
     }
 
-    private boolean isFileSelected(File file) {
-        return selectedFiles.contains(file);
+    private boolean isUrlSelected(String url) {
+        return selectedUrls.contains(url);
     }
 
     private boolean isMultiSelectMode() {
         return isMultiSelectMode;
     }
 
-    // ✅ Load images only for this user's category
-    private void loadImagesForCategory() {
-        imageFileList.clear();
+    // ---------------------------------------------------------
+    // DELETION LOGIC (Firebase)
+    // ---------------------------------------------------------
+    private void deleteSelectedImages() {
+        if (selectedUrls.isEmpty()) return;
 
-        if (uid == null) {
-            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        File categoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-        if (!categoryDir.exists()) categoryDir.mkdirs();
-
-        File[] files = categoryDir.listFiles();
-        if (files != null) {
-            for (File f : files) {
-                if (f.getName().endsWith(".jpg") || f.getName().endsWith(".png")) {
-                    imageFileList.add(f);
-                }
+        for (String url : selectedUrls) {
+            String key = urlToKeyMap.get(url);
+            if (key != null) {
+                // Remove from Firebase: categories/[id]/photos/[key]
+                categoryRef.child("photos").child(key).removeValue();
             }
         }
 
-        adapter.notifyDataSetChanged();
-// DEBUG: show how many images were loaded and the directory
-        try {
-            Toast.makeText(this, "Found " + imageFileList.size() + " images in " + categoryDir.getAbsolutePath(), Toast.LENGTH_LONG).show();
-        } catch (Exception e) { /* ignore debug toast failures */ }
+        // Cloudinary Note:
+        // Ideally, you should also delete the image from Cloudinary using its API
+        // to save storage space, but that usually requires backend logic or a secure server.
+        // For now, we just remove the reference from the Database.
 
-
+        selectedUrls.clear();
+        exitMultiSelectMode();
+        Toast.makeText(this, "Images deleted", Toast.LENGTH_SHORT).show();
     }
 
+    // ---------------------------------------------------------
+    // NAVIGATION
+    // ---------------------------------------------------------
     public void onCloset_backClicked(View view) {
         finish();
-    }
-
-    // ✅ Now saves images per user
-    public static void saveImageToCategory(Context context, Bitmap bitmap, String categoryName, String imageName, String uid) {
-        if (uid == null) return;
-
-        File categoryDir = new File(context.getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-        if (!categoryDir.exists()) categoryDir.mkdirs();
-
-        File imageFile = new File(categoryDir, imageName + ".jpg");
-        try (FileOutputStream fos = new FileOutputStream(imageFile)) {
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     public void onButtonClicked(View view) {
@@ -213,7 +244,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
         if (id == R.id.home_menu) intent = new Intent(this, D1_FeedActivity.class);
         else if (id == R.id.calendar_menu) intent = new Intent(this, E1_CalendarActivity.class);
-        else if (id == R.id.add_menu) intent = new Intent(this, F1_CameraActivity.class);
+        else if (id == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class); // Fixed ID name
         else if (id == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
         else if (id == R.id.profile_menu) intent = new Intent(this, I1_ProfileActivity.class);
 
@@ -221,45 +252,5 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         }
-    }
-
-    /*** NEW STATIC METHODS FOR CATEGORY MANAGEMENT ***/
-    public static List<String> loadCategories(Context context, String uid) {
-        List<String> categories = new ArrayList<>();
-        if (uid == null) return categories;
-
-        File closetRoot = new File(context.getFilesDir(), "ClosetImages/" + uid);
-        if (!closetRoot.exists()) closetRoot.mkdirs();
-
-        File[] dirs = closetRoot.listFiles();
-        if (dirs != null) {
-            for (File f : dirs) {
-                if (f.isDirectory()) {
-                    categories.add(f.getName());
-                }
-            }
-        }
-        return categories;
-    }
-
-    public static void saveCategoryLocally(Context context, String categoryName, String uid) {
-        if (categoryName == null || categoryName.trim().isEmpty() || uid == null) return;
-
-        File categoryDir = new File(context.getFilesDir(), "ClosetImages/" + uid + "/" + categoryName);
-        if (!categoryDir.exists()) {
-            categoryDir.mkdirs();
-        }
-    }
-
-    public static void saveCategoryToFirebase(Context context, String categoryName, String uid) {
-        if (categoryName == null || categoryName.trim().isEmpty() || uid == null) return;
-
-        saveCategoryLocally(context, categoryName, uid);
-
-        DatabaseReference ref = FirebaseDatabase.getInstance()
-                .getReference("ClosetData")
-                .child(uid) // ✅ per-user categories
-                .child("categories");
-        ref.child(categoryName).setValue(true);
     }
 }

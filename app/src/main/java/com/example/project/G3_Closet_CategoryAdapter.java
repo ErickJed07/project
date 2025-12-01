@@ -1,7 +1,6 @@
 package com.example.project;
 
 import android.content.Context;
-import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,28 +11,32 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.File;
+import com.bumptech.glide.Glide; // Import Glide
+
 import java.util.List;
 
 public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_CategoryAdapter.PhotoHolder> {
 
     private final Context context;
-    private final List<File> imageFiles;
+    private final List<String> imageUrls; // Changed from File to String
     private final OnImageClickListener clickListener;
     private final OnImageLongClickListener longClickListener;
-    private final FileSelectionChecker selectionChecker;
+    private final UrlSelectionChecker selectionChecker; // Renamed interface
     private final MultiSelectChecker multiSelectChecker;
 
+    // Interface updated to pass String (URL)
     public interface OnImageClickListener {
-        void onClick(File file);
+        void onClick(String url);
     }
 
+    // Interface updated to pass String (URL)
     public interface OnImageLongClickListener {
-        void onLongClick(File file);
+        void onLongClick(String url);
     }
 
-    public interface FileSelectionChecker {
-        boolean isSelected(File file);
+    // Interface updated to pass String (URL)
+    public interface UrlSelectionChecker {
+        boolean isSelected(String url);
     }
 
     public interface MultiSelectChecker {
@@ -42,14 +45,14 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
 
     public G3_Closet_CategoryAdapter(
             Context context,
-            List<File> imageFiles,
+            List<String> imageUrls, // Changed from File to String
             OnImageClickListener clickListener,
             OnImageLongClickListener longClickListener,
-            FileSelectionChecker selectionChecker,
+            UrlSelectionChecker selectionChecker,
             MultiSelectChecker multiSelectChecker
     ) {
         this.context = context;
-        this.imageFiles = imageFiles;
+        this.imageUrls = imageUrls;
         this.clickListener = clickListener;
         this.longClickListener = longClickListener;
         this.selectionChecker = selectionChecker;
@@ -65,26 +68,33 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
 
     @Override
     public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
-        File file = imageFiles.get(position);
-        holder.imageView.setImageBitmap(BitmapFactory.decodeFile(file.getAbsolutePath()));
+        String url = imageUrls.get(position);
+
+        // Use Glide to load image from URL
+        Glide.with(context)
+                .load(url)
+                .placeholder(R.drawable.box_background) // Optional placeholder
+                .centerCrop()
+                .into(holder.imageView);
+
         holder.itemView.setAnimation(AnimationUtils.loadAnimation(context, R.anim.fade_scale));
 
-        boolean selected = selectionChecker.isSelected(file);
+        boolean selected = selectionChecker.isSelected(url);
         boolean showCheckbox = multiSelectChecker.isMultiSelectMode();
 
         holder.checkBox.setVisibility(showCheckbox ? View.VISIBLE : View.GONE);
         holder.checkBox.setChecked(selected);
 
-        holder.itemView.setOnClickListener(v -> clickListener.onClick(file));
+        holder.itemView.setOnClickListener(v -> clickListener.onClick(url));
         holder.itemView.setOnLongClickListener(v -> {
-            longClickListener.onLongClick(file);
+            longClickListener.onLongClick(url);
             return true;
         });
     }
 
     @Override
     public int getItemCount() {
-        return imageFiles.size();
+        return imageUrls.size();
     }
 
     static class PhotoHolder extends RecyclerView.ViewHolder {

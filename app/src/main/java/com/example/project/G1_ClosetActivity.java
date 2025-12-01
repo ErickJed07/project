@@ -17,6 +17,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
+import com.bumptech.glide.Glide; // Ensure you have Glide in build.gradle
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -48,50 +49,73 @@ public class G1_ClosetActivity extends AppCompatActivity {
         setContentView(R.layout.g1_closet);
 
         mAuth = FirebaseAuth.getInstance();
-        dbRef = FirebaseDatabase.getInstance().getReference("ClosetData");
+        // Point to Users root
+        dbRef = FirebaseDatabase.getInstance().getReference("Users");
         storage = FirebaseStorage.getInstance();
         gridLayout = findViewById(R.id.galleryGrid);
         addButtonView = findViewById(R.id.AddCategory);
 
-        // Existing categories from Firebase
         loadCategoriesFromFirebase();
 
-        // Add listener for category addition
         addButtonView.setOnClickListener(v -> onAddCategoryClicked(v));
 
-        // Always add the permanent category if it's missing
         addPermanentCategoryIfNeeded();
 
-        // Navigate to new outfit activity
         findViewById(R.id.newoutfit).setOnClickListener(view ->
                 startActivity(new Intent(G1_ClosetActivity.this, H1_DressActivity.class))
         );
     }
 
     private void loadCategoriesFromFirebase() {
+        if (mAuth.getCurrentUser() == null) return;
+
         String uid = mAuth.getCurrentUser().getUid();
-        dbRef.child(uid).child("categories").addListenerForSingleValueEvent(new ValueEventListener() {
+
+        // Read from Users -> uid -> closetData -> categories
+        dbRef.child(uid).child("closetData").child("categories").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
+                // Clear existing views to prevent duplication during updates
                 for (View view : categoryViews.values()) {
                     gridLayout.removeView(view);
                 }
                 categoryViews.clear();
                 existingCategoryIds.clear();
 
-                // Add permanent category first
                 addPermanentCategoryToUI();
 
-                // Add other categories after the permanent category
+                // ... inside loadCategoriesFromFirebase method ...
+
                 for (DataSnapshot child : snapshot.getChildren()) {
                     String categoryId = child.getKey();
                     String name = child.child("name").getValue(String.class);
+
+                    String firstImageUrl = "";
+
+                    // CHECK: Make sure "photos" exists and has children
+                    if (child.hasChild("photos")) {
+                        // We iterate through the generated keys (e.g. -OfOds83...)
+                        for (DataSnapshot photoSnap : child.child("photos").getChildren()) {
+                            // GET VALUE: The value at that key is the URL string
+                            Object value = photoSnap.getValue();
+
+                            if (value instanceof String) {
+                                String url = (String) value;
+                                if (url != null && !url.isEmpty()) {
+                                    firstImageUrl = url;
+                                    break; // Stop after finding the first valid URL
+                                }
+                            }
+                        }
+                    }
+
                     if (categoryId != null && name != null && !categoryId.equals("permanent_category_id")) {
-                        addCategoryToUI(categoryId, name);
+                        addCategoryToUI(categoryId, name, firstImageUrl);
                     }
                 }
 
-                // Add the "Add Category" button back
+
+                // Ensure "Add Button" is always at the end
                 gridLayout.removeView(addButtonView);
                 gridLayout.addView(addButtonView);
             }
@@ -112,7 +136,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         builder.setPositiveButton("Add", (dialog, which) -> {
             String categoryName = input.getText().toString().trim();
             if (!categoryName.isEmpty()) {
-                saveCategoryToFirebase(categoryName);
+                saveCategoryToFirebase(categoryName, "");
             }
         });
 
@@ -120,19 +144,25 @@ public class G1_ClosetActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private void saveCategoryToFirebase(String categoryName) {
+    private void saveCategoryToFirebase(String categoryName, String imageUrl) {
         String uid = mAuth.getCurrentUser().getUid();
-        DatabaseReference userCategoryRef = dbRef.child(uid).child("categories").push();
-        String categoryId = userCategoryRef.getKey();
-        G6_Closet_CategoryFirebase category = new G6_Closet_CategoryFirebase(categoryId, categoryName);
-        userCategoryRef.setValue(category);
-        addCategoryToUI(categoryId, categoryName);
 
-        gridLayout.removeView(addButtonView);
-        gridLayout.addView(addButtonView);
+        // Save to Users -> uid -> closetData -> categories
+        DatabaseReference userCategoryRef = dbRef.child(uid).child("closetData").child("categories").push();
+        String categoryId = userCategoryRef.getKey();
+
+        Map<String, Object> catData = new HashMap<>();
+        catData.put("id", categoryId);
+        catData.put("name", categoryName);
+        // Note: We don't save "imageUrl" directly on the category object anymore,
+        // images live in the "photos" sub-node, but we pass it here for UI consistency.
+
+        userCategoryRef.setValue(catData);
+
+        // UI update will happen automatically via the ValueEventListener in loadCategoriesFromFirebase
     }
 
-    private void addCategoryToUI(String categoryId, String categoryName) {
+    private void addCategoryToUI(String categoryId, String categoryName, String imageUrl) {
         if (existingCategoryIds.contains(categoryId)) return;
         existingCategoryIds.add(categoryId);
 
@@ -162,16 +192,17 @@ public class G1_ClosetActivity extends AppCompatActivity {
         imagePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
         imagePreview.setClipToOutline(true);
 
-        // Local images now stored per user
-        File categoryDir = new File(getFilesDir(), "ClosetImages/" + mAuth.getCurrentUser().getUid() + "/" + categoryName);
-        File[] imageFiles = categoryDir.listFiles((dir, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
-        if (imageFiles != null && imageFiles.length > 0) {
-            File latest = imageFiles[0];
-            for (File file : imageFiles) {
-                if (file.lastModified() > latest.lastModified()) latest = file;
-            }
-            imagePreview.setImageURI(Uri.fromFile(latest));
+        // ---------------------------------------------------------
+        // IMAGE LOADING LOGIC
+        // ---------------------------------------------------------
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            // Use Glide to load the Cloudinary URL
+            Glide.with(this)
+                    .load(imageUrl)
+                    .placeholder(R.drawable.box_background) // Make sure this drawable exists
+                    .into(imagePreview);
         } else {
+            // Fallback: No image uploaded yet
             imagePreview.setImageResource(R.drawable.box_background);
         }
 
@@ -190,6 +221,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         card.setOnClickListener(v -> {
             Intent intent = new Intent(this, G2_Closet_CategoryActivity.class);
             intent.putExtra("CATEGORY_NAME", categoryName);
+            intent.putExtra("CATEGORY_ID", categoryId); // Pass ID for better querying in next screen
             startActivity(intent);
         });
 
@@ -198,27 +230,19 @@ public class G1_ClosetActivity extends AppCompatActivity {
                     .setTitle("Delete Category")
                     .setMessage("Are you sure you want to delete \"" + categoryName + "\"?")
                     .setPositiveButton("Delete", (dialog, which) -> {
+                        // Remove from UI (though listener will do it too)
                         gridLayout.removeView(card);
                         existingCategoryIds.remove(categoryId);
                         categoryViews.remove(categoryId);
 
+                        // Remove from Firebase
                         dbRef.child(mAuth.getCurrentUser().getUid())
+                                .child("closetData")
                                 .child("categories")
                                 .child(categoryId)
                                 .removeValue();
 
-                        storage.getReference()
-                                .child("ClosetImages")
-                                .child(mAuth.getCurrentUser().getUid())
-                                .child(categoryName)
-                                .listAll()
-                                .addOnSuccessListener(listResult -> {
-                                    for (var item : listResult.getItems()) {
-                                        item.delete();
-                                    }
-                                });
-
-                        deleteCategoryLocalFolder(categoryName);
+                        // Optional: Call Cloudinary API to delete images if needed (requires backend usually)
                     })
                     .setNegativeButton("Cancel", null)
                     .show();
@@ -229,51 +253,39 @@ public class G1_ClosetActivity extends AppCompatActivity {
         categoryViews.put(categoryId, card);
     }
 
-    private void deleteCategoryLocalFolder(String categoryName) {
-        File categoryDir = new File(getFilesDir(), "ClosetImages/" + mAuth.getCurrentUser().getUid() + "/" + categoryName);
-        if (categoryDir.exists() && categoryDir.isDirectory()) {
-            File[] files = categoryDir.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    file.delete();
-                }
-            }
-            categoryDir.delete();
-        }
-    }
-
     private void addPermanentCategoryIfNeeded() {
         String permanentCategoryName = "PermanentCategory";
-        String permanentCategoryId = "permanent_category_id"; // A fixed ID
+        String permanentCategoryId = "permanent_category_id";
 
-        DatabaseReference categoryRef = dbRef.child(mAuth.getCurrentUser().getUid()).child("categories").child(permanentCategoryId);
+        DatabaseReference categoryRef = dbRef.child(mAuth.getCurrentUser().getUid())
+                .child("closetData")
+                .child("categories")
+                .child(permanentCategoryId);
 
-        // Check if the permanent category already exists in the database
         categoryRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (!dataSnapshot.exists()) {
-                    // If the permanent category doesn't exist, add it
-                    G6_Closet_CategoryFirebase category = new G6_Closet_CategoryFirebase(permanentCategoryId, permanentCategoryName);
-                    categoryRef.setValue(category);
-                    addCategoryToUI(permanentCategoryId, permanentCategoryName);
+                    Map<String, Object> catData = new HashMap<>();
+                    catData.put("id", permanentCategoryId);
+                    catData.put("name", permanentCategoryName);
+                    categoryRef.setValue(catData);
+
+                    addCategoryToUI(permanentCategoryId, permanentCategoryName, "");
                 }
             }
 
             @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Handle error
-            }
+            public void onCancelled(DatabaseError databaseError) { }
         });
     }
 
     private void addPermanentCategoryToUI() {
         String permanentCategoryName = "PermanentCategory";
-        String permanentCategoryId = "permanent_category_id"; // A fixed ID
+        String permanentCategoryId = "permanent_category_id";
 
-        // Check if the permanent category is already displayed
         if (!existingCategoryIds.contains(permanentCategoryId)) {
-            addCategoryToUI(permanentCategoryId, permanentCategoryName);
+            addCategoryToUI(permanentCategoryId, permanentCategoryName, "");
         }
     }
 
