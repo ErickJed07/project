@@ -24,7 +24,7 @@
             android:id="@+id/logo"
             android:layout_width="match_parent"
             android:layout_height="135dp"
-            app:srcCompat="@drawable/ic_placeholder" />
+            app:srcCompat="@drawable/ic_placeholder_2" />
 
     </androidx.cardview.widget.CardView>
 
@@ -74,7 +74,7 @@
             android:layout_height="60dp"
             android:backgroundTint="#2B2D30"
             android:text="LOGIN"
-            android:textColor="#9C27B0"
+            android:textColor="@color/pure_color"
             android:textSize="20dp"
             android:textStyle="bold"
             app:cornerRadius="10dp" />
@@ -88,13 +88,13 @@
             android:id="@+id/signinbutton"
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:backgroundTint="#FAFBFF"
+            android:backgroundTint="@color/pure_color"
             android:text="SIGN IN"
-            android:textColor="#000000"
+            android:textColor="@color/white"
             android:textSize="20dp"
             android:textStyle="bold"
             app:cornerRadius="10dp"
-            app:strokeColor="#9C27B0"
+            app:strokeColor="@color/pure_color"
             app:strokeWidth="2dp" />
     </LinearLayout>
 

@@ -17,6 +17,7 @@
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:background="@color/white"
+        android:outlineSpotShadowColor="#BC6464"
         app:layout_constraintBottom_toBottomOf="@+id/bottomBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
@@ -81,30 +82,18 @@
             app:layout_constraintVertical_bias="0.506">
 
             <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+
                 android:background="@drawable/plus"
                 android:backgroundTint="@color/white"
                 android:scaleType="fitCenter"
+                android:src="@drawable/new_outfit_btn"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.244"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:layout_width="191dp"
-                android:layout_height="30dp"
-                android:fontFamily="@font/lato_bold"
-                android:gravity="center"
-                android:text="NEW OUTFIT"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.592"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -112,7 +101,7 @@
         android:id="@+id/lineup"
         android:layout_width="0dp"
         android:layout_height="2dp"
-        android:background="@color/black"
+        android:background="@color/light_gray"
         app:layout_constraintBottom_toBottomOf="@+id/textView6"
         app:layout_constraintEnd_toEndOf="@+id/textView6"
         app:layout_constraintStart_toStartOf="@+id/textView6"
@@ -123,6 +112,7 @@
         android:id="@+id/textView6"
         android:layout_width="0dp"
         android:layout_height="50dp"
+        android:background="@color/white"
         android:fontFamily="@font/inter_extrabold"
         android:gravity="center"
         android:text="CATEGORY"
@@ -130,7 +120,7 @@
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/add_buttons"
         app:layout_constraintVertical_bias="0.0" />
@@ -139,7 +129,7 @@
         android:id="@+id/linebot"
         android:layout_width="0dp"
         android:layout_height="2dp"
-        android:background="@color/black"
+        android:background="@color/light_gray"
         app:layout_constraintBottom_toBottomOf="@+id/textView6"
         app:layout_constraintEnd_toEndOf="@+id/textView6"
         app:layout_constraintStart_toStartOf="@+id/textView6"
@@ -226,7 +216,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/home" />
+                android:src="@drawable/home_1" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -249,7 +239,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/calendar" />
+                android:src="@drawable/calendar_1" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -295,7 +285,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/closet" />
+                android:src="@drawable/closet_2" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -318,7 +308,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/profile" />
+                android:src="@drawable/user_1" />
 
             <TextView
                 android:layout_width="wrap_content"

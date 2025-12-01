@@ -23,7 +23,7 @@
             android:id="@+id/logo"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:srcCompat="@drawable/ic_placeholder" />
+            app:srcCompat="@drawable/ic_placeholder_2" />
 
     </androidx.cardview.widget.CardView>
 
@@ -136,7 +136,7 @@
             android:layout_height="60dp"
             android:backgroundTint="#2B2D30"
             android:text="LOGIN"
-            android:textColor="#9C27B0"
+            android:textColor="@color/pure_color"
             android:textSize="20dp"
             android:textStyle="bold"
             app:cornerRadius="10dp" />

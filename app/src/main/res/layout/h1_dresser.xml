@@ -70,7 +70,7 @@
         android:id="@+id/toolsPanel"
         android:layout_width="0dp"
         android:layout_height="52dp"
-        android:background="#CCC"
+        android:background="#FFFFFF"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -86,7 +86,9 @@
                 android:id="@+id/btnSave"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Save" />
+                android:text="Save"
+                app:cornerRadius="100dp"
+                 />
         </LinearLayout>
     </LinearLayout>
 

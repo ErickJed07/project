@@ -49,7 +49,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:backgroundTint="#E53935"
+            android:backgroundTint="@color/orange_complement"
             android:text="Delete"
             android:textColor="@android:color/white"
             app:layout_constraintEnd_toStartOf="@+id/btnEdit" />
@@ -63,7 +63,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:backgroundTint="#3949AB"
+            android:backgroundTint="@color/pure_color"
             android:text="Edit"
             android:textColor="@android:color/white" />
     </LinearLayout>
