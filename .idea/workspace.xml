@@ -109,11 +109,6 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
-      <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/ic_luncher.xml">
-        <config>
-          <theme>@style/Theme.Project</theme>
-        </config>
-      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/drawable/image_border.xml">
         <config>
           <theme>@style/Theme.Project</theme>
@@ -309,11 +304,6 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
-      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/image_border.xml">
-        <config>
-          <theme>@style/Theme.Project</theme>
-        </config>
-      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml">
         <config>
           <theme>@style/Theme.Project</theme>
@@ -330,16 +320,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9381cc0d-49e9-43ab-88d8-f1c323f9fb0d" name="Changes" comment="updated">
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/calendar_inside_roundcorner.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/calendar_inside_roundcorner.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/calendar_outside_roundcorner.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/calendar_outside_roundcorner.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/house_door_1.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/d1_feed.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/d1_feed.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/e1_calendar.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/e1_calendar.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/e3_calendar_item_event.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/e3_calendar_item_event.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i1_profile.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i1_profile.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/colors.xml" afterDir="false" />
-    </list>
+    <list default="true" id="9381cc0d-49e9-43ab-88d8-f1c323f9fb0d" name="Changes" comment="updated" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
