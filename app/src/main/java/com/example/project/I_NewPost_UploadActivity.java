@@ -26,13 +26,18 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+// --- Cloudinary Imports ---
+import com.cloudinary.android.MediaManager;
+import com.cloudinary.android.callback.ErrorInfo;
+import com.cloudinary.android.callback.UploadCallback;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class I_NewPost_UploadActivity extends AppCompatActivity {
 
@@ -54,6 +59,20 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.i_newpostupload);
+
+        // --- Initialize Cloudinary ---
+        // TODO: Replace these placeholders with your actual Cloudinary Dashboard details
+        try {
+            Map<String, Object> config = new HashMap<>();
+            config.put("cloud_name", BuildConfig.CLOUDINARY_CLOUD_NAME);    // Use credentials from gradle.properties
+            config.put("api_key", BuildConfig.CLOUDINARY_API_KEY);
+            config.put("api_secret", BuildConfig.CLOUDINARY_API_SECRET);
+            MediaManager.init(this, config);  // Initialize Cloudinary MediaManager
+        } catch (IllegalStateException e) {
+            // MediaManager is already initialized, this is fine.
+            e.printStackTrace();
+        }
+
 
         // Initialize Firebase Realtime Database
         database = FirebaseDatabase.getInstance().getReference("PostEvents");
@@ -165,121 +184,128 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
         }
     }
 
+    // 1. Start the Upload Process
     private void savePostData() {
         if (!selectedImages.isEmpty()) {
-            // Save images to the app's local storage and get the paths
-            List<String> savedImagePaths = new ArrayList<>();
+            // Disable button to prevent multiple clicks
+            savePostButton.setEnabled(false);
+            Toast.makeText(this, "Uploading " + selectedImages.size() + " images...", Toast.LENGTH_SHORT).show();
+
+            List<String> uploadedImageUrls = new ArrayList<>();
+            AtomicInteger uploadCounter = new AtomicInteger(0);
+            int totalImages = selectedImages.size();
+
+            // Loop through selected images and upload each to Cloudinary
             for (String imageUri : selectedImages) {
-                String savedPath = saveImageToLocalStorage(imageUri);
-                if (savedPath != null) {
-                    savedImagePaths.add(savedPath);
-                }
-            }
+                MediaManager.get().upload(Uri.parse(imageUri))
+                        .callback(new UploadCallback() {
+                            @Override
+                            public void onStart(String requestId) {
+                                // Optional: Update UI for start
+                            }
 
-            if (savedImagePaths.isEmpty()) {
-                Toast.makeText(this, "Failed to save images", Toast.LENGTH_SHORT).show();
-                return;
-            }
+                            @Override
+                            public void onProgress(String requestId, long bytes, long totalBytes) {
+                                // Optional: Update Progress Bar
+                            }
 
-            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid(); // Get current user's ID
-            DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId);
+                            @Override
+                            public void onSuccess(String requestId, Map resultData) {
+                                // Retrieve the secure public URL from Cloudinary
+                                String secureUrl = (String) resultData.get("secure_url");
+                                uploadedImageUrls.add(secureUrl);
 
-            userRef.addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot) {
-                    if (dataSnapshot.exists()) {
-                        // Retrieve current post count, default to 0 if null
-                        Integer currentPostCount = dataSnapshot.child("posts").getValue(Integer.class);
-                        if (currentPostCount == null) {
-                            currentPostCount = 0;
-                        }
-                        // Increment the post count
-                        userRef.child("posts").setValue(currentPostCount + 1);
+                                // Check if all images are done uploading
+                                if (uploadCounter.incrementAndGet() == totalImages) {
+                                    // All done! Save to Firebase
+                                    saveToFirebase(uploadedImageUrls);
+                                }
+                            }
 
-                                // Fetch the username from Firebase
-                        String username = dataSnapshot.child("username").getValue(String.class);
-                        if (username == null) {
-                            username = "Anonymous"; // Fallback if username is not found
-                        }
-
-                        // Generate post ID
-                        String postId = FirebaseDatabase.getInstance().getReference("PostEvents").push().getKey();
-
-                        // Get the current date in the format required
-                        String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new Date());
-
-                        // Get the caption from the EditText
-                        String caption = captionEditText.getText().toString().trim();
-
-                        // Create a post event object with the dynamic data
-                        I_NewPost_Event postEvent = new I_NewPost_Event(username, caption, savedImagePaths, postId, date, userId , 0, null);
-
-                        // Save the post data to Firebase under "PostEvents"
-                        FirebaseDatabase.getInstance().getReference("PostEvents")
-                                .child(postId)  // Save directly under postId
-                                .setValue(postEvent)
-                                .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(I_NewPost_UploadActivity.this, "Post saved successfully!", Toast.LENGTH_SHORT).show();
-
-                                    // Navigate to FeedActivity after saving the post
-                                    Intent intent = new Intent(I_NewPost_UploadActivity.this, D1_FeedActivity.class);
-                                    startActivity(intent);
-                                    finish();
-                                })
-                                .addOnFailureListener(e -> {
-                                    Toast.makeText(I_NewPost_UploadActivity.this, "Failed to save post", Toast.LENGTH_SHORT).show();
+                            @Override
+                            public void onError(String requestId, ErrorInfo error) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(I_NewPost_UploadActivity.this, "Upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+                                    savePostButton.setEnabled(true); // Re-enable button so user can try again
                                 });
+                            }
 
-                    } else {
-                        Toast.makeText(I_NewPost_UploadActivity.this, "User not found", Toast.LENGTH_SHORT).show();
-                    }
-                }
+                            @Override
+                            public void onReschedule(String requestId, ErrorInfo error) {
+                                // Handle rescheduling if needed
+                            }
+                        })
+                        .dispatch();
+            }
 
-                @Override
-                public void onCancelled(DatabaseError databaseError) {
-                    Toast.makeText(I_NewPost_UploadActivity.this, "Failed to fetch user data", Toast.LENGTH_SHORT).show();
-                }
-            });
         } else {
             Toast.makeText(this, "Please select at least one image.", Toast.LENGTH_SHORT).show();
         }
     }
 
+    // 2. Save Post Metadata to Firebase (Called only after images are uploaded)
+    private void saveToFirebase(List<String> cloudImageUrls) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid(); // Get current user's ID
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(userId);
 
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    // Retrieve current post count, default to 0 if null
+                    Integer currentPostCount = dataSnapshot.child("posts").getValue(Integer.class);
+                    if (currentPostCount == null) {
+                        currentPostCount = 0;
+                    }
+                    // Increment the post count
+                    userRef.child("posts").setValue(currentPostCount + 1);
 
+                    // Fetch the username from Firebase
+                    String username = dataSnapshot.child("username").getValue(String.class);
+                    if (username == null) {
+                        username = "Anonymous"; // Fallback if username is not found
+                    }
 
+                    // Generate post ID
+                    String postId = FirebaseDatabase.getInstance().getReference("PostEvents").push().getKey();
 
-    // Save the image to local storage and return the saved file path
-    private String saveImageToLocalStorage(String imageUri) {
-        try {
-            // Extract the file name from the URI
-            Uri uri = Uri.parse(imageUri);
-            String fileName = uri.getLastPathSegment();
+                    // Get the current date in the format required
+                    String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new Date());
 
-            // Create a file in the app's local storage
-            File dir = new File(getFilesDir(), "posts");
-            if (!dir.exists()) {
-                dir.mkdirs(); // Create directory if it doesn't exist
+                    // Get the caption from the EditText
+                    String caption = captionEditText.getText().toString().trim();
+
+                    // Create a post event object using the CLOUDINARY URLs
+                    I_NewPost_Event postEvent = new I_NewPost_Event(username, caption, cloudImageUrls, postId, date, userId , 0, null);
+
+                    // Save the post data to Firebase under "PostEvents"
+                    FirebaseDatabase.getInstance().getReference("PostEvents")
+                            .child(postId)  // Save directly under postId
+                            .setValue(postEvent)
+                            .addOnSuccessListener(aVoid -> {
+                                Toast.makeText(I_NewPost_UploadActivity.this, "Post saved successfully!", Toast.LENGTH_SHORT).show();
+
+                                // Navigate to FeedActivity after saving the post
+                                Intent intent = new Intent(I_NewPost_UploadActivity.this, D1_FeedActivity.class);
+                                startActivity(intent);
+                                finish();
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(I_NewPost_UploadActivity.this, "Failed to save post", Toast.LENGTH_SHORT).show();
+                                savePostButton.setEnabled(true);
+                            });
+
+                } else {
+                    Toast.makeText(I_NewPost_UploadActivity.this, "User not found", Toast.LENGTH_SHORT).show();
+                    savePostButton.setEnabled(true);
+                }
             }
 
-            File file = new File(dir, fileName);
-            FileOutputStream fos = new FileOutputStream(file);
-
-            // Copy the image from the URI to the app's local storage
-            InputStream inputStream = getContentResolver().openInputStream(uri);
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = inputStream.read(buffer)) > 0) {
-                fos.write(buffer, 0, length);
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(I_NewPost_UploadActivity.this, "Failed to fetch user data", Toast.LENGTH_SHORT).show();
+                savePostButton.setEnabled(true);
             }
-            fos.flush();
-            fos.close();
-            inputStream.close();
-
-            return file.getAbsolutePath();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        });
     }
 }

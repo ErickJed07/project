@@ -1,3 +1,12 @@
+import java.util.Properties
+
+// 1. Load local.properties securely
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -15,6 +24,17 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 2. Inject Cloudinary credentials into BuildConfig
+        // These values must exist in your local.properties file
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("CLOUDINARY_API_KEY")}\"")
+        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("CLOUDINARY_API_SECRET")}\"")
+    }
+
+    // 3. Enable the BuildConfig feature so the generated class is created
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -59,21 +79,22 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.0-alpha02")
     implementation("androidx.camera:camera-view:1.4.0-alpha02")
 
-    // Image Loading Libraries (Glide or Picasso)
+    // Image Loading Libraries (Glide)
+    // Note: You had duplicate Glide entries, I cleaned them up to use the newer version
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation(libs.car.ui.lib) // Glide for image loading + caching
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
-    implementation("com.squareup.picasso:picasso:2.8") // If you prefer Picasso (or use both)
+    implementation(libs.car.ui.lib)
 
-    // RecyclerView for displaying gallery images
-    implementation(libs.recyclerview)
+    implementation("com.squareup.picasso:picasso:2.8")
+
+    // UI extras
+    implementation("com.tbuonomo:dotsindicator:4.2")
+
+    // Cloudinary
+    implementation("com.cloudinary:cloudinary-android:2.3.1")
 
     // Testing Libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    implementation ("com.github.bumptech.glide:glide:4.12.0")
-    annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0'")
-    implementation ("com.tbuonomo:dotsindicator:4.2")
-
 }

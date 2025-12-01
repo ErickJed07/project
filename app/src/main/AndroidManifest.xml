@@ -57,6 +57,7 @@
         <activity android:name=".I_ProfileFavContent_GridViewer"/>
         <activity android:name=".I_Profile_AddModels" />
         <activity android:name=".I_ProfileModelFans_List" />
+        <activity android:name=".C_SignInProfilePhoto" />
 
 
 

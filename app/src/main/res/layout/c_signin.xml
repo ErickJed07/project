@@ -193,16 +193,16 @@
 
         <Button
             android:id="@+id/signinbutton"
-            app:cornerRadius="10dp"
-            app:strokeColor="#9C27B0"
-            app:strokeWidth="2dp"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:backgroundTint="#9C27B0"
-            android:text="SIGN IN"
+            android:text="Next"
             android:textColor="#000000"
             android:textSize="18dp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            app:cornerRadius="10dp"
+            app:strokeColor="#9C27B0"
+            app:strokeWidth="2dp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
