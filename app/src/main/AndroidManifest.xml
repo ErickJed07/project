@@ -47,7 +47,6 @@
         <activity android:name=".B_LoginActivity" android:exported="true" />
         <activity android:name=".D1_FeedActivity" android:exported="true" />
         <activity android:name=".C_SignInActivity" android:exported="true" />
-        <activity android:name=".F2_Camera_EditActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
         <activity android:name=".A_HomeActivity"/>
         <activity android:name=".I_ProfileUploadContent_GridViewer"/>
@@ -56,6 +55,8 @@
         <activity android:name=".I_Profile_AddModels" />
         <activity android:name=".I_ProfileModelFans_List" />
         <activity android:name=".C_SignInProfilePhoto" />
+        <activity android:name="H6_RecommendationActivity"/>
+
 
 
 
