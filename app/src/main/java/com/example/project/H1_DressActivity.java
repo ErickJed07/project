@@ -94,11 +94,6 @@ public class H1_DressActivity extends AppCompatActivity {
         btnToggleCarousel = findViewById(R.id.btnToggleCarousel);
         btnRotate = findViewById(R.id.btnrotate);
 
-        // --- FIX: Removed dummy code causing "yourBitmap" error ---
-        // H2_Dresser_OutfitView outfitView = findViewById(R.id.outfitView);
-        // ImageView newClothingItem = outfitView.addImage(yourBitmap);
-        // new H3_Dresser_TouchHandler(newClothingItem, ...);
-
         // Ensure user is logged in
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -128,6 +123,8 @@ public class H1_DressActivity extends AppCompatActivity {
 
         // Toggle categories + photos
         btnToggleCarousel.setOnClickListener(v -> showDresserBottomSheet());
+
+        // Reset rotation
 
         // Sync reset button visibility with selection
         outfitView.setOnSelectionChangedListener((selected, scale) -> {
@@ -366,25 +363,8 @@ public class H1_DressActivity extends AppCompatActivity {
                 Glide.with(H1_DressActivity.this).asBitmap().load(photoPath).into(new CustomTarget<Bitmap>() {
                     @Override
                     public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                        // 1. Add image to canvas
                         ImageView iv = outfitView.addImage(resource);
                         outfitView.setSelectedView(iv);
-
-// 2. Attach Touch Handler with Long Click Logic
-                        new H3_Dresser_TouchHandler(iv, new H3_Dresser_TouchHandler.OnSelectListener() {
-                            @Override
-                            public void onSelect(ImageView selected) {
-                                outfitView.setSelectedView(selected);
-                            }
-
-                            @Override
-                            public void onLongClick(ImageView view, boolean isCurrentlyLocked, H3_Dresser_TouchHandler handler) {
-                                // Call the popup method we just created
-                                showLockPopup(view, isCurrentlyLocked, handler);
-                            }
-                        });
-
-
                         bottomSheetDialog.dismiss();
                     }
                     @Override
@@ -399,58 +379,6 @@ public class H1_DressActivity extends AppCompatActivity {
 
         loadCategoriesFromFirebase(sheetCategoryAdapter, sheetPhotoAdapter);
         bottomSheetDialog.show();
-    }
-
-    private void showLockPopup(View anchorView, boolean isLocked, H3_Dresser_TouchHandler handler) {
-        // 1. Inflate the layout we created in Step 2
-        View popupView = getLayoutInflater().inflate(R.layout.h7_lock_popup, null);
-
-        // 2. Create the Popup Window
-        final android.widget.PopupWindow popupWindow = new android.widget.PopupWindow(
-                popupView,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                true // Focusable (allows clicking outside to dismiss)
-        );
-        // Set background to transparent so the rounded corners work
-        popupWindow.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-        popupWindow.setElevation(10);
-
-        // 3. Setup the Button
-        Button btnAction = popupView.findViewById(R.id.btnLockAction);
-
-        if (isLocked) {
-            btnAction.setText("Unlock 🔓");
-            // Optional: Change color for Unlock
-            btnAction.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4CAF50"))); // Green
-        } else {
-            btnAction.setText("Lock 🔒");
-            // Optional: Change color for Lock
-            btnAction.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#F44336"))); // Red
-        }
-
-        // 4. Handle Click
-        btnAction.setOnClickListener(v -> {
-            boolean newState = !isLocked;
-
-            // Update the handler state
-            handler.setLocked(newState);
-
-            // Visual Feedback: Dim the image if locked, restore if unlocked
-            if (newState) {
-                Toast.makeText(H1_DressActivity.this, "Item Locked", Toast.LENGTH_SHORT).show();
-                anchorView.setAlpha(0.6f); // Dim it
-            } else {
-                Toast.makeText(H1_DressActivity.this, "Item Unlocked", Toast.LENGTH_SHORT).show();
-                anchorView.setAlpha(1.0f); // Normal
-            }
-
-            popupWindow.dismiss();
-        });
-
-        // 5. Show the popup centered on the image
-        // We use showAsDropDown with offsets to try and center it
-        popupWindow.showAsDropDown(anchorView, 0, -anchorView.getHeight() / 2);
     }
 
     private void loadCategoriesFromFirebase(final H4_DressAdapter categoryAdapter, final H5_Dress_PhotoAdapter photoAdapter) {
@@ -550,37 +478,14 @@ public class H1_DressActivity extends AppCompatActivity {
     }
 
     // ---------------------------------------------------------
-    // NEW: Setup Suggestions + Dropdown Logic
+    // NEW: Load Temporary Suggestions from H6
     // ---------------------------------------------------------
+
     private void setupSuggestionsRecycler() {
         recyclerSuggestions = findViewById(R.id.recyclerSuggestions);
-        View btnDropdown = findViewById(R.id.dropdown); // Initialize the arrow button
-
         if (recyclerSuggestions != null) {
-            // 1. Setup the Layout Manager
-            recyclerSuggestions.setLayoutManager(
-                    new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-            );
-
-            // 2. Load Data
+            recyclerSuggestions.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
             loadTempSuggestions();
-
-            // 3. Add Dropdown Click Logic (Toggle Visibility)
-            if (btnDropdown != null) {
-                btnDropdown.setOnClickListener(v -> {
-                    if (recyclerSuggestions.getVisibility() == View.VISIBLE) {
-                        // Hide it
-                        recyclerSuggestions.setVisibility(View.GONE);
-                        // Optional: Rotate the arrow to point down/up
-                        btnDropdown.animate().rotation(180).setDuration(200).start();
-                    } else {
-                        // Show it
-                        recyclerSuggestions.setVisibility(View.VISIBLE);
-                        // Reset rotation
-                        btnDropdown.animate().rotation(0).setDuration(200).start();
-                    }
-                });
-            }
         }
     }
 
@@ -621,6 +526,7 @@ public class H1_DressActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            // Ensure you have created res/layout/item_outfit_suggestion.xml
             View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_outfit_suggestion, parent, false);
             return new ViewHolder(v);
         }
@@ -650,27 +556,13 @@ public class H1_DressActivity extends AppCompatActivity {
                         @Override
                         public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
                             if (outfitView != null) {
-                                ImageView iv = outfitView.addImage(resource);
-
-                                // FIXED: Use full anonymous class instead of lambda
-                                new H3_Dresser_TouchHandler(iv, new H3_Dresser_TouchHandler.OnSelectListener() {
-                                    @Override
-                                    public void onSelect(ImageView selected) {
-                                        outfitView.setSelectedView(selected);
-                                    }
-
-                                    @Override
-                                    public void onLongClick(ImageView view, boolean isLocked, H3_Dresser_TouchHandler handler) {
-                                        showLockPopup(view, isLocked, handler);
-                                    }
-                                });
+                                outfitView.addImage(resource);
                             }
                         }
                         @Override
                         public void onLoadCleared(@Nullable Drawable placeholder) {}
                     });
         }
-
 
         @Override
         public int getItemCount() { return data.size(); }
@@ -685,4 +577,3 @@ public class H1_DressActivity extends AppCompatActivity {
         }
     }
 }
-
