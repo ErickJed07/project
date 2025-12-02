@@ -1,23 +1,22 @@
 package com.example.project;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.GridLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
-import android.content.Intent;
-import android.os.Build;
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
-import android.view.View;
-import android.widget.Button;
-import android.widget.GridLayout;
-import android.widget.ImageButton;
-import android.widget.TextView;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -25,7 +24,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.FirebaseFirestore;
+// Removed Firestore imports as we are using Realtime Database
+// import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.text.SimpleDateFormat;
@@ -40,7 +40,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
 
     private GridLayout calendarGrid;
     private TextView selectedDayLabel;
-    private TextView monthLabel , yearLabel;
+    private TextView monthLabel, yearLabel;
     private Calendar calendar;
     private TextView selectedDayView = null;
 
@@ -55,8 +55,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
     private String userId;
 
     private GestureDetector gestureDetector;
-    private ConstraintLayout constraintLayout6;
-
+    // private ConstraintLayout constraintLayout6; // Unused based on snippet
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,8 +63,15 @@ public class E1_CalendarActivity extends AppCompatActivity {
         setContentView(R.layout.e1_calendar);
 
         // Firebase setup
-        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        eventsRef = FirebaseDatabase.getInstance().getReference("CalendarEvents").child(userId);
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            // Path matches H1 save logic: CalendarEvents -> userId
+            eventsRef = FirebaseDatabase.getInstance().getReference("CalendarEvents").child(userId);
+        } else {
+            // Handle not logged in
+            finish();
+            return;
+        }
 
         // Request notification permission for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -84,10 +90,21 @@ public class E1_CalendarActivity extends AppCompatActivity {
         eventRecyclerView.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
+        // Initialize Adapter with Click/Delete Listener
         calendarEventAdapter = new E4_Calendar_EventAdapter(calendarEventList, (event, position) -> {
-            if (selectedDateString != null && !selectedDateString.isEmpty() && event.getId() != null) {
+            if (event.getId() != null) {
+                // 1. Cancel local notification
                 E3_Calendar_ReminderUtils.cancelReminder(E1_CalendarActivity.this, event);
-                eventsRef.child(selectedDateString).child(event.getId()).removeValue();
+
+                // 2. Remove from Realtime Database
+                // Note: H1 saves directly under userId, NOT under a date node.
+                eventsRef.child(event.getId()).removeValue()
+                        .addOnSuccessListener(aVoid ->
+                                Toast.makeText(E1_CalendarActivity.this, "Event Deleted", Toast.LENGTH_SHORT).show()
+                        )
+                        .addOnFailureListener(e ->
+                                Toast.makeText(E1_CalendarActivity.this, "Delete Failed", Toast.LENGTH_SHORT).show()
+                        );
             }
         });
         eventRecyclerView.setAdapter(calendarEventAdapter);
@@ -100,20 +117,18 @@ public class E1_CalendarActivity extends AppCompatActivity {
 
         updateCalendar();
 
-
         gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                // Detect swipe direction (left or right)
                 if (e1.getX() - e2.getX() > 50) {
-                    // Swipe left: move to the next month
+                    // Swipe left: next month
                     calendar.add(Calendar.MONTH, 1);
-                    updateCalendar();  // Call update to show the next month
+                    updateCalendar();
                     return true;
                 } else if (e2.getX() - e1.getX() > 50) {
-                    // Swipe right: move to the previous month
+                    // Swipe right: previous month
                     calendar.add(Calendar.MONTH, -1);
-                    updateCalendar();  // Call update to show the previous month
+                    updateCalendar();
                     return true;
                 }
                 return false;
@@ -121,15 +136,12 @@ public class E1_CalendarActivity extends AppCompatActivity {
         });
 
         loadEventsFromFirebase();
-
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event);
     }
-
-
 
     private String getFullDateString(Calendar selectedDate) {
         Calendar today = Calendar.getInstance();
@@ -156,7 +168,6 @@ public class E1_CalendarActivity extends AppCompatActivity {
         long diffInMillis = selectedDateOnly.getTimeInMillis() - todayDate.getTimeInMillis();
         long diffDays = diffInMillis / (1000 * 60 * 60 * 24);
 
-// Remove diffDays == 0, since Today is already handled
         if (diffDays == 1) {
             return dateFormat.format(selectedDate.getTime()) + ", Tomorrow";
         } else if (diffDays == -1) {
@@ -167,22 +178,17 @@ public class E1_CalendarActivity extends AppCompatActivity {
             return dateFormat.format(selectedDate.getTime()) + ", 365+ days ago";
         } else if (diffDays > 1) {
             return dateFormat.format(selectedDate.getTime()) + ", " + diffDays + " days later";
-        } else { // diffDays < -1
+        } else {
             return dateFormat.format(selectedDate.getTime()) + ", " + Math.abs(diffDays) + " days ago";
         }
+    }
 
-        }
-
-
-
-        private void updateCalendar() {
+    private void updateCalendar() {
         calendarGrid.removeAllViews();
 
-        // Show month/year label
         SimpleDateFormat sdf = new SimpleDateFormat("MMMM", Locale.getDefault());
         monthLabel.setText(sdf.format(calendar.getTime()));
 
-        // Update the yearLabel with the current year
         SimpleDateFormat yearFormat = new SimpleDateFormat("yyyy", Locale.getDefault());
         yearLabel.setText(yearFormat.format(calendar.getTime()));
 
@@ -197,8 +203,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
         int daysInMonth = tempCalendar.getActualMaximum(Calendar.DAY_OF_MONTH);
 
         int totalCells = 42;
-
-        selectedDayView = null; // Reset for new month
+        selectedDayView = null;
 
         for (int i = 0; i < totalCells; i++) {
             View dayCell = createDayView();
@@ -215,7 +220,6 @@ public class E1_CalendarActivity extends AppCompatActivity {
                 String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(tempDate.getTime());
                 dayCell.setTag(dateKey);
 
-                // Event background
                 if (eventMap.containsKey(dateKey) && !eventMap.get(dateKey).isEmpty()) {
                     eventBg.setVisibility(View.VISIBLE);
                     dayNumber.setTextColor(getResources().getColor(android.R.color.white));
@@ -224,52 +228,38 @@ public class E1_CalendarActivity extends AppCompatActivity {
                     dayNumber.setTextColor(getResources().getColor(android.R.color.black));
                 }
 
-                // Selection: auto or previously selected
                 if (dateKey.equals(selectedDateString) || (isCurrentMonth && day == today && selectedDayView == null)) {
                     selectionBg.setVisibility(View.VISIBLE);
                     selectedDayView = dayNumber;
                     selectedDateString = dateKey;
-
-                    // Format the selected date with dynamic label
-                    selectedDayLabel.setText(getFullDateString(tempDate)); // Use the helper method for the label
+                    selectedDayLabel.setText(getFullDateString(tempDate));
                 } else {
                     selectionBg.setVisibility(View.GONE);
                 }
 
-                // Click listener
                 dayCell.setOnClickListener(v -> {
                     if (selectedDayView != null) {
                         View oldSelectionBg = ((View) selectedDayView.getParent())
                                 .findViewById(R.id.selection_background);
                         oldSelectionBg.setVisibility(View.GONE);
                     }
-
                     selectionBg.setVisibility(View.VISIBLE);
                     selectedDayView = dayNumber;
                     selectedDateString = dateKey;
-
                     loadEventsForSelectedDate();
-
-                    // Set the full date label
-                    selectedDayLabel.setText(getFullDateString(tempDate)); // Use the helper method
+                    selectedDayLabel.setText(getFullDateString(tempDate));
                 });
 
             } else {
-                // Adjacent month days
                 dayNumber.setText(getAdjacentDay(i, firstDayOfWeek, daysInMonth));
                 dayNumber.setTextColor(getResources().getColor(R.color.gray));
             }
-
             calendarGrid.addView(dayCell);
         }
     }
 
-
-
     private View createDayView() {
         View view = getLayoutInflater().inflate(R.layout.e2_calendar_day, calendarGrid, false);
-
-        // Set up layout parameters
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
         params.height = 0;
@@ -278,49 +268,51 @@ public class E1_CalendarActivity extends AppCompatActivity {
         params.setMargins(2, 2, 2, 2);
         view.setLayoutParams(params);
 
-        // Use GestureDetector to detect swipe gestures
         GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 if (Math.abs(velocityX) > Math.abs(velocityY)) {
                     if (e1.getX() - e2.getX() > 50) {
-                        // Swipe left: move to the next month
                         moveToNextMonth();
                     } else if (e2.getX() - e1.getX() > 50) {
-                        // Swipe right: move to the previous month
                         moveToPreviousMonth();
                     }
                 }
                 return true;
             }
         });
-
-        // Set touch listener to detect swipe gestures on the individual day
         view.setOnTouchListener((v, event) -> gestureDetector.onTouchEvent(event));
-
         return view;
     }
 
     private void moveToNextMonth() {
-        calendar.add(Calendar.MONTH, 1); // Move to the next month
-        updateCalendar(); // Update the calendar view
+        calendar.add(Calendar.MONTH, 1);
+        updateCalendar();
     }
 
     private void moveToPreviousMonth() {
-        calendar.add(Calendar.MONTH, -1); // Move to the previous month
-        updateCalendar(); // Update the calendar view
+        calendar.add(Calendar.MONTH, -1);
+        updateCalendar();
     }
 
-
-
     private void loadEventsFromFirebase() {
+        if (eventsRef == null) return;
+
         eventsRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 eventMap.clear();
 
                 for (DataSnapshot eventSnapshot : snapshot.getChildren()) {
+                    // --------------------------------------------------------
+                    // Cloudinary Image Logic:
+                    // The Cloudinary URL is stored in the "imagePath" field of
+                    // the Firebase object (saved in H1 Activity).
+                    // E2_Calendar_Event automatically deserializes this URL
+                    // into its imagePath field.
+                    // --------------------------------------------------------
                     E2_Calendar_Event event = eventSnapshot.getValue(E2_Calendar_Event.class);
+
                     if (event != null) {
                         event.setId(eventSnapshot.getKey());
                         String date = event.getDate();
@@ -348,6 +340,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
                 eventMap.getOrDefault(selectedDateString, new ArrayList<>());
         calendarEventList.clear();
         calendarEventList.addAll(selectedCalendarEvents);
+        // The Adapter (E4) will take these events and use Glide to load the Cloudinary URL
         calendarEventAdapter.notifyDataSetChanged();
     }
 
@@ -386,37 +379,4 @@ public class E1_CalendarActivity extends AppCompatActivity {
             return String.valueOf(day);
         }
     }
-
-
-// Inside your Activity class
-
-    private void setUpDeleteButton(String eventId) {
-        Button deleteButton = findViewById(R.id.deleteButton); // Make sure to set your delete button ID
-
-        deleteButton.setOnClickListener(view -> {
-            // Reference to Firestore
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-            // Reference to the specific event document
-            db.collection("CalendarEvents").document(eventId)
-                    .delete()
-                    .addOnSuccessListener(aVoid -> {
-                        // Show Snackbar confirmation
-                        Snackbar.make(view, "Event deleted successfully", Snackbar.LENGTH_LONG).show();
-
-                        // Optionally, remove the event from your local list if needed
-                        removeEventFromLocalList(eventId);
-
-                    })
-                    .addOnFailureListener(e -> {
-                        // Show error message if deletion fails
-                        Snackbar.make(view, "Error deleting event", Snackbar.LENGTH_LONG).show();
-                    });
-        });
-    }
-
-    private void removeEventFromLocalList(String eventId) {
-        // Code to remove event from local data, e.g., your adapter or local storage
-    }
-
 }

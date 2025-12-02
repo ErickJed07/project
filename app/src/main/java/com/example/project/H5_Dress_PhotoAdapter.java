@@ -83,8 +83,9 @@ public class H5_Dress_PhotoAdapter extends RecyclerView.Adapter<H5_Dress_PhotoAd
 
     /**
      * Replace photos list and refresh the UI.
+     * Renamed to match H1_DressActivity call.
      */
-    public void setPhotos(List<String> newPhotos) {
+    public void updatePhotos(List<String> newPhotos) {
         if (newPhotos == null) {
             this.photos = new ArrayList<>();
         } else {
