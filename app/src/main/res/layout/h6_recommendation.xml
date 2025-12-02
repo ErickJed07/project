@@ -1,81 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootCanvas"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:gravity="center_horizontal"
-    android:background="#F8F9FA">
+    android:background="#F4F6F8">
+
+    <!-- HEADER -->
+    <ImageButton
+        android:id="@+id/btnBack"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/arrowleft"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Outfit of the Day"
-        android:textSize="24sp"
+        android:text="Free-Form Builder"
+        android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="#333"
-        android:layout_marginBottom="10dp"
-        android:layout_marginTop="20dp"/>
+        app:layout_constraintBottom_toBottomOf="@id/btnBack"
+        app:layout_constraintStart_toEndOf="@id/btnBack"
+        app:layout_constraintTop_toTopOf="@id/btnBack" />
 
-    <!-- Outfit Display Container -->
-    <!-- Changed height to 0dp and weight to 1 so it takes all available space -->
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- CANVAS AREA (Where boxes are added) -->
+    <FrameLayout
+        android:id="@+id/canvasContainer"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:background="#FFFFFF"
-        android:elevation="10dp"
-        android:padding="16dp"
-        android:layout_marginBottom="20dp"
-        android:gravity="center">
+        android:background="#EFEFEF"
+        android:layout_margin="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnBack">
 
-        <!-- Top Item -->
-        <!-- Changed height to 0dp and weight to 1 -->
-        <ImageView
-            android:id="@+id/imgTop"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginBottom="8dp"
-            android:layout_weight="1"
-            android:scaleType="fitXY"
-            android:src="@drawable/box_background" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tap '+ Add Box' to start.\nDrag boxes to move.\nTap lock icon to freeze position."
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textColor="#999"/>
 
-        <!-- Bottom Item -->
-        <!-- Changed height to 0dp and weight to 1 -->
-        <ImageView
-            android:id="@+id/imgBottom"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:scaleType="fitXY"
-            android:src="@drawable/box_background" />
-    </LinearLayout>
 
-    <!-- Controls -->
+
+    </FrameLayout>
+
+    <!-- BOTTOM CONTROLS -->
     <LinearLayout
+        android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <Button
-            android:id="@+id/btnShuffle"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginEnd="20dp"
-            android:backgroundTint="#2196F3"
-            android:text="Shuffle" />
+            android:id="@+id/btnAddBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="+ Add Box"
+            android:backgroundTint="#333"/>
 
+        <Button
+            android:id="@+id/btnShuffleAll"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Shuffle All"
+            android:backgroundTint="#6C5CE7"/>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btnHistory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:src="@android:drawable/ic_menu_recent_history"
+            app:backgroundTint="#FF9800"
+            app:fabSize="mini"/>
     </LinearLayout>
 
-    <Button
-        android:id="@+id/btnBack"
+    <!-- HISTORY LIST (Hidden Overlay) -->
+    <FrameLayout
+        android:id="@+id/historyContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Back to Closet"
-        android:layout_marginTop="20dp"
-        android:backgroundTint="#757575"/>
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:visibility="gone"
+        android:elevation="20dp"
+        android:padding="32dp">
 
-</LinearLayout>
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="#FFF">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Generated History" android:textSize="18sp" android:textStyle="bold"/>
+                    <ImageButton android:id="@+id/btnCloseHistory" android:layout_width="30dp" android:layout_height="30dp"
+                        android:layout_alignParentEnd="true" android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:background="@android:color/transparent"/>
+                </RelativeLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvHistory"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="8dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
