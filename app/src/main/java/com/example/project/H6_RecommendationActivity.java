@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -30,6 +31,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -45,7 +47,7 @@ public class H6_RecommendationActivity extends AppCompatActivity {
 
     // History Model: Stores a snapshot of URLs generated
     private static class HistorySnapshot {
-        List<String> imageUrls;
+        List<String> imageUrls = new ArrayList<>();
         String timestamp;
         HistorySnapshot(List<String> urls) {
             this.imageUrls = urls;
@@ -90,6 +92,9 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         // 3. Listeners
         btnBack.setOnClickListener(v -> finish());
 
+        // CHANGED: Show menu first, then add box
+        btnAddBox.setOnClickListener(v -> showAddBoxMenu());
+
         btnShuffleAll.setOnClickListener(v -> shuffleAllBoxes());
 
         btnHistory.setOnClickListener(v -> historyContainer.setVisibility(View.VISIBLE));
@@ -127,25 +132,65 @@ public class H6_RecommendationActivity extends AppCompatActivity {
 
     // --- CORE LOGIC: ADD MOVABLE BOX ---
 
+    // Helper to convert dp to pixels
+    private int dp(int value) {
+        float density = getResources().getDisplayMetrics().density;
+        return (int) (value * density + 0.5f);
+    }
+
+    // 1. Helper to show menu first
+    // 1. Helper to show menu first and handle selection
+    private void showAddBoxMenu() {
+        PopupMenu popup = new PopupMenu(H6_RecommendationActivity.this, btnAddBox);
+
+        // Add menu items
+        popup.getMenu().add("All");
+        popup.getMenu().add("Hat");
+        popup.getMenu().add("Accessories");
+        popup.getMenu().add("Outer");
+        popup.getMenu().add("Top");
+        popup.getMenu().add("Bag");
+        popup.getMenu().add("Bottom");
+        popup.getMenu().add("Shoes");
+        popup.getMenu().add("Dress");
+
+        // Add Listener to handle clicks
+        popup.setOnMenuItemClickListener(item -> {
+            String category = item.getTitle().toString();
+            addMovableBox(category); // This creates the box with the chosen category
+            return true;
+        });
+
+        popup.show();
+    }
+
+    // 2. Helper to calculate and apply size based on category
     private void resizeBox(CardView card, String category) {
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
 
-        float widthRatio, heightRatio, aspect;
-
-        switch (category.toLowerCase()) {
-            case "hatsd":         widthRatio = 0.25f; heightRatio = 0.15f; aspect = 1.5f; break;
-            case "accessories": widthRatio = 0.25f; heightRatio = 0.25f; aspect = 1.0f; break;
-            case "outer":       widthRatio = 0.40f; heightRatio = 0.50f; aspect = 0.85f; break;
-            case "top":         widthRatio = 0.40f; heightRatio = 0.45f; aspect = 0.85f; break;
-            case "bag":         widthRatio = 0.30f; heightRatio = 0.30f; aspect = 0.9f; break;
-            case "bottom":      widthRatio = 0.40f; heightRatio = 0.55f; aspect = 0.75f; break;
-            case "shoes":       widthRatio = 0.35f; heightRatio = 0.20f; aspect = 1.6f; break;
-            default:            widthRatio = 0.40f; heightRatio = 0.45f; aspect = 0.85f; break;
+        // Config Helper Class
+        class BoxConfig {
+            float widthRatio, heightRatio, aspect;
+            BoxConfig(float w, float h, float a) {
+                this.widthRatio = w; this.heightRatio = h; this.aspect = a;
+            }
         }
 
-        int w = (int) (screenWidth * widthRatio);
-        int h = (aspect > 0) ? (int) (w / aspect) : (int) (screenHeight * heightRatio);
+        BoxConfig cfg;
+        switch (category.toLowerCase()) {
+            case "hat":         cfg = new BoxConfig(0.25f, 0.15f, 1.5f); break;
+            case "accessories": cfg = new BoxConfig(0.25f, 0.25f, 1.0f); break;
+            case "outer":       cfg = new BoxConfig(0.40f, 0.50f, 0.85f); break;
+            case "top":         cfg = new BoxConfig(0.40f, 0.45f, 0.85f); break;
+            case "bag":         cfg = new BoxConfig(0.30f, 0.30f, 0.9f); break;
+            case "bottom":      cfg = new BoxConfig(0.40f, 0.55f, 0.75f); break;
+            case "shoes":       cfg = new BoxConfig(0.35f, 0.20f, 1.6f); break;
+            default:            cfg = new BoxConfig(0.40f, 0.45f, 0.85f); break;
+        }
+
+        int w = (int) (screenWidth * cfg.widthRatio);
+        int h = (cfg.aspect > 0) ? (int) (w / cfg.aspect) : (int) (screenHeight * cfg.heightRatio);
 
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) card.getLayoutParams();
         if (params == null) {
@@ -159,11 +204,31 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         card.setLayoutParams(params);
     }
 
+    // Helper: Get sub-tags based on main category
+    // Helper: Get sub-tags based on main category
+    // Helper: Get sub-tags based on main category
+    private List<String> getSubTags(String category) {
+        switch (category) {
+            case "All": return Arrays.asList("all", "any", "everything"); // Fixed typo here
+            case "Hat": return Arrays.asList("hat", "cap", "beanie", "bucket hat", "beret", "snapback", "visor");
+            case "Accessories": return Arrays.asList("accessory", "belt", "scarf", "glasses", "sunglasses", "watch", "bracelet", "earrings");
+            case "Outer": return Arrays.asList("outer", "jacket", "coat", "hoodie", "blazer", "cardigan", "sweater", "windbreaker");
+            case "Top": return Arrays.asList("top", "shirt", "tshirt", "longsleeve", "blouse", "hoodie", "tanktop", "crop top");
+            case "Bag": return Arrays.asList("bag", "handbag", "crossbody", "backpack", "tote", "purse");
+            case "Bottom": return Arrays.asList("bottom", "pants", "jeans", "shorts", "skirt", "trousers", "cargo", "leggings");
+            case "Shoes": return Arrays.asList("shoes", "sneakers", "boots", "heels", "sandals", "slippers", "loafers");
+            case "Dress": return Arrays.asList("dress", "gown", "casual dress", "long dress", "mini dress");
+            default: return new ArrayList<>();
+        }
+    }
+
+
+
     @SuppressLint("ClickableViewAccessibility")
     private void addMovableBox(String startCategory) {
         // Create CardView Container
         CardView card = new CardView(this);
-        card.setVisibility(View.INVISIBLE);
+        card.setVisibility(View.INVISIBLE); // Start invisible to prevent flicker
 
         // Initialize layout params
         card.setLayoutParams(new FrameLayout.LayoutParams(0, 0));
@@ -209,9 +274,29 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         // Apply correct size immediately
         resizeBox(card, startCategory);
 
+        // --- CRITICAL: Initialize Data for this Box ---
+        // Structure: [0]=FilterKeywords(List<String>), [1]=IsLocked(boolean), [2]=CurrentUrl(String)
         List<String> initialFilters = new ArrayList<>();
-        initialFilters.add(startCategory.toLowerCase());
+        initialFilters.add(startCategory.toLowerCase()); // Default filter is the main category (e.g., "top")
         card.setTag(new Object[]{initialFilters, false, null});
+
+        // --- SUB-TAG LOGIC: Click Listener for Filter Label ---
+        tvFilter.setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(H6_RecommendationActivity.this, v);
+            List<String> subTags = getSubTags(startCategory); // Uses the helper method above
+
+            // 1. Add "All" option (resets to main category)
+            popup.getMenu().add("All " + startCategory);
+
+            // 2. Add specific sub-tags from your list
+            for (String tag : subTags) {
+                // Capitalize first letter for display
+                String displayTag = tag.substring(0, 1).toUpperCase() + tag.substring(1);
+                popup.getMenu().add(displayTag);
+            }
+
+            popup.show();
+        });
 
         // Logic: Dragging (Boundary Clamped)
         card.setOnTouchListener(new View.OnTouchListener() {
@@ -237,9 +322,7 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                         newX = Math.max(0, Math.min(newX, pW - view.getWidth()));
                         newY = Math.max(0, Math.min(newY, pH - view.getHeight()));
 
-                        // More efficient than animate() for dragging
-                        view.setX(newX);
-                        view.setY(newY);
+                        view.animate().x(newX).y(newY).setDuration(0).start();
                         break;
                     default: return false;
                 }
@@ -288,6 +371,7 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                     continue;
                 }
 
+                // --- CHANGE 3: Read List and Filter ---
                 @SuppressWarnings("unchecked")
                 List<String> filterKeywords = (List<String>) tags[0];
 
@@ -296,13 +380,16 @@ public class H6_RecommendationActivity extends AppCompatActivity {
 
                 // Check against all items in database
                 for (ClothingItem item : allItems) {
+                    // 1. If "all" is in the keyword list, accept everything
                     if (filterKeywords.contains("all")) {
                         candidates.add(item);
                     } else {
+                        // 2. Otherwise, check if item category matches ANY keyword in the list
                         for (String keyword : filterKeywords) {
+                            // Example: if keyword is "gown", check if item.category contains "gown"
                             if (item.category.toLowerCase().contains(keyword.toLowerCase())) {
                                 candidates.add(item);
-                                break;
+                                break; // Found a match for this item, move to next item
                             }
                         }
                     }
@@ -338,7 +425,7 @@ public class H6_RecommendationActivity extends AppCompatActivity {
     }
 
     // --- HISTORY ADAPTER ---
-    private static class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {
+    private class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {
         List<HistorySnapshot> history;
 
         HistoryAdapter(List<HistorySnapshot> history) { this.history = history; }
@@ -346,6 +433,7 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            // A horizontal scroll view inside a vertical list item
             RecyclerView rv = new RecyclerView(parent.getContext());
             rv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 250));
             rv.setLayoutManager(new LinearLayoutManager(parent.getContext(), LinearLayoutManager.HORIZONTAL, false));
@@ -355,13 +443,14 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             HistorySnapshot snapshot = history.get(position);
+            // Set internal adapter for the horizontal images
             holder.rvMini.setAdapter(new MiniImageAdapter(snapshot.imageUrls));
         }
 
         @Override
         public int getItemCount() { return history.size(); }
 
-        static class ViewHolder extends RecyclerView.ViewHolder {
+        class ViewHolder extends RecyclerView.ViewHolder {
             RecyclerView rvMini;
             ViewHolder(View itemView) {
                 super(itemView);
@@ -370,7 +459,8 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         }
     }
 
-    private static class MiniImageAdapter extends RecyclerView.Adapter<MiniImageAdapter.MiniHolder> {
+    // Adapter for the tiny images inside the history list
+    private class MiniImageAdapter extends RecyclerView.Adapter<MiniImageAdapter.MiniHolder> {
         List<String> urls;
         MiniImageAdapter(List<String> urls) { this.urls = urls; }
 
@@ -392,7 +482,7 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         @Override
         public int getItemCount() { return urls.size(); }
 
-        static class MiniHolder extends RecyclerView.ViewHolder {
+        class MiniHolder extends RecyclerView.ViewHolder {
             MiniHolder(View v) { super(v); }
         }
     }
