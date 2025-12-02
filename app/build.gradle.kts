@@ -7,7 +7,6 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -25,7 +24,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
         // 2. Inject Cloudinary credentials into BuildConfig
         // These values must exist in your local.properties file
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME")}\"")
@@ -67,6 +65,20 @@ dependencies {
     implementation(libs.exifinterface)
     implementation(libs.material.v1120)
 
+
+
+        implementation(libs.appcompat)
+    implementation(libs.object1.detection)
+    implementation(libs.object1.detection.common)
+    // ... other implementations ...
+
+        testImplementation(libs.junit)
+        androidTestImplementation(libs.ext.junit)
+        androidTestImplementation(libs.espresso.core)
+
+
+
+
     // Firebase (using BoM to sync versions)
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
     implementation("com.google.firebase:firebase-analytics")
@@ -82,21 +94,18 @@ dependencies {
 
     // Image Loading Libraries (Glide or Picasso)
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation(libs.car.ui.lib) // Glide for image loading + caching
+    implementation(libs.car.ui.lib)
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
-    implementation("com.squareup.picasso:picasso:2.8") // If you prefer Picasso (or use both)
-
-    // RecyclerView for displaying gallery images
-    implementation(libs.recyclerview)
+    implementation("com.squareup.picasso:picasso:2.8")
 
     implementation("com.cloudinary:cloudinary-android:2.3.1")
 
-    // Testing Libraries
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.ext.junit)
-    androidTestImplementation(libs.espresso.core)
-    implementation ("com.github.bumptech.glide:glide:4.12.0")
-    annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0'")
-    implementation ("com.tbuonomo:dotsindicator:4.2")
+    // UI extras
+    implementation("com.tbuonomo:dotsindicator:4.2")
+    implementation ("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation ("com.google.mlkit:image-labeling:17.0.7")
+    implementation ("androidx.palette:palette:1.0.0")
+
+
 
 }

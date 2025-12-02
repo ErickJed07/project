@@ -14,7 +14,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -63,11 +65,17 @@ import java.util.Map;
 import java.util.UUID;
 
 public class H1_DressActivity extends AppCompatActivity {
+    private Button btnOpenReco;
 
     private H2_Dresser_OutfitView outfitView;
     private Button btnSave;
     private ImageButton btnToggleCarousel, btnBack, btnRotate;
     private String uid;
+
+    // --- Reco List Variables ---
+    private RecyclerView recyclerSuggestions;
+    private SuggestionAdapter suggestionAdapter;
+    private List<Map<String, String>> suggestionList = new ArrayList<>();
 
     private static final int REQ_CODE_POST_NOTIFICATIONS = 101;
 
@@ -77,7 +85,7 @@ public class H1_DressActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.h1_dresser);
 
-        // Initialize Cloudinary if not already done (safe to call multiple times if handled correctly in app)
+        // Initialize Cloudinary if not already done
         initCloudinary();
 
         outfitView = findViewById(R.id.outfitView);
@@ -86,14 +94,29 @@ public class H1_DressActivity extends AppCompatActivity {
         btnToggleCarousel = findViewById(R.id.btnToggleCarousel);
         btnRotate = findViewById(R.id.btnrotate);
 
+        // --- FIX: Removed dummy code causing "yourBitmap" error ---
+        // H2_Dresser_OutfitView outfitView = findViewById(R.id.outfitView);
+        // ImageView newClothingItem = outfitView.addImage(yourBitmap);
+        // new H3_Dresser_TouchHandler(newClothingItem, ...);
+
         // Ensure user is logged in
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         }
 
+        // Reco Button Logic
+        btnOpenReco = findViewById(R.id.btnOpenReco);
+        btnOpenReco.setOnClickListener(v -> {
+            Intent intent = new Intent(H1_DressActivity.this, H6_RecommendationActivity.class);
+            startActivity(intent);
+        });
+
+        // Initialize Suggestions RecyclerView
+        setupSuggestionsRecycler();
+
         btnRotate.setVisibility(View.GONE);
 
-        // ✅ Runtime permissions
+        // Runtime permissions
         checkAndRequestPermissions();
 
         // Back → Closet
@@ -106,9 +129,6 @@ public class H1_DressActivity extends AppCompatActivity {
         // Toggle categories + photos
         btnToggleCarousel.setOnClickListener(v -> showDresserBottomSheet());
 
-        // Reset rotation
-        btnRotate.setOnClickListener(v -> outfitView.resetSelectedRotation());
-
         // Sync reset button visibility with selection
         outfitView.setOnSelectionChangedListener((selected, scale) -> {
             btnRotate.setVisibility(selected != null ? View.VISIBLE : View.GONE);
@@ -120,8 +140,8 @@ public class H1_DressActivity extends AppCompatActivity {
             if (bitmap != null) {
                 String path = saveBitmapToFile(bitmap);
                 if (path != null) {
-                    saveToPermanentCategory(path);  // Save image in permanent category (local logic kept)
-                    showSavePopup(path);  // Show save popup for event scheduling
+                    saveToPermanentCategory(path);
+                    showSavePopup(path);
                 } else {
                     Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show();
                 }
@@ -143,23 +163,16 @@ public class H1_DressActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * ✅ Handle runtime permissions for notifications + exact alarms
-     */
     private void checkAndRequestPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                Log.d("H1_DressActivity", "Requesting POST_NOTIFICATIONS permission");
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_CODE_POST_NOTIFICATIONS);
-            } else {
-                Log.d("H1_DressActivity", "POST_NOTIFICATIONS already granted");
             }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
             if (am != null && !am.canScheduleExactAlarms()) {
-                Log.w("H1_DressActivity", "Exact alarm permission not granted. Opening settings...");
                 Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
             }
@@ -169,20 +182,15 @@ public class H1_DressActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
         if (requestCode == REQ_CODE_POST_NOTIFICATIONS) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.d("H1_DressActivity", "POST_NOTIFICATIONS granted by user");
             } else {
-                Log.w("H1_DressActivity", "POST_NOTIFICATIONS denied by user");
-                Toast.makeText(this, "Notifications are disabled. Reminders may not work.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Notifications are disabled.", Toast.LENGTH_LONG).show();
             }
         }
     }
 
-    /**
-     * Save bitmap to local file
-     */
     private String saveBitmapToFile(Bitmap bitmap) {
         try {
             File dir = new File(getFilesDir(), "outfits");
@@ -203,55 +211,31 @@ public class H1_DressActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Save photo in the "PermanentCategory" folder
-     */
     private void saveToPermanentCategory(String photoPath) {
         if (uid == null) return;
-
-        // Define the "Permanent" category directory
         File permanentCategoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/PermanentCategory");
-
-        // Create directory if it doesn't exist
-        if (!permanentCategoryDir.exists()) {
-            permanentCategoryDir.mkdirs();
-        }
+        if (!permanentCategoryDir.exists()) permanentCategoryDir.mkdirs();
 
         if (photoPath != null && !photoPath.isEmpty()) {
-            File sourceFile = new File(photoPath);  // Source file from the given photo path
-            File destFile = new File(permanentCategoryDir, sourceFile.getName());  // Destination file in the "PermanentCategory" folder
+            File sourceFile = new File(photoPath);
+            File destFile = new File(permanentCategoryDir, sourceFile.getName());
 
             try {
-                // Copy the file to the permanent category directory
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
 
-                // ---------------------------------------------------------
-                // UPDATE: Path excludes "closetData"
-                // NEW: Users -> uid -> categories
-                // ---------------------------------------------------------
                 DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
-                        .child(uid)
-                        .child("categories") // Moved directly under uid
-                        .child("permanent_category_id")
-                        .child("photos");
+                        .child(uid).child("categories").child("permanent_category_id").child("photos");
 
                 String pushId = dbRef.push().getKey();
                 if (pushId != null) {
-                    // ---------------------------------------------------------
-                    // UPDATE: Save as Object to match other activities
-                    // Object structure: { url: "...", tagCloth: "...", tagColor: "..." }
-                    // ---------------------------------------------------------
                     Map<String, Object> photoData = new HashMap<>();
                     photoData.put("url", destFile.getAbsolutePath());
-                    // Add default tags for outfit composition
                     photoData.put("tagCloth", "Outfit");
                     photoData.put("tagColor", "Mixed");
-
                     dbRef.child(pushId).setValue(photoData);
                 }
-
                 Toast.makeText(this, "Saved to Permanent Category", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -277,50 +261,33 @@ public class H1_DressActivity extends AppCompatActivity {
 
         etDate.setOnClickListener(v -> {
             Calendar now = Calendar.getInstance();
-            DatePickerDialog dialog = new DatePickerDialog(
-                    this,
-                    (view, year, month, day) -> {
-                        selectedDate.set(Calendar.YEAR, year);
-                        selectedDate.set(Calendar.MONTH, month);
-                        selectedDate.set(Calendar.DAY_OF_MONTH, day);
-                        etDate.setText(day + "/" + (month + 1) + "/" + year);
-                    },
-                    now.get(Calendar.YEAR),
-                    now.get(Calendar.MONTH),
-                    now.get(Calendar.DAY_OF_MONTH)
-            );
+            DatePickerDialog dialog = new DatePickerDialog(this, (view, year, month, day) -> {
+                selectedDate.set(Calendar.YEAR, year);
+                selectedDate.set(Calendar.MONTH, month);
+                selectedDate.set(Calendar.DAY_OF_MONTH, day);
+                etDate.setText(day + "/" + (month + 1) + "/" + year);
+            }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH));
             dialog.show();
         });
 
         etTime.setOnClickListener(v -> {
             Calendar now = Calendar.getInstance();
-            TimePickerDialog dialog = new TimePickerDialog(
-                    this,
-                    (view, hourOfDay, minute) -> {
-                        selectedDate.set(Calendar.HOUR_OF_DAY, hourOfDay);
-                        selectedDate.set(Calendar.MINUTE, minute);
-                        etTime.setText(String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute));
-                    },
-                    now.get(Calendar.HOUR_OF_DAY),
-                    now.get(Calendar.MINUTE),
-                    false
-            );
+            TimePickerDialog dialog = new TimePickerDialog(this, (view, hourOfDay, minute) -> {
+                selectedDate.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                selectedDate.set(Calendar.MINUTE, minute);
+                etTime.setText(String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute));
+            }, now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE), false);
             dialog.show();
         });
 
         String[] reminders = {"None", "1 hour before", "45 min before", "30 min before", "15 min before"};
-
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, reminders);
         spinnerReminder.setAdapter(adapter);
         spinnerReminder.setText(reminders[0], false);
 
-        cbEnableAlarm.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            layoutReminder.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-        });
+        cbEnableAlarm.setOnCheckedChangeListener((buttonView, isChecked) -> layoutReminder.setVisibility(isChecked ? View.VISIBLE : View.GONE));
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setView(popupView)
-                .create();
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(popupView).create();
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
 
@@ -328,86 +295,61 @@ public class H1_DressActivity extends AppCompatActivity {
             String title = etTitle.getText().toString().trim();
             String reminder = spinnerReminder.getText().toString();
             String time = etTime.getText().toString();
-            String dateString = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    .format(selectedDate.getTime());
+            String dateString = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selectedDate.getTime());
 
             if (title.isEmpty()) {
                 Toast.makeText(this, "Title required", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            // Prevent double clicks / show loading
             btnSave.setEnabled(false);
             Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
 
-            // Upload to Cloudinary first, then save the event
             MediaManager.get().upload(localImagePath)
                     .option("folder", "ClosetImages/" + uid + "/Events")
                     .callback(new UploadCallback() {
                         @Override
                         public void onStart(String requestId) {}
-
                         @Override
                         public void onProgress(String requestId, long bytes, long totalBytes) {}
-
                         @Override
                         public void onSuccess(String requestId, Map resultData) {
                             String cloudUrl = (String) resultData.get("secure_url");
-
                             runOnUiThread(() -> {
                                 saveEventToFirebase(title, dateString, time, reminder, cloudUrl);
                                 dialog.dismiss();
                             });
                         }
-
                         @Override
                         public void onError(String requestId, ErrorInfo error) {
                             runOnUiThread(() -> {
                                 btnSave.setEnabled(true);
-                                Toast.makeText(H1_DressActivity.this, "Image upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+                                Toast.makeText(H1_DressActivity.this, "Upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
                             });
                         }
-
                         @Override
                         public void onReschedule(String requestId, ErrorInfo error) {}
-                    })
-                    .dispatch();
+                    }).dispatch();
         });
-
         dialog.show();
     }
 
     private void saveEventToFirebase(String title, String dateString, String time, String reminder, String imageUrl) {
-        DatabaseReference userRef = FirebaseDatabase.getInstance()
-                .getReference("CalendarEvents")
-                .child(uid);
-
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("CalendarEvents").child(uid);
         String eventKey = userRef.push().getKey();
-        if (eventKey == null) {
-            eventKey = UUID.randomUUID().toString();
-        }
+        if (eventKey == null) eventKey = UUID.randomUUID().toString();
 
         E2_Calendar_Event event = new E2_Calendar_Event(
-                eventKey,
-                title,
-                dateString,
+                eventKey, title, dateString,
                 time == null ? "" : time,
-                imageUrl, // Use Cloudinary URL here
+                imageUrl,
                 reminder == null ? E3_Calendar_ReminderUtils.NONE : reminder
         );
-
         userRef.child(eventKey).setValue(event);
-
         Toast.makeText(this, "Event saved!", Toast.LENGTH_SHORT).show();
-
-        Intent intent = new Intent(H1_DressActivity.this, E1_CalendarActivity.class);
-        startActivity(intent);
+        startActivity(new Intent(H1_DressActivity.this, E1_CalendarActivity.class));
         finish();
     }
 
-    /**
-     * BottomSheet with categories + photos
-     */
     private void showDresserBottomSheet() {
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
         View sheetView = getLayoutInflater().inflate(R.layout.h2_dresser_bottomsheet, null);
@@ -419,59 +361,101 @@ public class H1_DressActivity extends AppCompatActivity {
         sheetCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         sheetPhotos.setLayoutManager(new GridLayoutManager(this, 3));
 
-        H5_Dress_PhotoAdapter sheetPhotoAdapter = new H5_Dress_PhotoAdapter(
-                this,
-                new ArrayList<>(),
-                photoPath -> {
-                    if (photoPath != null) {
-                        // FIX: Use Glide to load the image as a Bitmap first.
-                        Glide.with(H1_DressActivity.this)
-                                .asBitmap()
-                                .load(photoPath)
-                                .into(new CustomTarget<Bitmap>() {
-                                    @Override
-                                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                                        // Add the loaded Bitmap to the OutfitView
-                                        ImageView iv = outfitView.addImage(resource);
-                                        outfitView.setSelectedView(iv);
-                                        bottomSheetDialog.dismiss();
-                                    }
+        H5_Dress_PhotoAdapter sheetPhotoAdapter = new H5_Dress_PhotoAdapter(this, new ArrayList<>(), photoPath -> {
+            if (photoPath != null) {
+                Glide.with(H1_DressActivity.this).asBitmap().load(photoPath).into(new CustomTarget<Bitmap>() {
+                    @Override
+                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                        // 1. Add image to canvas
+                        ImageView iv = outfitView.addImage(resource);
+                        outfitView.setSelectedView(iv);
 
-                                    @Override
-                                    public void onLoadCleared(@Nullable Drawable placeholder) {
-                                        // No cleanup needed here
-                                    }
-                                });
+// 2. Attach Touch Handler with Long Click Logic
+                        new H3_Dresser_TouchHandler(iv, new H3_Dresser_TouchHandler.OnSelectListener() {
+                            @Override
+                            public void onSelect(ImageView selected) {
+                                outfitView.setSelectedView(selected);
+                            }
+
+                            @Override
+                            public void onLongClick(ImageView view, boolean isCurrentlyLocked, H3_Dresser_TouchHandler handler) {
+                                // Call the popup method we just created
+                                showLockPopup(view, isCurrentlyLocked, handler);
+                            }
+                        });
+
+
+                        bottomSheetDialog.dismiss();
                     }
-                }
-        );
+                    @Override
+                    public void onLoadCleared(@Nullable Drawable placeholder) {}
+                });
+            }
+        });
         sheetPhotos.setAdapter(sheetPhotoAdapter);
 
-        H4_DressAdapter sheetCategoryAdapter = new H4_DressAdapter(
-                this,
-                new ArrayList<>(),
-                categoryName -> loadPhotosForCategory(categoryName, sheetPhotoAdapter)
-        );
+        H4_DressAdapter sheetCategoryAdapter = new H4_DressAdapter(this, new ArrayList<>(), categoryName -> loadPhotosForCategory(categoryName, sheetPhotoAdapter));
         sheetCategories.setAdapter(sheetCategoryAdapter);
 
         loadCategoriesFromFirebase(sheetCategoryAdapter, sheetPhotoAdapter);
-
         bottomSheetDialog.show();
     }
 
-    private void loadCategoriesFromFirebase(final H4_DressAdapter categoryAdapter,
-                                            final H5_Dress_PhotoAdapter photoAdapter) {
-        if (uid == null) return;
+    private void showLockPopup(View anchorView, boolean isLocked, H3_Dresser_TouchHandler handler) {
+        // 1. Inflate the layout we created in Step 2
+        View popupView = getLayoutInflater().inflate(R.layout.h7_lock_popup, null);
 
-        // ---------------------------------------------------------
-        // UPDATE: Path excludes "closetData"
-        // NEW: Users -> uid -> categories
-        // ---------------------------------------------------------
-        DatabaseReference ref = FirebaseDatabase
-                .getInstance()
-                .getReference("Users")
-                .child(uid)
-                .child("categories"); // Moved directly under uid
+        // 2. Create the Popup Window
+        final android.widget.PopupWindow popupWindow = new android.widget.PopupWindow(
+                popupView,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true // Focusable (allows clicking outside to dismiss)
+        );
+        // Set background to transparent so the rounded corners work
+        popupWindow.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        popupWindow.setElevation(10);
+
+        // 3. Setup the Button
+        Button btnAction = popupView.findViewById(R.id.btnLockAction);
+
+        if (isLocked) {
+            btnAction.setText("Unlock 🔓");
+            // Optional: Change color for Unlock
+            btnAction.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#4CAF50"))); // Green
+        } else {
+            btnAction.setText("Lock 🔒");
+            // Optional: Change color for Lock
+            btnAction.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#F44336"))); // Red
+        }
+
+        // 4. Handle Click
+        btnAction.setOnClickListener(v -> {
+            boolean newState = !isLocked;
+
+            // Update the handler state
+            handler.setLocked(newState);
+
+            // Visual Feedback: Dim the image if locked, restore if unlocked
+            if (newState) {
+                Toast.makeText(H1_DressActivity.this, "Item Locked", Toast.LENGTH_SHORT).show();
+                anchorView.setAlpha(0.6f); // Dim it
+            } else {
+                Toast.makeText(H1_DressActivity.this, "Item Unlocked", Toast.LENGTH_SHORT).show();
+                anchorView.setAlpha(1.0f); // Normal
+            }
+
+            popupWindow.dismiss();
+        });
+
+        // 5. Show the popup centered on the image
+        // We use showAsDropDown with offsets to try and center it
+        popupWindow.showAsDropDown(anchorView, 0, -anchorView.getHeight() / 2);
+    }
+
+    private void loadCategoriesFromFirebase(final H4_DressAdapter categoryAdapter, final H5_Dress_PhotoAdapter photoAdapter) {
+        if (uid == null) return;
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories");
 
         ref.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -483,99 +467,58 @@ public class H1_DressActivity extends AppCompatActivity {
                     String categoryId = categorySnapshot.getKey();
                     String name = categorySnapshot.child("name").getValue(String.class);
 
-                    // 1. Handle "PermanentCategory" which might not have a name field
                     if (name == null && "permanent_category_id".equals(categoryId)) {
                         name = "PermanentCategory";
                     }
 
-                    // 2. If we have a valid name, find the first photo for the thumbnail
                     if (name != null) {
                         categoryNames.add(name);
-
                         String latestUrl = null;
-
-                        // Check if "photos" exists
                         if (categorySnapshot.hasChild("photos")) {
-                            DataSnapshot photosSnapshot = categorySnapshot.child("photos");
-
-                            // Iterate through photos to find the last one (or first one)
-                            for (DataSnapshot photoChild : photosSnapshot.getChildren()) {
-                                // Handle new Object structure
+                            for (DataSnapshot photoChild : categorySnapshot.child("photos").getChildren()) {
                                 if (photoChild.hasChild("url")) {
                                     latestUrl = photoChild.child("url").getValue(String.class);
-                                }
-                                // Handle legacy string or Map logic
-                                else {
+                                } else {
                                     Object val = photoChild.getValue();
-                                    if (val instanceof String) {
-                                        latestUrl = (String) val;
-                                    } else if (val instanceof Map) {
-                                        Map map = (Map) val;
-                                        if (map.containsKey("url")) {
-                                            latestUrl = (String) map.get("url");
-                                        }
-                                    }
+                                    if (val instanceof String) latestUrl = (String) val;
+                                    else if (val instanceof Map) latestUrl = (String) ((Map) val).get("url");
                                 }
-                                if (latestUrl != null && !latestUrl.isEmpty()) break; // Found one
+                                if (latestUrl != null && !latestUrl.isEmpty()) break;
                             }
                         }
                         categoryThumbs.add(latestUrl);
                     }
                 }
-
-                // 3. Update the UI Adapter
                 categoryAdapter.updateData(categoryNames, categoryThumbs);
             }
-
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(H1_DressActivity.this, "Failed to load categories", Toast.LENGTH_SHORT).show();
-            }
+            public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    // Placeholder for loading photos specific to a category
     private void loadPhotosForCategory(String categoryName, H5_Dress_PhotoAdapter adapter) {
         if (uid == null) return;
-
-        // ---------------------------------------------------------
-        // UPDATE: Path excludes "closetData"
-        // NEW: Users -> uid -> categories
-        // ---------------------------------------------------------
-        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users")
-                .child(uid)
-                .child("categories"); // Moved directly under uid
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories");
 
         ref.orderByChild("name").equalTo(categoryName).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 List<String> photoPaths = new ArrayList<>();
-
                 for (DataSnapshot catSnapshot : snapshot.getChildren()) {
                     DataSnapshot photosSnapshot = catSnapshot.child("photos");
                     for (DataSnapshot photoSnap : photosSnapshot.getChildren()) {
-
-                        // Check Object structure first
                         if (photoSnap.hasChild("url")) {
                             String url = photoSnap.child("url").getValue(String.class);
                             if (url != null) photoPaths.add(url);
-                        }
-                        // Check legacy structure
-                        else {
+                        } else {
                             Object val = photoSnap.getValue();
-                            if (val instanceof String) {
-                                photoPaths.add((String) val);
-                            } else if (val instanceof Map) {
-                                Map map = (Map) val;
-                                if (map.containsKey("url")) {
-                                    photoPaths.add((String) map.get("url"));
-                                }
-                            }
+                            if (val instanceof String) photoPaths.add((String) val);
+                            else if (val instanceof Map && ((Map) val).containsKey("url"))
+                                photoPaths.add((String) ((Map) val).get("url"));
                         }
                     }
                 }
 
-                // Also handle Permanent Category special case if name is "PermanentCategory"
                 if (photoPaths.isEmpty() && "PermanentCategory".equals(categoryName)) {
                     ref.child("permanent_category_id").child("photos").addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
@@ -588,27 +531,158 @@ public class H1_DressActivity extends AppCompatActivity {
                                 } else {
                                     Object val = p.getValue();
                                     if (val instanceof String) permPhotos.add((String) val);
-                                    else if (val instanceof Map && ((Map) val).containsKey("url")) {
+                                    else if (val instanceof Map && ((Map) val).containsKey("url"))
                                         permPhotos.add((String) ((Map) val).get("url"));
-                                    }
                                 }
                             }
                             adapter.updatePhotos(permPhotos);
                         }
-
                         @Override
-                        public void onCancelled(@NonNull DatabaseError error) {
-                        }
+                        public void onCancelled(@NonNull DatabaseError error) {}
                     });
                 } else {
                     adapter.updatePhotos(photoPaths);
                 }
             }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
 
+    // ---------------------------------------------------------
+    // NEW: Setup Suggestions + Dropdown Logic
+    // ---------------------------------------------------------
+    private void setupSuggestionsRecycler() {
+        recyclerSuggestions = findViewById(R.id.recyclerSuggestions);
+        View btnDropdown = findViewById(R.id.dropdown); // Initialize the arrow button
+
+        if (recyclerSuggestions != null) {
+            // 1. Setup the Layout Manager
+            recyclerSuggestions.setLayoutManager(
+                    new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            );
+
+            // 2. Load Data
+            loadTempSuggestions();
+
+            // 3. Add Dropdown Click Logic (Toggle Visibility)
+            if (btnDropdown != null) {
+                btnDropdown.setOnClickListener(v -> {
+                    if (recyclerSuggestions.getVisibility() == View.VISIBLE) {
+                        // Hide it
+                        recyclerSuggestions.setVisibility(View.GONE);
+                        // Optional: Rotate the arrow to point down/up
+                        btnDropdown.animate().rotation(180).setDuration(200).start();
+                    } else {
+                        // Show it
+                        recyclerSuggestions.setVisibility(View.VISIBLE);
+                        // Reset rotation
+                        btnDropdown.animate().rotation(0).setDuration(200).start();
+                    }
+                });
+            }
+        }
+    }
+
+    private void loadTempSuggestions() {
+        if (uid == null) return;
+        DatabaseReference tempRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("temp_suggestions");
+
+        tempRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                suggestionList.clear();
+                for (DataSnapshot data : snapshot.getChildren()) {
+                    Map<String, String> outfit = new HashMap<>();
+                    outfit.put("topUrl", data.child("topUrl").getValue(String.class));
+                    outfit.put("bottomUrl", data.child("bottomUrl").getValue(String.class));
+                    suggestionList.add(outfit);
+                }
+                if (suggestionAdapter == null) {
+                    suggestionAdapter = new SuggestionAdapter(suggestionList);
+                    if (recyclerSuggestions != null) recyclerSuggestions.setAdapter(suggestionAdapter);
+                } else {
+                    suggestionAdapter.notifyDataSetChanged();
+                }
+            }
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // Handle error
+                Log.e("H1_DressActivity", "Failed to load suggestions", error.toException());
             }
         });
     }
+
+    // --- Inner Adapter Class for Suggestions ---
+    class SuggestionAdapter extends RecyclerView.Adapter<SuggestionAdapter.ViewHolder> {
+        List<Map<String, String>> data;
+
+        SuggestionAdapter(List<Map<String, String>> data) { this.data = data; }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_outfit_suggestion, parent, false);
+            return new ViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            String topUrl = data.get(position).get("topUrl");
+            String bottomUrl = data.get(position).get("bottomUrl");
+
+            Glide.with(H1_DressActivity.this).load(topUrl).into(holder.top);
+            Glide.with(H1_DressActivity.this).load(bottomUrl).into(holder.bottom);
+
+            // Click listener: Load this outfit onto the main H2_Dresser_OutfitView
+            holder.itemView.setOnClickListener(v -> {
+                Toast.makeText(H1_DressActivity.this, "Loading Outfit...", Toast.LENGTH_SHORT).show();
+                loadAndAddImageToCanvas(topUrl);
+                loadAndAddImageToCanvas(bottomUrl);
+            });
+        }
+
+        private void loadAndAddImageToCanvas(String url) {
+            if (url == null) return;
+            Glide.with(H1_DressActivity.this)
+                    .asBitmap()
+                    .load(url)
+                    .into(new CustomTarget<Bitmap>() {
+                        @Override
+                        public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                            if (outfitView != null) {
+                                ImageView iv = outfitView.addImage(resource);
+
+                                // FIXED: Use full anonymous class instead of lambda
+                                new H3_Dresser_TouchHandler(iv, new H3_Dresser_TouchHandler.OnSelectListener() {
+                                    @Override
+                                    public void onSelect(ImageView selected) {
+                                        outfitView.setSelectedView(selected);
+                                    }
+
+                                    @Override
+                                    public void onLongClick(ImageView view, boolean isLocked, H3_Dresser_TouchHandler handler) {
+                                        showLockPopup(view, isLocked, handler);
+                                    }
+                                });
+                            }
+                        }
+                        @Override
+                        public void onLoadCleared(@Nullable Drawable placeholder) {}
+                    });
+        }
+
+
+        @Override
+        public int getItemCount() { return data.size(); }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            ImageView top, bottom;
+            ViewHolder(View itemView) {
+                super(itemView);
+                top = itemView.findViewById(R.id.imgRecTop);
+                bottom = itemView.findViewById(R.id.imgRecBottom);
+            }
+        }
+    }
 }
+

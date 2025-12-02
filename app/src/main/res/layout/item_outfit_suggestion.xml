@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:background="@drawable/box_background"
+    android:layout_gravity="center"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <!-- Top Item -->
+    <!-- Note: width must be match_parent, height 0dp with weight 1 -->
+    <ImageView
+        android:id="@+id/imgRecTop"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_weight="1"
+        android:adjustViewBounds="true"
+        android:background="#E0E0E0"
+        android:scaleType="fitXY" />
+
+    <!-- Bottom Item -->
+    <ImageView
+        android:id="@+id/imgRecBottom"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_weight="1"
+        android:adjustViewBounds="true"
+        android:background="#E0E0E0"
+        android:scaleType="fitXY" />
+
+</LinearLayout>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
@@ -30,18 +31,54 @@
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/arrow" />
 
-    <!-- Outfit View -->
-    <com.example.project.H2_Dresser_OutfitView
-        android:id="@+id/outfitView"
+    <!-- OUTFIT CONTAINER: Wraps the background and the draggable items -->
+    <FrameLayout
+        android:id="@+id/canvasContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="#EEE"
-        app:layout_constraintBottom_toTopOf="@id/toolsPanel"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@+id/recyclerSuggestions"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/topBar" />
+        app:layout_constraintTop_toBottomOf="@id/topBar">
 
-    <!-- Clothes Toggle Icon -->
+        <!-- The background view (canvas) -->
+        <com.example.project.H2_Dresser_OutfitView
+            android:id="@+id/outfitView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- Clothes will be added here programmatically in Java -->
+    </FrameLayout>
+
+    <!-- Clothes Toggle Icon (Positioned relative to the container now) -->
+    <ImageButton
+        android:id="@+id/imageButton3"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/delete"
+        app:layout_constraintBottom_toBottomOf="@+id/canvasContainer"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Suggestions Recycler -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerSuggestions"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="#FAFAFA"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintBottom_toTopOf="@+id/toolsPanel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/canvasContainer" />
+
     <ImageButton
         android:id="@+id/btnToggleCarousel"
         android:layout_width="40dp"
@@ -52,17 +89,17 @@
         android:scaleType="fitCenter"
         android:src="@drawable/closet"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/topBar" />
-
-    <!-- Zoom SeekBar (kept) -->
+        app:layout_constraintTop_toTopOf="@+id/canvasContainer" />
 
     <!-- Bottom Tools Panel -->
     <ImageButton
         android:id="@+id/btnrotate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
         android:background="@android:color/transparent"
-        app:layout_constraintBottom_toBottomOf="@+id/outfitView"
+        app:layout_constraintBottom_toBottomOf="@+id/canvasContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:srcCompat="@android:drawable/ic_menu_rotate" />
 
@@ -76,20 +113,42 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:layout_height="match_parent">
 
             <Button
                 android:id="@+id/btnSave"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Save"
-                app:cornerRadius="100dp"
-                 />
-        </LinearLayout>
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <Button
+                android:id="@+id/btnOpenReco"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="#FF9800"
+                android:text="Ideas?"
+                android:textColor="#FFF"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageButton
+                android:id="@+id/dropdown"
+                android:layout_width="40dp"
+                android:layout_height="0dp"
+                android:src="@drawable/car_ui_icon_down"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintDimensionRatio="h,1:1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
