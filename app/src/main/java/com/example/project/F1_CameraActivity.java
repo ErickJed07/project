@@ -2,29 +2,31 @@ package com.example.project;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
+import android.view.Gravity;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.Space;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
@@ -38,147 +40,224 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-// Color Palette Import
-import androidx.palette.graphics.Palette;
 
 import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
-// ML KIT IMPORTS
-import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.label.ImageLabel;
-import com.google.mlkit.vision.label.ImageLabeler;
-import com.google.mlkit.vision.label.ImageLabeling;
-import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
-import com.google.android.material.chip.ChipGroup;
-import com.google.android.material.chip.Chip;
+import com.google.firebase.database.ServerValue;
+import com.google.firebase.database.ValueEventListener;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-
 public class F1_CameraActivity extends AppCompatActivity {
 
-    private static final int PERMISSION_REQUEST_CODE = 100;
-    private static final int GALLERY_REQUEST_CODE = 101;
+    // --- UI COMPONENTS ---
+    private PreviewView previewView;
+    private ImageView imagePreview;
+    private ImageView backButton;
+    private Button btnTakePhoto;
+    private Button btnSave;
+    private ProgressBar progressBar;
+    private TextView statusTextView;
 
-    // API KEYS
-    private static final String REMOVE_BG_API_KEY = "NWtuUZKef3YtvncY3uhme1mX";
-
-    // UI Components
-    PreviewView previewView;
-    ImageView imagePreview, backButton;
-    Button btnTakePhoto, btnSave;
-    ProgressBar progressBar;
-    TextView tagsTextView;
-    ChipGroup tagsChipGroup;
-
-    // Logic Variables
-    Bitmap originalBitmap;
-    Bitmap processedBitmap;
-    List<String> detectedTags = new ArrayList<>();
-    // We'll use a local list inside showSaveDialog, or keep one here if needed globally
-    // but for the dialog logic, local is usually cleaner. Keeping class member just in case.
-    List<CategoryItem> categoryListItems = new ArrayList<>();
-
+    // --- CAMERA VARS ---
+    private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     private ImageCapture imageCapture;
-    private Camera camera; // Needed for Zoom control
+    private Camera camera;
+    private static final int PERMISSION_REQUEST_CODE = 100;
 
-    // Store selections
-    private String selectedClothingItem = "Unknown";
-    private String selectedColor = "Unknown";
+    // --- IMAGE VARS ---
+    private Bitmap originalBitmap;
+    private Bitmap processedBitmap;
+
+    private List<String> clothingTypesList = new ArrayList<>();
+
+
+    private final String[] CLOTHING_COLORS = {
+            "Black", "White", "Grey", "Beige", "Red", "Blue",
+            "Green", "Yellow", "Orange", "Purple", "Pink", "Brown", "Multi"
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.f1_camera_act);
+        setContentView(R.layout.f1_camera_act); // Ensure XML matches this name
 
-        initCloudinary();
-
-        // Initialize Views
+        // 1. Initialize UI
         previewView = findViewById(R.id.previewView);
         imagePreview = findViewById(R.id.imagePreview);
         backButton = findViewById(R.id.backButton);
         btnTakePhoto = findViewById(R.id.btnTakePhoto);
         btnSave = findViewById(R.id.btnSave);
         progressBar = findViewById(R.id.progressBar);
-        tagsTextView = findViewById(R.id.statusTextView);
+        statusTextView = findViewById(R.id.statusTextView);
 
-        tagsChipGroup = findViewById(R.id.tagsChipGroup);
-
-        // 1. SINGLE SELECTION: Enforce only one tag at a time
-        tagsChipGroup.setSingleSelection(true);
-
-        // Hide Save button initially
         btnSave.setVisibility(View.GONE);
 
-        // Setup Buttons
-        btnTakePhoto.setOnClickListener(view -> takePhoto());
-
-        // ADVANCED: Long click "Take Photo" to open Gallery for testing
-        btnTakePhoto.setOnLongClickListener(view -> {
-            openGallery();
-            return true;
-        });
-
-        btnSave.setOnClickListener(view -> showSaveDialog());
-        backButton.setOnClickListener(v -> finish());
-
-        // Start Camera if permissions granted
+        // 2. Check Permissions & Start Camera
         if (checkSelfPermission()) {
             startCamera();
         }
+
+        // 3. Set Listeners
+        btnTakePhoto.setOnClickListener(v -> takePhoto());
+
+        backButton.setOnClickListener(v -> {
+            if (imagePreview.getVisibility() == View.VISIBLE) {
+                resetToCamera();
+            } else {
+                finish();
+            }
+        });
+
+        // If user cancels but wants to start over
+        btnSave.setOnClickListener(v -> showCategorySelectionDialog());
+
+        try {
+            initCloudinary();
+        } catch (Exception e) {
+            // Already initialized
+        }
+            // 1. Add Default items (Safety net)
+            clothingTypesList.add("Top");
+            clothingTypesList.add("Bottom");
+            clothingTypesList.add("Shoes");
+
+            // 2. Fetch real data from Firebase
+            fetchCategoriesFromFirebase();
+
+
+
     }
 
-    // -------------------------- 1. ADVANCED CAMERAX SETUP (WITH ZOOM) --------------------------
+    private boolean checkSelfPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CODE);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCamera();
+            } else {
+                Toast.makeText(this, "Camera permission required", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }
+    }
+
+    private void fetchCategoriesFromFirebase() {
+        // 1. Get the current user
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (currentUser == null) {
+            // User not logged in, stick with defaults
+            return;
+        }
+
+        // 2. CORRECT PATH: Users -> uid -> categories
+        String uid = currentUser.getUid();
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid)
+                .child("categories");
+
+        dbRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    List<String> firebaseCategories = new ArrayList<>();
+
+                    // 3. Loop through your specific JSON structure
+                    for (DataSnapshot data : snapshot.getChildren()) {
+                        // Your JSON structure has "name" inside the object
+                        // Example: Accessories -> name: "Accessories"
+                        String name = data.child("name").getValue(String.class);
+
+                        if (name != null) {
+                            firebaseCategories.add(name);
+                        }
+                    }
+
+                    // 4. Update the list only if we found data
+                    if (!firebaseCategories.isEmpty()) {
+                        clothingTypesList.clear();
+                        clothingTypesList.addAll(firebaseCategories);
+                        // Optional: Sort A-Z
+                        Collections.sort(clothingTypesList);
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Error handling
+            }
+        });
+    }
+
+
+
+    private void initCloudinary() {
+        Map<String, Object> config = new HashMap<>();
+        config.put("cloud_name", "YOUR_CLOUD_NAME"); // REPLACE THIS
+        config.put("api_key", "YOUR_API_KEY");       // REPLACE THIS
+        config.put("api_secret", "YOUR_API_SECRET"); // REPLACE THIS
+        MediaManager.init(this, config);
+    }
+
+    private void resetToCamera() {
+        imagePreview.setVisibility(View.GONE);
+        previewView.setVisibility(View.VISIBLE);
+        statusTextView.setText("Ready");
+        btnSave.setVisibility(View.GONE);
+        btnTakePhoto.setVisibility(View.VISIBLE);
+    }
+
+    // -------------------------- 1. CAMERA SETUP --------------------------
 
     private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        cameraProviderFuture = ProcessCameraProvider.getInstance(this);
 
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-
                 Preview preview = new Preview.Builder().build();
                 preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
-                // Use High Quality Capture
                 imageCapture = new ImageCapture.Builder()
                         .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                         .build();
 
                 CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
-
                 cameraProvider.unbindAll();
-
-                // Bind camera and store instance to control zoom
                 camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
 
-                // Enable Pinch-to-Zoom
                 setupZoom();
 
             } catch (ExecutionException | InterruptedException e) {
-                Log.e("CameraX", "Use case binding failed", e);
+                Log.e("CameraX", "Binding failed", e);
             }
         }, ContextCompat.getMainExecutor(this));
     }
@@ -191,13 +270,11 @@ public class F1_CameraActivity extends AppCompatActivity {
                 if (camera != null) {
                     CameraControl control = camera.getCameraControl();
                     float currentZoom = camera.getCameraInfo().getZoomState().getValue().getZoomRatio();
-                    float scale = detector.getScaleFactor();
-                    control.setZoomRatio(currentZoom * scale);
+                    control.setZoomRatio(currentZoom * detector.getScaleFactor());
                 }
                 return true;
             }
         });
-
         previewView.setOnTouchListener((view, event) -> {
             scaleGestureDetector.onTouchEvent(event);
             return true;
@@ -206,10 +283,8 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     private void takePhoto() {
         if (imageCapture == null) return;
-
         progressBar.setVisibility(View.VISIBLE);
-        tagsTextView.setText("Capturing High-Res Image...");
-        btnSave.setVisibility(View.GONE); // Hide save button until done
+        statusTextView.setText("Capturing...");
 
         imageCapture.takePicture(ContextCompat.getMainExecutor(this), new ImageCapture.OnImageCapturedCallback() {
             @Override
@@ -221,69 +296,44 @@ public class F1_CameraActivity extends AppCompatActivity {
 
             @Override
             public void onError(@NonNull ImageCaptureException exception) {
-                Log.e("CameraX", "Capture failed", exception);
                 progressBar.setVisibility(View.GONE);
                 Toast.makeText(F1_CameraActivity.this, "Capture Failed", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    // -------------------------- 2. GALLERY HANDLING --------------------------
-
-    private void openGallery() {
-        Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(intent, GALLERY_REQUEST_CODE);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == GALLERY_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
-            try {
-                InputStream inputStream = getContentResolver().openInputStream(data.getData());
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                handleImageResult(bitmap);
-            } catch (Exception e) {
-                Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
+    // -------------------------- 2. IMAGE HANDLING --------------------------
 
     private void handleImageResult(Bitmap bitmap) {
         if (bitmap != null) {
-            // 1. Save original for ML
             originalBitmap = bitmap;
-
-            // 2. Update UI
             previewView.setVisibility(View.GONE);
             imagePreview.setVisibility(View.VISIBLE);
             imagePreview.setImageBitmap(bitmap);
 
-            // 3. Start Parallel Processing (Background Removal)
-            tagsTextView.setText("Processing Image...");
+            btnTakePhoto.setVisibility(View.GONE);
+            statusTextView.setText("Processing Image...");
+
             new RemoveBgTask().execute(bitmap);
         }
     }
 
-    // Helper: Convert ImageProxy to Bitmap safely (Avoids Memory Crash)
     private Bitmap imageProxyToBitmap(ImageProxy image) {
         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
-
         BitmapFactory.Options options = new BitmapFactory.Options();
+
         options.inJustDecodeBounds = true;
         BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
 
-        // Scale down to avoid massive memory usage
-        int targetWidth = 1200;
+        int targetWidth = 1000;
         if (options.outWidth > targetWidth) {
             options.inSampleSize = options.outWidth / targetWidth;
         }
-
         options.inJustDecodeBounds = false;
-        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
 
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
         if (bitmap != null) {
             Matrix matrix = new Matrix();
             matrix.postRotate(image.getImageInfo().getRotationDegrees());
@@ -292,439 +342,322 @@ public class F1_CameraActivity extends AppCompatActivity {
         return null;
     }
 
-    // -------------------------- 3. SMART ML KIT LABELING --------------------------
-
-    private void detectClothingLabels(Bitmap bitmap) {
-        if (bitmap == null) return;
-
-        // Reset state
-        selectedClothingItem = "Unknown";
-        selectedColor = "Unknown";
-        btnSave.setVisibility(View.GONE); // Ensure hidden
-
-        InputImage image = InputImage.fromBitmap(bitmap, 0);
-        ImageLabeler labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS);
-
-        labeler.process(image)
-                .addOnSuccessListener(labels -> {
-                    detectedTags.clear();
-                    tagsChipGroup.removeAllViews(); // Clear previous buttons
-
-                    StringBuilder debugRawData = new StringBuilder();
-
-                    for (ImageLabel label : labels) {
-                        String text = label.getText();
-                        float confidence = label.getConfidence();
-                        debugRawData.append(text).append(" (").append((int)(confidence * 100)).append("%)\n");
-
-                        String correctedTag = correctLabelMistakes(text);
-
-                        if (confidence > 0.3 && isClothingItem(correctedTag)) {
-                            if (!detectedTags.contains(correctedTag)) {
-                                detectedTags.add(correctedTag);
-                                // CREATE CLICKABLE CHIP for Clothing (isColorTag = false)
-                                addTagChip(correctedTag, false);
-                            }
-                        }
-                    }
-
-                    if (detectedTags.isEmpty()) {
-                        Toast.makeText(this, "No specific clothing detected.", Toast.LENGTH_SHORT).show();
-                    } else {
-                        tagsTextView.setText("Select the item:");
-                    }
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "AI Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-    }
-
-    // Updated Helper method to create the button dynamically
-    private void addTagChip(String text, boolean isColorTag) {
-        Chip chip = new Chip(this);
-        chip.setText(text);
-        chip.setCheckable(true);
-        chip.setClickable(true);
-
-        // STYLE: Default state (Unselected)
-        chip.setChipBackgroundColorResource(android.R.color.white);
-        chip.setChipStrokeWidth(2);
-        chip.setChipStrokeColorResource(android.R.color.holo_blue_dark);
-        chip.setTextColor(getResources().getColor(android.R.color.black));
-
-        if (isColorTag) {
-            // Optional: Visual distinction for color tags
-            chip.setChipStrokeColorResource(android.R.color.holo_green_dark);
-        }
-
-        // LISTENER: Handle Selection with `setOnCheckedChangeListener` for Single Selection support
-        chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                // HIGHLIGHT STATE
-                if (isColorTag) {
-                    // --- COLOR LOGIC ---
-                    chip.setChipBackgroundColorResource(android.R.color.holo_green_light);
-                    chip.setTextColor(getResources().getColor(android.R.color.black));
-
-                    selectedColor = text;
-
-                    // 1. Update Text to show final result
-                    tagsTextView.setText("Selected: " + selectedClothingItem + ", " + selectedColor);
-
-                    // 2. Show Save Button now that flow is complete
-                    btnSave.setVisibility(View.VISIBLE);
-
-                } else {
-                    // --- CLOTHING ITEM LOGIC ---
-                    // Temporarily highlight before removing views
-                    chip.setChipBackgroundColorResource(android.R.color.holo_blue_dark);
-                    chip.setTextColor(getResources().getColor(android.R.color.white));
-
-                    selectedClothingItem = text;
-
-                    // 1. Clear existing chips (remove clothing options)
-                    tagsChipGroup.removeAllViews();
-
-                    // 2. Show a small header or toast
-                    tagsTextView.setText("Item: " + selectedClothingItem + ". Detecting Color...");
-                    Toast.makeText(this, "Finding color for " + text + "...", Toast.LENGTH_SHORT).show();
-
-                    // 3. Trigger color detection to populate new chips
-                    detectDominantColor(originalBitmap);
-                }
-            } else {
-                // UNHIGHLIGHT STATE (When deselected by SingleSelection)
-                chip.setChipBackgroundColorResource(android.R.color.white);
-                chip.setTextColor(getResources().getColor(android.R.color.black));
-
-                if (isColorTag) {
-                    btnSave.setVisibility(View.GONE); // Hide save if deselecting color
-                }
-            }
-        });
-
-        tagsChipGroup.addView(chip);
-    }
-
-    // POWERFUL FEATURE: Map wrong AI labels to correct clothing terms
-    private String correctLabelMistakes(String label) {
-        if (label.equalsIgnoreCase("Jersey")) return "Shirt";
-        if (label.equalsIgnoreCase("Top")) return "Shirt";
-        if (label.equalsIgnoreCase("Blouse")) return "Shirt";
-        if (label.equalsIgnoreCase("Short")) return "Shorts"; // Fix "Short" vs "Shorts"
-        if (label.equalsIgnoreCase("Miniskirt")) return "Skirt";
-        return label;
-    }
-
-    private boolean isClothingItem(String label) {
-        String[] clothingItems = {
-                "Shirt", "Top", "T-shirt", "Pants", "Jeans", "Trousers",
-                "Dress", "Skirt", "Coat", "Jacket", "Shoe", "Footwear",
-                "Clothing", "Outerwear", "Fashion", "Apparel", "Blazer",
-                "Sweater", "Cardigan", "Vest", "Suit", "Formal wear",
-                "Shorts", "Sneakers", "Hoodie", "Active shirt", "Sportswear"
-        };
-        for (String item : clothingItems) {
-            if (label.equalsIgnoreCase(item)) return true;
-        }
-        return false;
-    }
-
-    // -------------------------- 4. COLOR RECOGNITION HELPER --------------------------
-
-    private void detectDominantColor(Bitmap bitmap) {
-        if (bitmap == null) return;
-
-        // Generate palette asynchronously
-        Palette.from(bitmap).generate(palette -> {
-            if (palette == null) return;
-
-            tagsTextView.setText("Select color for: " + selectedClothingItem);
-
-            List<String> colorOptions = new ArrayList<>();
-
-            // 1. Vibrant (Often the main clothing color)
-            if (palette.getVibrantSwatch() != null) {
-                String name = getSimpleColorName(palette.getVibrantSwatch().getRgb());
-                if (!colorOptions.contains(name)) colorOptions.add(name);
-            }
-
-            // 2. Dark Vibrant
-            if (palette.getDarkVibrantSwatch() != null) {
-                String name = getSimpleColorName(palette.getDarkVibrantSwatch().getRgb());
-                if (!colorOptions.contains(name)) colorOptions.add(name);
-            }
-
-            // 3. Dominant (Overall average)
-            if (palette.getDominantSwatch() != null) {
-                String name = getSimpleColorName(palette.getDominantSwatch().getRgb());
-                if (!colorOptions.contains(name)) colorOptions.add(name);
-            }
-
-            // Add standard fallbacks if palette is weird
-            if (colorOptions.isEmpty()) {
-                colorOptions.add("Black");
-                colorOptions.add("White");
-                colorOptions.add("Grey");
-            }
-
-            // Display the color options as chips
-            for (String colorName : colorOptions) {
-                addTagChip(colorName, true); // true = isColorTag
-            }
-        });
-    }
-
-    // Simplified Color Naming (Adjusted for better White vs Grey detection)
-    private String getSimpleColorName(int color) {
-        int r = (color >> 16) & 0xFF;
-        int g = (color >> 8) & 0xFF;
-        int b = (color) & 0xFF;
-
-        // 1. WHITE DETECTION
-        if (r > 180 && g > 180 && b > 180) {
-            if (Math.abs(r - g) < 30 && Math.abs(r - b) < 30 && Math.abs(g - b) < 30) {
-                return "White";
-            }
-        }
-
-        // 2. BLACK DETECTION
-        if (r < 50 && g < 50 && b < 50) return "Black";
-
-        // 3. GREY DETECTION
-        if (Math.abs(r - g) < 20 && Math.abs(r - b) < 20 && Math.abs(g - b) < 20) {
-            if (r > 80) return "Grey";
-            return "Dark Grey";
-        }
-
-        // 4. COLOR DETECTION
-        if (r > g + 50 && r > b + 50) {
-            if (g > 150) return "Orange";
-            return "Red";
-        }
-
-        if (g > r + 30 && g > b + 30) return "Green";
-
-        if (b > r + 40 && b > g + 40) {
-            if (r > 120 && g > 120) return "Light Blue";
-            if (r < 60 && g < 60) return "Navy"; // Dark blue
-            return "Blue";
-        }
-
-        if (r > 200 && g > 200 && b < 100) return "Yellow";
-        if (r > 140 && g < 100 && b > 140) return "Purple";
-        if (r > 200 && g < 160 && b > 160) return "Pink";
-
-        if (r > 100 && g > 50 && b < 50 && r > b + 40) return "Brown";
-        if (r > 180 && g > 160 && b > 130) return "Beige";
-
-        return "Multi-color";
-    }
-
-    // -------------------------- 5. BACKGROUND REMOVAL --------------------------
+    // -------------------------- 3. BACKGROUND REMOVAL TASK --------------------------
 
     private class RemoveBgTask extends AsyncTask<Bitmap, Void, Bitmap> {
         @Override
         protected Bitmap doInBackground(Bitmap... bitmaps) {
-            return removeBackground(bitmaps[0]);
+            // Placeholder for BG removal logic
+            return bitmaps[0];
         }
 
         @Override
         protected void onPostExecute(Bitmap result) {
             progressBar.setVisibility(View.GONE);
-            if (result != null) {
-                processedBitmap = result;
-                imagePreview.setImageBitmap(result); // Show processed image
+            processedBitmap = (result != null) ? result : originalBitmap;
+            imagePreview.setImageBitmap(processedBitmap);
 
-                tagsTextView.setText("Analyzing details...");
-                detectClothingLabels(originalBitmap);
-            } else {
-                tagsTextView.setText("Bg removal failed. Analyzing original...");
-                processedBitmap = originalBitmap;
-                detectClothingLabels(originalBitmap);
-            }
+            // Start the Step-by-Step Dialog Flow immediately
+            showCategorySelectionDialog();
+
+            btnSave.setText("Restart Tagging");
+            btnSave.setVisibility(View.VISIBLE);
+            statusTextView.setText("Select Tags");
         }
     }
 
-    public Bitmap removeBackground(Bitmap bitmap) {
-        try {
-            OkHttpClient client = new OkHttpClient();
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    // -------------------------- 4. SUB-TAG DATA LOGIC --------------------------
 
-            // Use JPEG 80% quality for speed and reliability
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, bos);
-            byte[] imageBytes = bos.toByteArray();
+    private List<String> getSubTags(String category) {
+        switch (category) {
+            case "All": return Arrays.asList("all", "any", "everything");
+            case "Hat": return Arrays.asList("cap", "beanie", "bucket hat", "beret", "snapback", "visor");
+            case "Accessories": return Arrays.asList("belt", "scarf", "glasses", "sunglasses", "watch", "bracelet", "earrings");
+            case "Outer": return Arrays.asList("jacket", "coat", "hoodie", "blazer", "cardigan", "sweater", "windbreaker");
+            case "Top": return Arrays.asList("shirt", "tshirt", "longsleeve", "blouse", "hoodie", "tanktop", "crop top");
+            case "Bag": return Arrays.asList("handbag", "crossbody", "backpack", "tote", "purse");
+            case "Bottom": return Arrays.asList("pants", "jeans", "shorts", "skirt", "trousers", "cargo", "leggings");
+            case "Shoes": return Arrays.asList("sneakers", "boots", "heels", "sandals", "slippers", "loafers");
+            case "Dress": return Arrays.asList("dress", "gown", "casual dress", "long dress", "mini dress");
 
-            RequestBody requestBody = new MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart("image_file", "photo.jpg",
-                            RequestBody.create(MediaType.parse("image/jpeg"), imageBytes))
-                    .addFormDataPart("size", "auto")
-                    .build();
-
-            Request request = new Request.Builder()
-                    .url("https://api.remove.bg/v1.0/removebg")
-                    .addHeader("X-Api-Key", REMOVE_BG_API_KEY)
-                    .post(requestBody)
-                    .build();
-
-            Response response = client.newCall(request).execute();
-            if (response.isSuccessful() && response.body() != null) {
-                InputStream inputStream = response.body().byteStream();
-                return BitmapFactory.decodeStream(inputStream);
-            } else {
-                Log.e("RemoveBG", "API Error: " + (response.body() != null ? response.body().string() : response.message()));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            default: return new ArrayList<>(); // Returns empty list for unknown categories
         }
-        return null;
     }
 
-    // -------------------------- 6. SAVING & CLOUDINARY --------------------------
+    // -------------------------- 5. MULTI-STEP POPUP DIALOGS --------------------------
 
-    private void showSaveDialog() {
-        if (processedBitmap == null) return;
-
+    // STEP 1: Main Category
+    private void showCategorySelectionDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        // Ensure this layout exists in your resources
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.f3_camera_edit_dialog_save_image, null);
-        builder.setView(dialogView);
 
-        // 1. Find the EditText for Item Name and Auto-fill
-        TextView etItemName = dialogView.findViewById(R.id.etItemName);
-        String autoName = selectedClothingItem;
-        if (!selectedColor.equals("Unknown")) {
-            autoName += ", " + selectedColor;
-        }
-        etItemName.setText(autoName);
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(60, 60, 60, 60);
+        mainLayout.setGravity(Gravity.CENTER_HORIZONTAL);
+        mainLayout.setBackgroundResource(R.drawable.round_image_clip);
 
-        Spinner spinner = dialogView.findViewById(R.id.spinnerCategories);
-        ImageView btnAddCategory = dialogView.findViewById(R.id.btnAddCategory);
-        View btnSaveCategory = dialogView.findViewById(R.id.btnSaveCategory);
+        TextView title = new TextView(this);
+        title.setText("1. What is this item?");
+        title.setTextSize(22f);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextColor(Color.BLACK);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, 30);
+        mainLayout.addView(title);
 
-        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        ScrollView scrollView = new ScrollView(this);
+        ChipGroup chipGroup = new ChipGroup(this);
+        chipGroup.setPadding(10, 10, 10, 10);
+        chipGroup.setSingleSelection(true);
+
+        builder.setView(mainLayout);
         AlertDialog dialog = builder.create();
+
+        // Loop through the dynamic list fetched from Firebase
+        for (String type : clothingTypesList) {
+            addChip(chipGroup, type, v -> {
+                dialog.dismiss();
+                showSubCategorySelectionDialog(type);
+            });
+        }
+
+        scrollView.addView(chipGroup);
+        mainLayout.addView(scrollView);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
         dialog.show();
+    }
 
-        // ---------------------------------------------------------
-        // UPDATE: Path excludes "closetData"
-        // Path: Users -> uid -> categories
-        // ---------------------------------------------------------
-        DatabaseReference categoriesRef = FirebaseDatabase.getInstance()
-                .getReference("Users").child(uid).child("categories");
+    // STEP 2: Sub-Category (Handles both Chips and Manual Entry)
+    private void showSubCategorySelectionDialog(String mainCategory) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-        List<String> categoryNames = new ArrayList<>();
-        categoryListItems.clear();
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(60, 60, 60, 60);
+        mainLayout.setGravity(Gravity.CENTER_HORIZONTAL);
+        mainLayout.setBackgroundResource(R.drawable.round_image_clip);
 
-        // Load Categories
-        categoriesRef.get().addOnSuccessListener(snapshot -> {
-            categoryListItems.clear();
-            categoryNames.clear();
-            for (DataSnapshot catSnap : snapshot.getChildren()) {
-                String name = catSnap.child("name").getValue(String.class);
-                String id = catSnap.getKey();
+        TextView title = new TextView(this);
+        title.setText("2. Type of " + mainCategory + "?");
+        title.setTextSize(22f);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextColor(Color.BLACK);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, 30);
+        mainLayout.addView(title);
 
-                // Fallback if name is missing (use ID)
-                if (name == null) name = id;
+        List<String> subTags = getSubTags(mainCategory);
 
-                if (name != null) {
-                    categoryListItems.add(new CategoryItem(id, name));
-                    categoryNames.add(name);
-                }
+        builder.setView(mainLayout);
+        AlertDialog dialog = builder.create();
+
+        // LOGIC: IF subTags exist, show Chips. IF NOT, show EditText.
+        if (!subTags.isEmpty()) {
+            // --- SCENARIO A: KNOWN CATEGORY (Show Chips) ---
+            ScrollView scrollView = new ScrollView(this);
+            ChipGroup chipGroup = new ChipGroup(this);
+            chipGroup.setPadding(10, 10, 10, 10);
+            chipGroup.setSingleSelection(true);
+
+            for (String subTag : subTags) {
+                String displayTag = subTag.substring(0, 1).toUpperCase() + subTag.substring(1);
+                addChip(chipGroup, displayTag, v -> {
+                    dialog.dismiss();
+                    List<String> selection = new ArrayList<>();
+                    selection.add(displayTag);
+                    showColorSelectionDialog(mainCategory, selection);
+                });
             }
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                    android.R.layout.simple_spinner_item, categoryNames);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            spinner.setAdapter(adapter);
-        });
 
-        // Add New Category Logic
-        btnAddCategory.setOnClickListener(v -> {
-            AlertDialog.Builder inputDialog = new AlertDialog.Builder(this);
-            EditText input = new EditText(this);
-            input.setHint("New category name");
-            inputDialog.setView(input);
+            // Option for manual entry even if chips exist
+            addChip(chipGroup, "Other / Custom", v -> {
+                dialog.dismiss();
+                List<String> selection = new ArrayList<>();
+                selection.add("Other");
+                showColorSelectionDialog(mainCategory, selection);
+            });
 
-            inputDialog.setPositiveButton("Add", (d, which) -> {
-                String newCatName = input.getText().toString().trim();
-                if (!newCatName.isEmpty()) {
+            scrollView.addView(chipGroup);
+            mainLayout.addView(scrollView);
 
-                    // ---------------------------------------------------------
-                    // UPDATE: ID Generation (Name + "_id")
-                    // ---------------------------------------------------------
-                    String sanitized = newCatName.replaceAll("[.#$\\[\\]]", "");
-                    String newCatId = sanitized + "_id";
+        } else {
+            // --- SCENARIO B: NEW/UNKNOWN CATEGORY (Show EditText) ---
+            EditText editText = new EditText(this);
+            editText.setHint("e.g. Silk Scarf, Wool Hat...");
+            editText.setBackgroundResource(android.R.drawable.edit_text);
+            editText.setPadding(30, 30, 30, 30);
+            mainLayout.addView(editText);
 
-                    Map<String, Object> catData = new HashMap<>();
-                    catData.put("id", newCatId);
-                    catData.put("name", newCatName);
+            Space space = new Space(this);
+            space.setMinimumHeight(40);
+            mainLayout.addView(space);
 
-                    // Save directly to .../categories/ID
-                    categoriesRef.child(newCatId).setValue(catData);
+            Button btnNext = new Button(this);
+            btnNext.setText("Next >");
+            btnNext.setBackgroundColor(Color.BLACK);
+            btnNext.setTextColor(Color.WHITE);
 
-                    // Update local list and spinner immediately
-                    categoryListItems.add(new CategoryItem(newCatId, newCatName));
-                    categoryNames.add(newCatName);
-                    ((ArrayAdapter) spinner.getAdapter()).notifyDataSetChanged();
-                    spinner.setSelection(categoryNames.size() - 1);
+            btnNext.setOnClickListener(v -> {
+                String typedText = editText.getText().toString().trim();
+                if (!typedText.isEmpty()) {
+                    dialog.dismiss();
+                    List<String> selection = new ArrayList<>();
+                    selection.add(typedText);
+                    showColorSelectionDialog(mainCategory, selection);
+                } else {
+                    editText.setError("Please describe the item");
                 }
             });
-            inputDialog.setNegativeButton("Cancel", (d, w) -> d.dismiss());
-            inputDialog.show();
-        });
+            mainLayout.addView(btnNext);
+        }
 
-        // Save Button Logic
-        btnSaveCategory.setOnClickListener(v -> {
-            int selectedPos = spinner.getSelectedItemPosition();
-
-            if (categoryListItems.isEmpty()) {
-                Toast.makeText(this, "Categories are still loading...", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (selectedPos < 0 || selectedPos >= categoryListItems.size()) {
-                Toast.makeText(this, "Please select a category", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Get the ID from our helper list
-            String selectedCategoryId = categoryListItems.get(selectedPos).id;
-
-            String finalItemName = etItemName.getText().toString().trim();
-            if (finalItemName.isEmpty()) finalItemName = selectedClothingItem;
-            selectedClothingItem = finalItemName;
-
-            progressBar.setVisibility(View.VISIBLE);
+        Button btnBack = new Button(this);
+        btnBack.setText("<< Back");
+        btnBack.setBackgroundColor(Color.TRANSPARENT);
+        btnBack.setTextColor(Color.GRAY);
+        btnBack.setOnClickListener(v -> {
             dialog.dismiss();
-
-            File fileToUpload = bitmapToFile(processedBitmap, "closet_item.png");
-            if (fileToUpload != null) {
-                uploadToCloudinary(fileToUpload, uid, selectedCategoryId);
-            }
+            showCategorySelectionDialog();
         });
+        mainLayout.addView(btnBack);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        dialog.show();
     }
 
+    // STEP 3: Color Selection
+    private void showColorSelectionDialog(String category, List<String> subTags) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-    private void uploadToCloudinary(File file, String uid, String categoryId) {
-        MediaManager.get().upload(file.getAbsolutePath())
-                .option("folder", "ClosetImages/" + uid)
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(60, 60, 60, 60);
+        mainLayout.setGravity(Gravity.CENTER_HORIZONTAL);
+        mainLayout.setBackgroundResource(R.drawable.round_image_clip);
+
+        TextView title = new TextView(this);
+        title.setText("3. What color is it?");
+        title.setTextSize(22f);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextColor(Color.BLACK);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, 30);
+        mainLayout.addView(title);
+
+        ScrollView scrollView = new ScrollView(this);
+        ChipGroup chipGroup = new ChipGroup(this);
+        chipGroup.setPadding(10, 10, 10, 10);
+        chipGroup.setSingleSelection(false); // Allow multiple colors
+
+        builder.setView(mainLayout);
+        AlertDialog dialog = builder.create();
+
+        final List<String> selectedColors = new ArrayList<>();
+
+        for (String color : CLOTHING_COLORS) {
+            Chip chip = new Chip(this);
+            chip.setText(color);
+            chip.setCheckable(true);
+            chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#E0E0E0")));
+
+            // Color circles
+            int colorValue;
+            switch(color) {
+                case "Black": colorValue = Color.BLACK; break;
+                case "White": colorValue = Color.WHITE; break;
+                case "Red": colorValue = Color.RED; break;
+                case "Blue": colorValue = Color.BLUE; break;
+                case "Green": colorValue = Color.GREEN; break;
+                case "Yellow": colorValue = Color.YELLOW; break;
+                case "Orange": colorValue = Color.parseColor("#FFA500"); break;
+                case "Purple": colorValue = Color.parseColor("#800080"); break;
+                case "Pink": colorValue = Color.parseColor("#FFC0CB"); break;
+                case "Brown": colorValue = Color.parseColor("#A52A2A"); break;
+                default: colorValue = Color.GRAY; break;
+            }
+
+            GradientDrawable drawable = new GradientDrawable();
+            drawable.setShape(GradientDrawable.OVAL);
+            drawable.setColor(colorValue);
+            drawable.setStroke(2, Color.GRAY); // Border for visibility (esp white)
+            drawable.setSize(40, 40);
+            drawable.setBounds(0, 0, 40, 40);
+            chip.setChipIcon(drawable);
+            chip.setChipIconVisible(true);
+
+            chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    selectedColors.add(color);
+                    chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#D1C4E9")));
+                } else {
+                    selectedColors.remove(color);
+                    chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#E0E0E0")));
+                }
+            });
+            chipGroup.addView(chip);
+        }
+
+        scrollView.addView(chipGroup);
+        mainLayout.addView(scrollView);
+
+        // Finish / Upload Button
+        Button btnFinish = new Button(this);
+        btnFinish.setText("Save & Upload");
+        btnFinish.setBackgroundColor(Color.BLACK);
+        btnFinish.setTextColor(Color.WHITE);
+        btnFinish.setOnClickListener(v -> {
+            if (!selectedColors.isEmpty()) {
+                dialog.dismiss();
+                uploadToCloudinary(processedBitmap, category, subTags, selectedColors);
+            } else {
+                Toast.makeText(this, "Select at least one color", Toast.LENGTH_SHORT).show();
+            }
+        });
+        mainLayout.addView(btnFinish);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        dialog.show();
+    }
+
+    // -------------------------- 6. UPLOAD & SAVE LOGIC --------------------------
+
+    private void uploadToCloudinary(Bitmap bitmap, String category, List<String> subTags, List<String> colors) {
+        progressBar.setVisibility(View.VISIBLE);
+        statusTextView.setText("Uploading...");
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        byte[] byteArray = stream.toByteArray();
+
+        MediaManager.get().upload(byteArray)
                 .callback(new UploadCallback() {
                     @Override
                     public void onStart(String requestId) {}
+
                     @Override
                     public void onProgress(String requestId, long bytes, long totalBytes) {}
 
                     @Override
                     public void onSuccess(String requestId, Map resultData) {
-                        String secureUrl = (String) resultData.get("secure_url");
-                        saveItemToFirebase(uid, categoryId, secureUrl);
+                        String imageUrl = (String) resultData.get("secure_url");
+                        saveToFirebase(imageUrl, category, subTags, colors);
                     }
 
                     @Override
                     public void onError(String requestId, ErrorInfo error) {
-                        runOnUiThread(() -> {
-                            progressBar.setVisibility(View.GONE);
-                            Toast.makeText(F1_CameraActivity.this, "Upload Failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
-                        });
+                        progressBar.setVisibility(View.GONE);
+                        statusTextView.setText("Upload Failed");
+                        Toast.makeText(F1_CameraActivity.this, "Upload Error: " + error.getDescription(), Toast.LENGTH_LONG).show();
                     }
 
                     @Override
@@ -733,104 +666,54 @@ public class F1_CameraActivity extends AppCompatActivity {
                 .dispatch();
     }
 
-    private void saveItemToFirebase(String uid, String categoryId, String imageUrl) {
-        // ---------------------------------------------------------
-        // UPDATE: Save to categories -> catID -> photos
-        // ---------------------------------------------------------
-        DatabaseReference itemRef = FirebaseDatabase.getInstance()
-                .getReference("Users").child(uid)
-                .child("categories").child(categoryId).child("photos").push();
-
-        Map<String, Object> itemData = new HashMap<>();
-
-        // 1. Save URL
-        itemData.put("url", imageUrl);
-
-        String clothVal = selectedClothingItem;
-        String colorVal = selectedColor;
-
-
-        if (selectedClothingItem.contains(",")) {
-            String[] parts = selectedClothingItem.split(",");
-            if (parts.length > 0) clothVal = parts[0].trim();
-            if (parts.length > 1) colorVal = parts[1].trim();
+    private void saveToFirebase(String imageUrl, String category, List<String> subTags, List<String> colors) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        itemData.put("tagCloth", clothVal);
-        itemData.put("tagColor", colorVal);
+        String uid = user.getUid();
+        DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid)
+                .child("categories")
+                .child(category)
+                .child("photos");
+        // Or whatever your database node is named
 
-        itemRef.setValue(itemData).addOnSuccessListener(aVoid -> {
-            runOnUiThread(() -> {
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(F1_CameraActivity.this, "Item Saved!", Toast.LENGTH_SHORT).show();
-                finish();
-            });
-        });
-    }
+        String itemId = databaseRef.push().getKey();
 
+        if (itemId != null) {
+            Map<String, Object> itemData = new HashMap<>();
+            itemData.put("imageUrl", imageUrl);
+            itemData.put("category", category);
+            itemData.put("subTags", subTags);
+            itemData.put("colors", colors);
+            itemData.put("timestamp", ServerValue.TIMESTAMP);
 
-
-    private File bitmapToFile(Bitmap bitmap, String fileName) {
-        try {
-            File f = new File(getCacheDir(), fileName);
-            f.createNewFile();
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.PNG, 0, bos);
-            byte[] bitmapdata = bos.toByteArray();
-            FileOutputStream fos = new FileOutputStream(f);
-            fos.write(bitmapdata);
-            fos.flush();
-            fos.close();
-            return f;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            databaseRef.child(itemId).setValue(itemData)
+                    .addOnSuccessListener(aVoid -> {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(F1_CameraActivity.this, "Item Saved Successfully!", Toast.LENGTH_SHORT).show();
+                        finish(); // Close activity and go back
+                    })
+                    .addOnFailureListener(e -> {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(F1_CameraActivity.this, "Failed to save metadata: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
         }
     }
 
-    private void initCloudinary() {
-        try {
-            Map<String, Object> config = new HashMap<>();
-            config.put("cloud_name", BuildConfig.CLOUDINARY_CLOUD_NAME);
-            config.put("api_key", BuildConfig.CLOUDINARY_API_KEY);
-            config.put("api_secret", BuildConfig.CLOUDINARY_API_SECRET);
-            MediaManager.init(this, config);
-        } catch (Exception e) {
-            // Already initialized
-        }
-    }
 
-    private boolean checkSelfPermission() {
-        if (Build.VERSION.SDK_INT >= 23) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CODE);
-                return false;
-            }
-        }
-        return true;
-    }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startCamera();
-            }
-        }
-    }
-
-    private static class CategoryItem {
-        String id;
-        String name;
-        CategoryItem(String id, String name) {
-            this.id = id;
-            this.name = name;
-        }
-
-        @Override
-        public String toString() {
-            return name; // Necessary for ArrayAdapter to display name
-        }
+    // Helper to add Chips
+    private void addChip(ChipGroup group, String text, View.OnClickListener listener) {
+        Chip chip = new Chip(this);
+        chip.setText(text);
+        chip.setClickable(true);
+        chip.setCheckable(true);
+        chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#E0E0E0")));
+        chip.setOnClickListener(listener);
+        group.addView(chip);
     }
 }

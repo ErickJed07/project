@@ -3,7 +3,6 @@ package com.example.project;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -18,7 +17,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
-import com.bumptech.glide.Glide; // Ensure you have Glide in build.gradle
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -27,7 +26,6 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -50,17 +48,19 @@ public class G1_ClosetActivity extends AppCompatActivity {
         setContentView(R.layout.g1_closet);
 
         mAuth = FirebaseAuth.getInstance();
-        // Point to Users root
         dbRef = FirebaseDatabase.getInstance().getReference("Users");
         storage = FirebaseStorage.getInstance();
+
         gridLayout = findViewById(R.id.galleryGrid);
+        gridLayout.setColumnCount(3);
+
         addButtonView = findViewById(R.id.AddCategory);
 
         loadCategoriesFromFirebase();
 
         addButtonView.setOnClickListener(v -> onAddCategoryClicked(v));
 
-        addPermanentCategoryIfNeeded();
+        initializeDefaultCategories();
 
         findViewById(R.id.newoutfit).setOnClickListener(view ->
                 startActivity(new Intent(G1_ClosetActivity.this, H1_DressActivity.class))
@@ -72,84 +72,28 @@ public class G1_ClosetActivity extends AppCompatActivity {
 
         String uid = mAuth.getCurrentUser().getUid();
 
-        // ---------------------------------------------------------
-        // UPDATE: Removed "closetData" -> Now directly under "categories"
-        // ---------------------------------------------------------
         dbRef.child(uid).child("categories").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                // Clear existing views to prevent duplication during updates
                 for (View view : categoryViews.values()) {
                     gridLayout.removeView(view);
                 }
                 categoryViews.clear();
                 existingCategoryIds.clear();
 
-                // Removed separate call to addPermanentCategoryToUI() here to avoid duplication
-                // We will handle it inside the loop or check for its existence after.
+                String preOutfitKey = "PreOutfit_id";
 
-                boolean permanentCategoryFound = false;
+                if (snapshot.hasChild(preOutfitKey)) {
+                    processCategorySnapshot(snapshot.child(preOutfitKey));
+                }
 
                 for (DataSnapshot child : snapshot.getChildren()) {
-                    String categoryId = child.getKey();
-                    String name = child.child("name").getValue(String.class);
-
-                    // Fallback if name is missing, use ID
-                    if (name == null) {
-                        if ("permanent_category_id".equals(categoryId)) {
-                            name = "PermanentCategory";
-                        } else {
-                            name = categoryId;
-                        }
+                    if (child.getKey().equals(preOutfitKey)) {
+                        continue;
                     }
-
-                    if ("permanent_category_id".equals(categoryId)) {
-                        permanentCategoryFound = true;
-                    }
-
-                    String firstImageUrl = "";
-
-                    // ---------------------------------------------------------
-                    // UPDATE: Parsing Logic for new Object Structure
-                    // Structure: photos -> autoID -> { url: "...", tagCloth: "...", tagColor: "..." }
-                    // ---------------------------------------------------------
-                    if (child.hasChild("photos")) {
-                        for (DataSnapshot photoSnap : child.child("photos").getChildren()) {
-
-                            // 1. Check for the new Object structure with "url" key
-                            if (photoSnap.hasChild("url")) {
-                                String url = photoSnap.child("url").getValue(String.class);
-                                if (url != null && !url.isEmpty()) {
-                                    firstImageUrl = url;
-                                    break; // Stop after finding the first valid URL
-                                }
-                            }
-                            // 2. Legacy fallback: Check if the value itself is just a String
-                            else {
-                                Object value = photoSnap.getValue();
-                                if (value instanceof String) {
-                                    String url = (String) value;
-                                    if (url != null && !url.isEmpty()) {
-                                        firstImageUrl = url;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (categoryId != null && name != null) {
-                        addCategoryToUI(categoryId, name, firstImageUrl);
-                    }
+                    processCategorySnapshot(child);
                 }
 
-                // If the loop finished and we didn't find the permanent category (e.g. it has no data yet),
-                // add it manually with an empty image.
-                if (!permanentCategoryFound) {
-                    addCategoryToUI("permanent_category_id", "PermanentCategory", "");
-                }
-
-                // Ensure "Add Button" is always at the end
                 gridLayout.removeView(addButtonView);
                 gridLayout.addView(addButtonView);
             }
@@ -157,6 +101,42 @@ public class G1_ClosetActivity extends AppCompatActivity {
             @Override
             public void onCancelled(DatabaseError error) { }
         });
+    }
+
+    private void processCategorySnapshot(DataSnapshot child) {
+        String categoryId = child.getKey();
+        String name = child.child("name").getValue(String.class);
+
+        if (name == null) {
+            name = categoryId;
+        }
+
+        String firstImageUrl = "";
+
+        if (child.hasChild("photos")) {
+            for (DataSnapshot photoSnap : child.child("photos").getChildren()) {
+                if (photoSnap.hasChild("url")) {
+                    String url = photoSnap.child("url").getValue(String.class);
+                    if (url != null && !url.isEmpty()) {
+                        firstImageUrl = url;
+                        break;
+                    }
+                } else {
+                    Object value = photoSnap.getValue();
+                    if (value instanceof String) {
+                        String url = (String) value;
+                        if (url != null && !url.isEmpty()) {
+                            firstImageUrl = url;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (categoryId != null && name != null) {
+            addCategoryToUI(categoryId, name, firstImageUrl);
+        }
     }
 
     public void onAddCategoryClicked(View view) {
@@ -180,8 +160,6 @@ public class G1_ClosetActivity extends AppCompatActivity {
 
     private void saveCategoryToFirebase(String categoryName, String imageUrl) {
         String uid = mAuth.getCurrentUser().getUid();
-
-        // Sanitize the category name to be safe for Firebase paths (no . # $ [ ])
         String sanitizedName = categoryName.replaceAll("[.#$\\[\\]]", "");
 
         if (sanitizedName.isEmpty()) {
@@ -189,18 +167,13 @@ public class G1_ClosetActivity extends AppCompatActivity {
             return;
         }
 
-        // ---------------------------------------------------------
-        // UPDATE: ID is now "categoryName" + "_id"
-        // ---------------------------------------------------------
         String safeId = sanitizedName + "_id";
-
         DatabaseReference userCategoryRef = dbRef.child(uid).child("categories").child(safeId);
 
         Map<String, Object> catData = new HashMap<>();
         catData.put("id", safeId);
         catData.put("name", categoryName);
 
-        // Check if exists first to avoid silent overwrites (optional but recommended)
         userCategoryRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
@@ -221,7 +194,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         existingCategoryIds.add(categoryId);
 
         float scale = getResources().getDisplayMetrics().density;
-        int cardSize = (int) (160 * scale);
+        int cardSize = (int) (100 * scale);
 
         CardView card = new CardView(this);
         card.setRadius(24f);
@@ -233,7 +206,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         params.width = 0;
         params.height = GridLayout.LayoutParams.WRAP_CONTENT;
         params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        params.setMargins(12, 12, 12, 12);
+        params.setMargins(1, 1, 1, 1);
         card.setLayoutParams(params);
 
         LinearLayout container = new LinearLayout(this);
@@ -246,25 +219,23 @@ public class G1_ClosetActivity extends AppCompatActivity {
         imagePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
         imagePreview.setClipToOutline(true);
 
-        // ---------------------------------------------------------
-        // IMAGE LOADING LOGIC
-        // ---------------------------------------------------------
+        // CHANGED: Logic to show default icons if no user photo exists
         if (imageUrl != null && !imageUrl.isEmpty()) {
-            // Use Glide to load the Cloudinary URL
             Glide.with(this)
                     .load(imageUrl)
-                    .placeholder(R.drawable.box_background) // Make sure this drawable exists
+                    .placeholder(R.drawable.box_background)
                     .into(imagePreview);
         } else {
-            // Fallback: No image uploaded yet
-            imagePreview.setImageResource(R.drawable.box_background);
+            // Use the helper method to get the specific drawable
+            int defaultIconResId = getDefaultCategoryIcon(categoryName);
+            imagePreview.setImageResource(defaultIconResId);
         }
 
         TextView label = new TextView(this);
         label.setText(categoryName);
         label.setTextColor(getResources().getColor(R.color.black));
         label.setTypeface(Typeface.DEFAULT_BOLD);
-        label.setTextSize(16f);
+        label.setTextSize(14f);
         label.setGravity(Gravity.CENTER);
         label.setPadding(0, 8, 0, 0);
 
@@ -275,14 +246,13 @@ public class G1_ClosetActivity extends AppCompatActivity {
         card.setOnClickListener(v -> {
             Intent intent = new Intent(this, G2_Closet_CategoryActivity.class);
             intent.putExtra("CATEGORY_NAME", categoryName);
-            intent.putExtra("CATEGORY_ID", categoryId); // Pass ID for better querying in next screen
+            intent.putExtra("CATEGORY_ID", categoryId);
             startActivity(intent);
         });
 
         card.setOnLongClickListener(v -> {
-            // Don't allow deleting the permanent category
-            if ("permanent_category_id".equals(categoryId)) {
-                Toast.makeText(this, "Cannot delete Permanent Category", Toast.LENGTH_SHORT).show();
+            if (isDefaultCategory(categoryName)) {
+                Toast.makeText(this, "Cannot delete Default Category", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
@@ -290,20 +260,14 @@ public class G1_ClosetActivity extends AppCompatActivity {
                     .setTitle("Delete Category")
                     .setMessage("Are you sure you want to delete \"" + categoryName + "\"?")
                     .setPositiveButton("Delete", (dialog, which) -> {
-                        // Remove from UI (though listener will do it too)
                         gridLayout.removeView(card);
                         existingCategoryIds.remove(categoryId);
                         categoryViews.remove(categoryId);
 
-                        // ---------------------------------------------------------
-                        // UPDATE: Removed "closetData" from delete path
-                        // ---------------------------------------------------------
                         dbRef.child(mAuth.getCurrentUser().getUid())
                                 .child("categories")
                                 .child(categoryId)
                                 .removeValue();
-
-                        // Optional: Call Cloudinary API to delete images if needed (requires backend usually)
                     })
                     .setNegativeButton("Cancel", null)
                     .show();
@@ -314,57 +278,75 @@ public class G1_ClosetActivity extends AppCompatActivity {
         categoryViews.put(categoryId, card);
     }
 
-    private void addPermanentCategoryIfNeeded() {
-        String permanentCategoryName = "PermanentCategory";
-        String permanentCategoryId = "permanent_category_id";
-
-        // ---------------------------------------------------------
-        // UPDATE: Removed "closetData"
-        // ---------------------------------------------------------
-        DatabaseReference categoryRef = dbRef.child(mAuth.getCurrentUser().getUid())
-                .child("categories")
-                .child(permanentCategoryId);
-
-        categoryRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (!dataSnapshot.exists()) {
-                    Map<String, Object> catData = new HashMap<>();
-                    catData.put("id", permanentCategoryId);
-                    catData.put("name", permanentCategoryName);
-                    categoryRef.setValue(catData);
-
-                    // Only add to UI here if the listener hasn't fired yet (rare race condition check)
-                    // But generally, the addValueEventListener will handle the UI update.
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) { }
-        });
+    private boolean isDefaultCategory(String name) {
+        String[] defaults = {
+                "Pre-Outfit", "Hat", "Accessories", "Outer",
+                "Top", "Bag", "Bottom", "Shoes", "Dress"
+        };
+        for (String s : defaults) {
+            if (s.equals(name)) return true;
+        }
+        return false;
     }
 
-    // Removed addPermanentCategoryToUI as it's now integrated into the main loop
-
-    public void onButtonClicked(View view) {
-        Intent intent = null;
-        int viewId = view.getId();
-
-        if (viewId == R.id.home_menu) {
-            intent = new Intent(this, D1_FeedActivity.class);
-        } else if (viewId == R.id.calendar_menu) {
-            intent = new Intent(this, E1_CalendarActivity.class);
-        } else if (viewId == R.id.camera_menu) {
-            intent = new Intent(this, F1_CameraActivity.class);
-        } else if (viewId == R.id.closet_menu) {
-            return;
-        } else if (viewId == R.id.profile_menu) {
-            intent = new Intent(this, I1_ProfileActivity.class);
+    // NEW HELPER METHOD: Assigns drawables based on category name
+    // IMPORTANT: Change 'R.drawable.box_background' to your actual image names
+    private int getDefaultCategoryIcon(String categoryName) {
+        switch (categoryName) {
+            case "Pre-Outfit":
+                return R.drawable.box_background; // e.g. R.drawable.ic_pre_outfit
+            case "Hat":
+                return R.drawable.box_background; // e.g. R.drawable.ic_hat
+            case "Accessories":
+                return R.drawable.box_background; // e.g. R.drawable.ic_accessories
+            case "Outer":
+                return R.drawable.box_background; // e.g. R.drawable.ic_outer
+            case "Top":
+                return R.drawable.box_background; // e.g. R.drawable.ic_top
+            case "Bag":
+                return R.drawable.box_background; // e.g. R.drawable.ic_bag
+            case "Bottom":
+                return R.drawable.box_background; // e.g. R.drawable.ic_bottom
+            case "Shoes":
+                return R.drawable.box_background; // e.g. R.drawable.ic_shoes
+            case "Dress":
+                return R.drawable.box_background; // e.g. R.drawable.ic_dress
+            default:
+                return R.drawable.box_background;
         }
+    }
 
-        if (intent != null) {
-            startActivity(intent);
-            finish();
+    private void initializeDefaultCategories() {
+        if (mAuth.getCurrentUser() == null) return;
+
+        String uid = mAuth.getCurrentUser().getUid();
+        DatabaseReference categoriesRef = dbRef.child(uid).child("categories");
+
+        String[] defaultCategories = {
+                "Pre-Outfit", "Hat", "Accessories", "Outer",
+                "Top", "Bag", "Bottom", "Shoes", "Dress"
+        };
+
+        for (String categoryName : defaultCategories) {
+            String categoryId = categoryName.replaceAll("[.#$\\[\\]-]", "");
+
+            DatabaseReference specificCatRef = categoriesRef.child(categoryId);
+            final String finalId = categoryId;
+            final String finalName = categoryName;
+
+            specificCatRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (!dataSnapshot.exists()) {
+                        Map<String, Object> catData = new HashMap<>();
+                        catData.put("id", finalId);
+                        catData.put("name", finalName);
+                        specificCatRef.setValue(catData);
+                    }
+                }
+                @Override
+                public void onCancelled(DatabaseError databaseError) { }
+            });
         }
     }
 }
