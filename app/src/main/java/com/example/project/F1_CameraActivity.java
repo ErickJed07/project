@@ -136,11 +136,7 @@ public class F1_CameraActivity extends AppCompatActivity {
             // Already initialized
         }
             // 1. Add Default items (Safety net)
-            clothingTypesList.add("Top");
-            clothingTypesList.add("Bottom");
-            clothingTypesList.add("Shoes");
 
-            // 2. Fetch real data from Firebase
             fetchCategoriesFromFirebase();
 
 
@@ -221,9 +217,9 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     private void initCloudinary() {
         Map<String, Object> config = new HashMap<>();
-        config.put("cloud_name", "YOUR_CLOUD_NAME"); // REPLACE THIS
-        config.put("api_key", "YOUR_API_KEY");       // REPLACE THIS
-        config.put("api_secret", "YOUR_API_SECRET"); // REPLACE THIS
+        config.put("cloud_name", BuildConfig.CLOUDINARY_CLOUD_NAME);
+        config.put("api_key", BuildConfig.CLOUDINARY_API_KEY);
+        config.put("api_secret", BuildConfig.CLOUDINARY_API_SECRET);
         MediaManager.init(this, config);
     }
 
@@ -387,6 +383,66 @@ public class F1_CameraActivity extends AppCompatActivity {
     // -------------------------- 5. MULTI-STEP POPUP DIALOGS --------------------------
 
     // STEP 1: Main Category
+    private void showNewCategoryInputDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(60, 60, 60, 60);
+        layout.setBackgroundResource(R.drawable.round_image_clip); // Assuming you have this drawable
+
+        TextView title = new TextView(this);
+        title.setText("New Category Name");
+        title.setTextSize(20f);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextColor(Color.BLACK);
+        title.setGravity(Gravity.CENTER);
+        layout.addView(title);
+
+        // Input field for the new category
+        EditText input = new EditText(this);
+        input.setHint("e.g. Scarf, Hat");
+        layout.addView(input);
+
+        Space space = new Space(this);
+        space.setMinimumHeight(40);
+        layout.addView(space);
+
+        Button btnCreate = new Button(this);
+        btnCreate.setText("Create & Continue");
+        btnCreate.setBackgroundColor(Color.BLACK);
+        btnCreate.setTextColor(Color.WHITE);
+        layout.addView(btnCreate);
+
+        builder.setView(layout);
+        AlertDialog dialog = builder.create();
+
+        btnCreate.setOnClickListener(v -> {
+            String newCategoryName = input.getText().toString().trim();
+            if (!newCategoryName.isEmpty()) {
+                // Capitalize first letter for consistency
+                String formattedName = newCategoryName.substring(0, 1).toUpperCase() + newCategoryName.substring(1);
+
+                dialog.dismiss();
+
+                // 1. Save this new category to Firebase
+                addNewCategoryToFirebase(formattedName);
+
+                // 2. Continue the flow (Go to Step 2: Sub-Category)
+                // Since it's a new category, showSubCategorySelectionDialog will handle it as "unknown" and ask for details
+                showSubCategorySelectionDialog(formattedName);
+            } else {
+                input.setError("Please enter a name");
+            }
+        });
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        dialog.show();
+    }
+
     private void showCategorySelectionDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -415,11 +471,22 @@ public class F1_CameraActivity extends AppCompatActivity {
 
         // Loop through the dynamic list fetched from Firebase
         for (String type : clothingTypesList) {
+            // Filter out "Pre - Outfit"
+            if (type.equals("Pre - Outfit")) {
+                continue;
+            }
+
             addChip(chipGroup, type, v -> {
                 dialog.dismiss();
                 showSubCategorySelectionDialog(type);
             });
         }
+
+        // Logic for "Others": Open a dialog to CREATE a new category
+        addChip(chipGroup, "Other", v -> {
+            dialog.dismiss();
+            showNewCategoryInputDialog();
+        });
 
         scrollView.addView(chipGroup);
         mainLayout.addView(scrollView);
@@ -429,6 +496,31 @@ public class F1_CameraActivity extends AppCompatActivity {
         }
 
         dialog.show();
+    }
+    private void addNewCategoryToFirebase(String categoryName) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        String uid = user.getUid();
+        String sanitizedName = categoryName.replaceAll("[.#$\\[\\]]", "");
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid)
+                .child("categories");
+
+        // Check if it already exists locally to avoid duplicate logic, though Firebase handles overwrites
+        if (!clothingTypesList.contains(categoryName)) {
+            clothingTypesList.add(categoryName);
+
+            String safeId = sanitizedName;
+            Map<String, Object> categoryData = new HashMap<>();
+            categoryData.put("id", safeId);
+            categoryData.put("name", categoryName);
+
+
+            dbRef.child(categoryName).setValue(categoryData)
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Category Added!", Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to add category", Toast.LENGTH_SHORT).show());
+        }
     }
 
     // STEP 2: Sub-Category (Handles both Chips and Manual Entry)
@@ -474,7 +566,7 @@ public class F1_CameraActivity extends AppCompatActivity {
             }
 
             // Option for manual entry even if chips exist
-            addChip(chipGroup, "Other / Custom", v -> {
+            addChip(chipGroup, "Other ", v -> {
                 dialog.dismiss();
                 List<String> selection = new ArrayList<>();
                 selection.add("Other");
@@ -487,7 +579,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         } else {
             // --- SCENARIO B: NEW/UNKNOWN CATEGORY (Show EditText) ---
             EditText editText = new EditText(this);
-            editText.setHint("e.g. Silk Scarf, Wool Hat...");
+            editText.setHint("what do you want to add");
             editText.setBackgroundResource(android.R.drawable.edit_text);
             editText.setPadding(30, 30, 30, 30);
             mainLayout.addView(editText);
@@ -604,6 +696,11 @@ public class F1_CameraActivity extends AppCompatActivity {
             chipGroup.addView(chip);
         }
 
+        addChip(chipGroup, "Others", v -> {
+            dialog.dismiss();
+            showSubCategorySelectionDialog("");
+        });
+
         scrollView.addView(chipGroup);
         mainLayout.addView(scrollView);
 
@@ -640,6 +737,10 @@ public class F1_CameraActivity extends AppCompatActivity {
         byte[] byteArray = stream.toByteArray();
 
         MediaManager.get().upload(byteArray)
+                // 1. This sets the fixed folder path "Categories/Photos"
+                // This removes the specific category name (like "Top") from the folder structure
+                .option("folder", "CategoriesPhotos")
+
                 .callback(new UploadCallback() {
                     @Override
                     public void onStart(String requestId) {}
@@ -650,6 +751,7 @@ public class F1_CameraActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(String requestId, Map resultData) {
                         String imageUrl = (String) resultData.get("secure_url");
+                        // 2. We still pass the 'category' to Firebase so the database knows what it is
                         saveToFirebase(imageUrl, category, subTags, colors);
                     }
 
@@ -665,6 +767,7 @@ public class F1_CameraActivity extends AppCompatActivity {
                 })
                 .dispatch();
     }
+
 
     private void saveToFirebase(String imageUrl, String category, List<String> subTags, List<String> colors) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -703,7 +806,6 @@ public class F1_CameraActivity extends AppCompatActivity {
                     });
         }
     }
-
 
 
     // Helper to add Chips

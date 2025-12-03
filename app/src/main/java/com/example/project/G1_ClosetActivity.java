@@ -81,9 +81,9 @@ public class G1_ClosetActivity extends AppCompatActivity {
                 categoryViews.clear();
                 existingCategoryIds.clear();
 
-                String preOutfitKey = "PreOutfit_id";
+                    String preOutfitKey = "PreOutfit";
 
-                if (snapshot.hasChild(preOutfitKey)) {
+                    if (snapshot.hasChild(preOutfitKey)) {
                     processCategorySnapshot(snapshot.child(preOutfitKey));
                 }
 
@@ -167,7 +167,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
             return;
         }
 
-        String safeId = sanitizedName + "_id";
+        String safeId = sanitizedName;
         DatabaseReference userCategoryRef = dbRef.child(uid).child("categories").child(safeId);
 
         Map<String, Object> catData = new HashMap<>();
@@ -197,7 +197,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         int cardSize = (int) (100 * scale);
 
         CardView card = new CardView(this);
-        card.setRadius(24f);
+//        card.setRadius(24f);
         card.setCardElevation(6f);
         card.setUseCompatPadding(true);
         card.setCardBackgroundColor(getResources().getColor(R.color.white));
@@ -206,12 +206,12 @@ public class G1_ClosetActivity extends AppCompatActivity {
         params.width = 0;
         params.height = GridLayout.LayoutParams.WRAP_CONTENT;
         params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        params.setMargins(1, 1, 1, 1);
+        params.setMargins(0, 0, 0, 0);
         card.setLayoutParams(params);
 
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(8, 8, 8, 8);
+        container.setPadding(0, 20, 0, 0);
         container.setGravity(Gravity.CENTER);
 
         ImageView imagePreview = new ImageView(this);
@@ -223,7 +223,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         if (imageUrl != null && !imageUrl.isEmpty()) {
             Glide.with(this)
                     .load(imageUrl)
-                    .placeholder(R.drawable.box_background)
+                    .placeholder(R.drawable.ic_placeholder_2)
                     .into(imagePreview);
         } else {
             // Use the helper method to get the specific drawable
@@ -237,7 +237,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         label.setTypeface(Typeface.DEFAULT_BOLD);
         label.setTextSize(14f);
         label.setGravity(Gravity.CENTER);
-        label.setPadding(0, 8, 0, 0);
+        label.setPadding(0, 0, 0, 0);
 
         container.addView(imagePreview);
         container.addView(label);
@@ -280,7 +280,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
 
     private boolean isDefaultCategory(String name) {
         String[] defaults = {
-                "Pre-Outfit", "Hat", "Accessories", "Outer",
+                "PreOutfit", "Hat", "Accessories", "Outer",
                 "Top", "Bag", "Bottom", "Shoes", "Dress"
         };
         for (String s : defaults) {
@@ -293,7 +293,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
     // IMPORTANT: Change 'R.drawable.box_background' to your actual image names
     private int getDefaultCategoryIcon(String categoryName) {
         switch (categoryName) {
-            case "Pre-Outfit":
+            case "PreOutfit":
                 return R.drawable.box_background; // e.g. R.drawable.ic_pre_outfit
             case "Hat":
                 return R.drawable.box_background; // e.g. R.drawable.ic_hat
@@ -323,7 +323,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         DatabaseReference categoriesRef = dbRef.child(uid).child("categories");
 
         String[] defaultCategories = {
-                "Pre-Outfit", "Hat", "Accessories", "Outer",
+                "PreOutfit", "Hat", "Accessories", "Outer",
                 "Top", "Bag", "Bottom", "Shoes", "Dress"
         };
 
