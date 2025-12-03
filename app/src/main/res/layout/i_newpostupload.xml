@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="10dp"
             android:gravity="center|top"
-            android:text="Save"
+            android:text="Post"
             android:textColor="@color/pure_color"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -120,7 +120,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/gallery"
-            app:tint="@color/teal_700" />
+            app:tint="@color/pure_color" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.recyclerview.widget.RecyclerView
