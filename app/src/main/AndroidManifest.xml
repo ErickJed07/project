@@ -50,7 +50,7 @@
         <activity android:name=".D1_FeedActivity" android:exported="true" />
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
-        <activity android:name=".A_HomeActivity"/>
+        <activity android:name=".H6_RecommendationActivity"/>
         <activity android:name=".I_ProfileUploadContent_GridViewer"/>
         <activity android:name=".I_ProfileLikedContent_GridViewer"/>
         <activity android:name=".I_ProfileFavContent_GridViewer"/>
@@ -66,7 +66,7 @@
 
         <!-- 📌 Main Launcher -->
         <activity
-            android:name=".H6_RecommendationActivity"
+            android:name=".A_HomeActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

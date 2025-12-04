@@ -1,6 +1,7 @@
 package com.example.project;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -10,11 +11,19 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,6 +39,8 @@ public class D1_FeedActivity extends AppCompatActivity {
     private List<I_NewPost_Event> postList;
     private DatabaseReference postsRef;
     private SwipeRefreshLayout swipeRefreshLayout;
+
+    private static final String VERSION_URL = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,22 +58,67 @@ public class D1_FeedActivity extends AppCompatActivity {
         postAdapter = new D_FeedAdapter(this, postList);
         recyclerView.setAdapter(postAdapter);
 
-        // --- REMOVED THE MANUAL SCROLL LISTENER ---
-        // Modern SwipeRefreshLayout automatically detects when RecyclerView is at the top.
-        // Manually enabling/disabling it causes the "sticky" scroll feeling.
-
         postsRef = FirebaseDatabase.getInstance().getReference("PostEvents");
 
         // Set up the Refresh Listener
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            fetchPostsFromFirebase();
-        });
+        swipeRefreshLayout.setOnRefreshListener(() -> fetchPostsFromFirebase());
 
         // Optional: Set a distance to trigger to avoid accidental refreshes
-        // This requires a slightly longer pull to activate
         swipeRefreshLayout.setDistanceToTriggerSync(300);
 
+        // Check for updates after login or when the feed activity is opened
+        checkForUpdates();
+
+        // Fetch posts from Firebase
         fetchPostsFromFirebase();
+    }
+
+    private void checkForUpdates() {
+        // Request queue for network calls
+        RequestQueue queue = Volley.newRequestQueue(this);
+
+        // Create a StringRequest to fetch the version.json
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, VERSION_URL,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            // Parse the response (JSON)
+                            JSONObject jsonObject = new JSONObject(response);
+                            int latestVersionCode = jsonObject.getInt("version_code");
+                            String apkUrl = jsonObject.getString("apk_url");
+
+                            // Compare with the current app version
+                            if (latestVersionCode > BuildConfig.VERSION_CODE) {
+                                // Show the update dialog if the version is newer
+                                showUpdateDialog(apkUrl);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(D1_FeedActivity.this, "Error parsing update info", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }, error -> {
+            // Handle error
+            Toast.makeText(D1_FeedActivity.this, "Error fetching version info", Toast.LENGTH_SHORT).show();
+        });
+
+        // Add the request to the queue
+        queue.add(stringRequest);
+    }
+
+    private void showUpdateDialog(final String apkUrl) {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("New Update Available")
+                .setMessage("A new version of the app is available. Do you want to update?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    // Start the browser to download the APK
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl));
+                    startActivity(intent);
+                })
+                .setNegativeButton("No", null)
+                .setCancelable(false)
+                .show();
     }
 
     private void fetchPostsFromFirebase() {
