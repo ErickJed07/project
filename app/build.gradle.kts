@@ -35,8 +35,8 @@ android {
         applicationId = "com.example.project"
         minSdk = 28
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // 2. Inject Cloudinary credentials into BuildConfig
