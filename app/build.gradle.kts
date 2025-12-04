@@ -17,6 +17,8 @@ android {
     compileSdk = 35
 
     defaultConfig {
+        versionCode = 4  // Increment versionCode
+        versionName = "1.2"  // Optional: Update version name
         applicationId = "com.example.project"
         minSdk = 28
         targetSdk = 35
@@ -67,16 +69,16 @@ dependencies {
 
 
 
-        implementation(libs.appcompat)
-    implementation(libs.object1.detection)
-    implementation(libs.object1.detection.common)
-    // ... other implementations ...
+    implementation(libs.appcompat)
+    implementation(libs.leanback.grid)
+    implementation(libs.volley)
 
-        testImplementation(libs.junit)
-        androidTestImplementation(libs.ext.junit)
-        androidTestImplementation(libs.espresso.core)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.ext.junit)
+    androidTestImplementation(libs.espresso.core)
 
 
+    implementation (libs.volley)
 
 
     // Firebase (using BoM to sync versions)

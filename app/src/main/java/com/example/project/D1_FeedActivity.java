@@ -2,9 +2,12 @@ package com.example.project;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.Toast;
+import androidx.core.content.FileProvider;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -25,6 +28,8 @@ import com.google.firebase.database.ValueEventListener;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +44,7 @@ public class D1_FeedActivity extends AppCompatActivity {
     private List<I_NewPost_Event> postList;
     private DatabaseReference postsRef;
     private SwipeRefreshLayout swipeRefreshLayout;
+    private ProgressBar progressBar;  // Progress bar to show download progress
 
     private static final String VERSION_URL = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json";
 
@@ -47,10 +53,11 @@ public class D1_FeedActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.d1_feed);
 
-        // Initialize SwipeRefreshLayout
+        // Initialize Views
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
-
         recyclerView = findViewById(R.id.feedrecyclerView);
+        progressBar = findViewById(R.id.progressBar); // Progress bar for download
+
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
 
@@ -62,8 +69,6 @@ public class D1_FeedActivity extends AppCompatActivity {
 
         // Set up the Refresh Listener
         swipeRefreshLayout.setOnRefreshListener(() -> fetchPostsFromFirebase());
-
-        // Optional: Set a distance to trigger to avoid accidental refreshes
         swipeRefreshLayout.setDistanceToTriggerSync(300);
 
         // Check for updates after login or when the feed activity is opened
@@ -111,14 +116,58 @@ public class D1_FeedActivity extends AppCompatActivity {
         new android.app.AlertDialog.Builder(this)
                 .setTitle("New Update Available")
                 .setMessage("A new version of the app is available. Do you want to update?")
-                .setPositiveButton("Yes", (dialog, which) -> {
-                    // Start the browser to download the APK
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl));
-                    startActivity(intent);
-                })
+                .setPositiveButton("Yes", (dialog, which) -> downloadAndInstallApk(apkUrl))
                 .setNegativeButton("No", null)
                 .setCancelable(false)
                 .show();
+    }
+
+    private void downloadAndInstallApk(String apkUrl) {
+        // Show progress bar while downloading
+        progressBar.setVisibility(View.VISIBLE);
+
+        // Create a new file for saving the APK
+        File apkFile = new File(getExternalFilesDir(null), "app-release.apk");
+
+        // Start downloading the APK file
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        FileDownloadRequest request = new FileDownloadRequest(apkUrl, apkFile, new Response.Listener<File>() {
+            @Override
+            public void onResponse(File file) {
+                // Hide the progress bar once the download is complete
+                progressBar.setVisibility(View.GONE);
+
+                Toast.makeText(D1_FeedActivity.this, "Download Complete!", Toast.LENGTH_SHORT).show();
+                // Install the APK after download
+                installApk(file);
+            }
+        }, error -> {
+            // Hide progress bar if download fails
+            progressBar.setVisibility(View.GONE);
+            Toast.makeText(D1_FeedActivity.this, "Download Failed", Toast.LENGTH_SHORT).show();
+        });
+
+        // Add the request to the queue to start downloading
+        requestQueue.add(request);
+    }
+
+    private void installApk(File file) {
+        Uri apkUri;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            // For Android N and above, use FileProvider
+            apkUri = FileProvider.getUriForFile(this, "com.example.project.fileprovider", file);
+            Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+            intent.setData(apkUri);
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(intent);
+        } else {
+            // For older versions, just use Uri.fromFile
+            apkUri = Uri.fromFile(file);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
     }
 
     private void fetchPostsFromFirebase() {
