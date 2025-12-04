@@ -248,17 +248,17 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ProgressBar for downloads -->
+    <!-- Add this at the bottom of d1_feed.xml -->
     <ProgressBar
         android:id="@+id/my_progress_bar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        android:elevation="8dp"
-        app:layout_constraintTop_toTopOf="parent"
+        android:elevation="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        tools:visibility="visible"/>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

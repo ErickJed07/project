@@ -132,8 +132,10 @@ public class D1_FeedActivity extends AppCompatActivity {
     }
 
     private void downloadAndInstallApk(String apkUrl) {
-        // Show progress bar while downloading
-        progressBar.setVisibility(View.VISIBLE);
+        // SAFEGUARD: Only show progress bar if it was found in the layout
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
 
         // Create a new file for saving the APK
         File apkFile = new File(getExternalFilesDir(null), "app-release.apk");
@@ -143,16 +145,20 @@ public class D1_FeedActivity extends AppCompatActivity {
         FileDownloadRequest request = new FileDownloadRequest(apkUrl, apkFile, new Response.Listener<File>() {
             @Override
             public void onResponse(File file) {
-                // Hide the progress bar once the download is complete
-                progressBar.setVisibility(View.GONE);
+                // SAFEGUARD: Hide progress bar
+                if (progressBar != null) {
+                    progressBar.setVisibility(View.GONE);
+                }
 
                 Toast.makeText(D1_FeedActivity.this, "Download Complete!", Toast.LENGTH_SHORT).show();
                 // Install the APK after download
                 installApk(file);
             }
         }, error -> {
-            // Hide progress bar if download fails
-            progressBar.setVisibility(View.GONE);
+            // SAFEGUARD: Hide progress bar if download fails
+            if (progressBar != null) {
+                progressBar.setVisibility(View.GONE);
+            }
             Toast.makeText(D1_FeedActivity.this, "Download Failed", Toast.LENGTH_SHORT).show();
         });
 
