@@ -1,5 +1,7 @@
 package com.example.project;
 
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -8,6 +10,12 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.core.content.FileProvider;
+
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
+import android.database.Cursor;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -132,39 +140,77 @@ public class D1_FeedActivity extends AppCompatActivity {
     }
 
     private void downloadAndInstallApk(String apkUrl) {
-        // SAFEGUARD: Only show progress bar if it was found in the layout
+        // 1. Show Progress Bar
         if (progressBar != null) {
             progressBar.setVisibility(View.VISIBLE);
         }
 
-        // Create a new file for saving the APK
-        File apkFile = new File(getExternalFilesDir(null), "app-release.apk");
+        Toast.makeText(this, "Downloading update...", Toast.LENGTH_SHORT).show();
 
-        // Start downloading the APK file
-        RequestQueue requestQueue = Volley.newRequestQueue(this);
-        FileDownloadRequest request = new FileDownloadRequest(apkUrl, apkFile, new Response.Listener<File>() {
-            @Override
-            public void onResponse(File file) {
-                // SAFEGUARD: Hide progress bar
-                if (progressBar != null) {
-                    progressBar.setVisibility(View.GONE);
+        // 2. Prepare the file path
+        String fileName = "app-release.apk";
+        File file = new File(getExternalFilesDir(null), fileName);
+
+        // Delete any old APK file
+        if (file.exists()) {
+            file.delete();
+        }
+
+        // 3. Create the Download Request using the STANDARD Android DownloadManager
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
+        request.setTitle("App Update");
+        request.setDescription("Downloading latest version...");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+        request.setMimeType("application/vnd.android.package-archive");
+
+        // Save to the app's private storage
+        request.setDestinationInExternalFilesDir(this, null, fileName);
+
+        // 4. Enqueue the download
+        DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        long downloadId = downloadManager.enqueue(request);
+
+        // 5. Listen for when the download finishes
+        BroadcastReceiver onComplete = new BroadcastReceiver() {
+            // FIX: Used standard Context here
+            public void onReceive(Context ctxt, Intent intent) {
+                // FIX: Used standard DownloadManager constants here
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                if (downloadId == id) {
+                    // Hide progress bar
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+
+                    // Check if download was actually successful
+                    DownloadManager.Query query = new DownloadManager.Query();
+                    query.setFilterById(downloadId);
+                    Cursor c = downloadManager.query(query);
+                    if (c.moveToFirst()) {
+                        int columnIndex = c.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                        if (DownloadManager.STATUS_SUCCESSFUL == c.getInt(columnIndex)) {
+                            // SUCCESS: Install the APK
+                            installApk(file);
+                        } else {
+                            Toast.makeText(D1_FeedActivity.this, "Download Failed", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    c.close();
+
+                    // Unregister this receiver
+                    try {
+                        unregisterReceiver(this);
+                    } catch (IllegalArgumentException e) {
+                        // Ignore if already unregistered
+                    }
                 }
-
-                Toast.makeText(D1_FeedActivity.this, "Download Complete!", Toast.LENGTH_SHORT).show();
-                // Install the APK after download
-                installApk(file);
             }
-        }, error -> {
-            // SAFEGUARD: Hide progress bar if download fails
-            if (progressBar != null) {
-                progressBar.setVisibility(View.GONE);
-            }
-            Toast.makeText(D1_FeedActivity.this, "Download Failed", Toast.LENGTH_SHORT).show();
-        });
-
-        // Add the request to the queue to start downloading
-        requestQueue.add(request);
+        };
+        // FIX: Used standard DownloadManager action here
+        registerReceiver(onComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
     }
+
+
 
     private void installApk(File file) {
         Uri apkUri;

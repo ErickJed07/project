@@ -35,8 +35,8 @@ android {
         applicationId = "com.example.project"
         minSdk = 28
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.6"
+        versionCode = 1
+        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // 2. Inject Cloudinary credentials into BuildConfig
@@ -82,20 +82,12 @@ dependencies {
     implementation(libs.cardview)
     implementation(libs.exifinterface)
     implementation(libs.material.v1120)
-
-
-
-    implementation(libs.appcompat)
     implementation(libs.leanback.grid)
     implementation(libs.volley)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-
-
-    implementation (libs.volley)
-
 
     // Firebase (using BoM to sync versions)
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
