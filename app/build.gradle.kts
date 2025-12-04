@@ -17,13 +17,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        versionCode = 4  // Increment versionCode
-        versionName = "1.2"  // Optional: Update version name
         applicationId = "com.example.project"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // 2. Inject Cloudinary credentials into BuildConfig
@@ -84,8 +82,8 @@ dependencies {
     // Firebase (using BoM to sync versions)
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
     implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-database")
+    implementation(libs.google.firebase.auth)
+    implementation(libs.google.firebase.database)
     implementation("com.google.firebase:firebase-storage")
     implementation(libs.firebase.firestore)
 
@@ -103,7 +101,7 @@ dependencies {
     implementation("com.cloudinary:cloudinary-android:2.3.1")
 
     // UI extras
-    implementation("com.tbuonomo:dotsindicator:4.2")
+    implementation(libs.dotsindicator)
     implementation ("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation ("com.google.mlkit:image-labeling:17.0.7")
     implementation ("androidx.palette:palette:1.0.0")

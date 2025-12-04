@@ -147,9 +147,15 @@ public class I1_ProfileActivity extends AppCompatActivity {
                 PopupMenu popup = new PopupMenu(I1_ProfileActivity.this, v);
                 final int LOGOUT_ID = 1;
                 final int DELETE_ID = 2;
+                final int VERSION_ID = 3; // New ID for Version
 
                 popup.getMenu().add(0, LOGOUT_ID, 0, "Logout");
-                MenuItem deleteItem = popup.getMenu().add(0, DELETE_ID, 1, "Delete Account");
+
+                // Add Version Item (Non-clickable or just shows version)
+                String versionText = "Version: " + BuildConfig.VERSION_NAME;
+                popup.getMenu().add(0, VERSION_ID, 1, versionText).setEnabled(false); // Disabled so it acts like a label
+
+                MenuItem deleteItem = popup.getMenu().add(0, DELETE_ID, 2, "Delete Account");
                 SpannableString s = new SpannableString(deleteItem.getTitle());
                 s.setSpan(new ForegroundColorSpan(Color.RED), 0, s.length(), 0);
                 deleteItem.setTitle(s);
@@ -171,6 +177,7 @@ public class I1_ProfileActivity extends AppCompatActivity {
                 popup.show();
             });
         }
+
 
         // --- FIREBASE DATA LISTENER ---
         if (currentUser != null) {
