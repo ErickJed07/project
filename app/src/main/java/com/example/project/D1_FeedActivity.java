@@ -58,6 +58,7 @@ public class D1_FeedActivity extends AppCompatActivity {
     private static final String VERSION_URL = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json?t=" + System.currentTimeMillis();
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,43 +92,41 @@ public class D1_FeedActivity extends AppCompatActivity {
     }
 
     private void checkForUpdates() {
-        // Request queue for network calls
+        // Correctly build the URL inside the method to get a fresh timestamp every time
+        String versionUrl = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json?t=" + System.currentTimeMillis();
+
         RequestQueue queue = Volley.newRequestQueue(this);
 
-        // Create a StringRequest to fetch the version.json
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, VERSION_URL,
-                new Response.Listener<String>() {
-                    @Override
-                    // Inside D1_FeedActivity.java -> checkForUpdates()
-                    public void onResponse(String response) {
-                        try {
-                            JSONObject jsonObject = new JSONObject(response);
-                            int latestVersionCode = jsonObject.getInt("version_code");
-                            String apkUrl = jsonObject.getString("apk_url");
+        // Use the new dynamically generated URL
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, versionUrl,
+                response -> {
+                    try {
+                        JSONObject jsonObject = new JSONObject(response);
+                        int latestVersionCode = jsonObject.getInt("version_code");
+                        String apkUrl = jsonObject.getString("apk_url");
 
-                            // LOGGING FOR DEBUGGING
-                            System.out.println("Current Version: " + BuildConfig.VERSION_CODE);
-                            System.out.println("Remote Version: " + latestVersionCode);
+                        // LOGGING FOR DEBUGGING
+                        System.out.println("Current Version: " + BuildConfig.VERSION_CODE);
+                        System.out.println("Remote Version: " + latestVersionCode);
 
-                            if (latestVersionCode > BuildConfig.VERSION_CODE) {
-                                showUpdateDialog(apkUrl);
-                            } else {
-                                // Temporary Toast to confirm the check ran successfully
-                                Toast.makeText(D1_FeedActivity.this, "App is up to date", Toast.LENGTH_SHORT).show();
-                            }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
+                        if (latestVersionCode > BuildConfig.VERSION_CODE) {
+                            showUpdateDialog(apkUrl);
+                        } else {
+                            Toast.makeText(D1_FeedActivity.this, "App is up to date", Toast.LENGTH_SHORT).show();
                         }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
+                },
+                error -> {
+                    Toast.makeText(D1_FeedActivity.this, "Error fetching version info", Toast.LENGTH_SHORT).show();
+                });
 
-                }, error -> {
-            // Handle error
-            Toast.makeText(D1_FeedActivity.this, "Error fetching version info", Toast.LENGTH_SHORT).show();
-        });
-
-        // Add the request to the queue
+        // Disable Volley's cache for this specific request
+        stringRequest.setShouldCache(false);
         queue.add(stringRequest);
     }
+
 
     private void showUpdateDialog(final String apkUrl) {
         new android.app.AlertDialog.Builder(this)
