@@ -39,10 +39,12 @@
             android:authorities="com.example.project.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
+            <!-- 👇 THIS IS THE LINE TO CHANGE 👇 -->
             <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:name="androidx.core.content.FileProvider"
                 android:resource="@xml/provider_paths" />
         </provider>
+
 
 
         <!-- 📌 Reminder BroadcastReceiver -->
