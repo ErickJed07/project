@@ -206,9 +206,17 @@ public class D1_FeedActivity extends AppCompatActivity {
                 }
             }
         };
-        // FIX: Used standard DownloadManager action here
-        registerReceiver(onComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        // ... existing code inside downloadAndIn
+        // FIX: Register receiver with security flags for Android 14 (API 34)+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Use EXPORTED because the broadcast comes from the system (DownloadManager)
+            registerReceiver(onComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(onComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        }
     }
+
+
 
 
 
