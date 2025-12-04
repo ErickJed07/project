@@ -165,15 +165,10 @@ public class F1_CameraActivity extends AppCompatActivity {
     }
 
     private void fetchCategoriesFromFirebase() {
-        // 1. Get the current user
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        if (currentUser == null) {
-            // User not logged in, stick with defaults
-            return;
-        }
+        if (currentUser == null) return;
 
-        // 2. CORRECT PATH: Users -> uid -> categories
         String uid = currentUser.getUid();
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
                 .child(uid)
@@ -185,33 +180,38 @@ public class F1_CameraActivity extends AppCompatActivity {
                 if (snapshot.exists()) {
                     List<String> firebaseCategories = new ArrayList<>();
 
-                    // 3. Loop through your specific JSON structure
                     for (DataSnapshot data : snapshot.getChildren()) {
-                        // Your JSON structure has "name" inside the object
-                        // Example: Accessories -> name: "Accessories"
+                        // 1. Try getting "name" field (based on your addNewCategoryToFirebase logic)
                         String name = data.child("name").getValue(String.class);
 
-                        if (name != null) {
+                        // 2. Fallback: If "name" is null, use the Key (e.g., "Hat")
+                        if (name == null) {
+                            name = data.getKey();
+                        }
+
+                        // 3. Only add if name exists and isn't empty
+                        if (name != null && !name.trim().isEmpty()) {
                             firebaseCategories.add(name);
                         }
                     }
 
-                    // 4. Update the list only if we found data
                     if (!firebaseCategories.isEmpty()) {
                         clothingTypesList.clear();
                         clothingTypesList.addAll(firebaseCategories);
-                        // Optional: Sort A-Z
                         Collections.sort(clothingTypesList);
+                        Log.d("F1_Camera", "Loaded categories: " + clothingTypesList.toString());
                     }
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // Error handling
+                Log.e("F1_Camera", "Db Error", error.toException());
             }
         });
     }
+
+
 
 
 
@@ -472,7 +472,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         // Loop through the dynamic list fetched from Firebase
         for (String type : clothingTypesList) {
             // Filter out "Pre - Outfit"
-            if (type.equals("Pre - Outfit")) {
+            if (type.equals("PreOutfit")) {
                 continue;
             }
 

@@ -11,6 +11,7 @@ import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class OutfitGenerator {
 
@@ -18,6 +19,8 @@ public class OutfitGenerator {
     private static final int MAX_COMBINATIONS = 50;
 
     public interface GeneratorCallback {
+        // We still pass the list in case you want to use it for undo/redo later,
+        // but the UI for it is gone.
         void onCombinationsGenerated(List<H6_RecommendationActivity.HistorySnapshot> generatedSnapshots);
         void onFirstCombinationApplied(List<String> firstComboUrls);
     }
@@ -55,16 +58,45 @@ public class OutfitGenerator {
                     String currentUrl = (String) tags[2];
                     if (currentUrl != null) matchingUrls.add(currentUrl);
                 } else {
-                    // Find potential items from Firebase
+                    // Find potential items from Firebase with Strict Filtering
+                    // Structure: [Category, SubCategory, Color]
                     List<String> filters = (List<String>) tags[0];
                     if (filters == null || filters.isEmpty()) continue;
-                    String category = filters.get(0).trim();
+
+                    // Parse filters safely
+                    String reqCategory = filters.size() > 0 ? filters.get(0).trim() : "";
+                    String reqSubCat   = filters.size() > 1 ? filters.get(1).trim() : "";
+                    String reqColor    = filters.size() > 2 ? filters.get(2).trim() : "";
 
                     for (H6_RecommendationActivity.ClothingItem item : allItems) {
-                        boolean matchCat = item.category != null && item.category.equalsIgnoreCase(category);
-                        boolean matchSub = item.subCategory != null && item.subCategory.equalsIgnoreCase(category);
-                        if (matchCat || matchSub) {
-                            matchingUrls.add(item.url);
+                        boolean isMatch = true;
+
+                        // 1. Check Category (Must match)
+                        if (!reqCategory.isEmpty()) {
+                            if (item.category == null || !item.category.equalsIgnoreCase(reqCategory)) {
+                                isMatch = false;
+                            }
+                        }
+
+                        // 2. Check SubCategory (Must match if filter is present)
+                        if (isMatch && !reqSubCat.isEmpty()) {
+                            if (item.subCategory == null || !item.subCategory.equalsIgnoreCase(reqSubCat)) {
+                                isMatch = false;
+                            }
+                        }
+
+                        // 3. Check Color (Must match if filter is present)
+                        if (isMatch && !reqColor.isEmpty()) {
+                            // Note: Assuming your ClothingItem class has a 'color' field.
+                            // If it is named 'primaryColor' or implies a list, adjust .color below.
+                            if (item.color == null || !item.color.equalsIgnoreCase(reqColor)) {
+                                isMatch = false;
+                            }
+                        }
+
+                        // If it passed all active filters, add it
+                        if (isMatch) {
+                            matchingUrls.add(item.imageUrl);
                         }
                     }
                 }
@@ -81,15 +113,24 @@ public class OutfitGenerator {
             return;
         }
 
-        // 2. Generate Combinations (Recursive Cartesian Product)
+        // 2. Generate Combinations
+        // OPTIMIZATION: If we only removed the history UI, we might just want ONE random combination
+        // instead of generating 50 and picking the first.
+        // However, to keep behavior identical to before (finding all combos), we keep this.
         List<List<String>> allCombinations = new ArrayList<>();
         generateCombinationsRecursive(allSlots, 0, new ArrayList<>(), allCombinations);
 
         // 3. Process Results
         if (!allCombinations.isEmpty()) {
-            // A. Prepare History Snapshots (with position data)
+            // Shuffle the combinations so "First" isn't always the same predictable sequence
+            // if the user clicks shuffle multiple times on the same locked items.
+            long seed = System.nanoTime();
+            java.util.Collections.shuffle(allCombinations, new Random(seed));
+
+            // A. Prepare History Snapshots (even if unused by UI now, logic remains for safety)
             int limit = Math.min(allCombinations.size(), MAX_COMBINATIONS);
             List<H6_RecommendationActivity.HistorySnapshot> snapshots = new ArrayList<>();
+
 
             for (int i = 0; i < limit; i++) {
                 List<String> comboUrls = allCombinations.get(i);
@@ -99,8 +140,9 @@ public class OutfitGenerator {
                     CardView box = boxReferences.get(j);
                     String url = comboUrls.get(j);
 
-                    // Capture current position relative to the canvas
+                    // Capture current position AND THE ID
                     snapshotStates.add(new H6_RecommendationActivity.BoxState(
+                            box.getId(), // <--- PASS THE ID HERE
                             url,
                             box.getX(),
                             box.getY(),
@@ -111,7 +153,9 @@ public class OutfitGenerator {
                 snapshots.add(new H6_RecommendationActivity.HistorySnapshot(snapshotStates));
             }
 
-            // B. Apply the FIRST combination to the UI immediately
+
+
+            // B. Apply the FIRST combination (after shuffle) to the UI immediately
             List<String> firstCombo = allCombinations.get(0);
             for (int i = 0; i < boxReferences.size(); i++) {
                 CardView card = boxReferences.get(i);
@@ -128,7 +172,7 @@ public class OutfitGenerator {
             callback.onCombinationsGenerated(snapshots);
             callback.onFirstCombinationApplied(firstCombo);
 
-            Toast.makeText(activity, "Generated " + limit + " layouts!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Outfit Shuffled!", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -141,10 +185,16 @@ public class OutfitGenerator {
             return;
         }
 
-        for (String url : lists.get(depth)) {
+        // Randomize the order we pick items from each slot so we get variety early
+        List<String> currentSlotItems = new ArrayList<>(lists.get(depth));
+        long seed = System.nanoTime();
+        java.util.Collections.shuffle(currentSlotItems, new Random(seed));
+
+        for (String url : currentSlotItems) {
             current.add(url);
             generateCombinationsRecursive(lists, depth + 1, current, result);
             current.remove(current.size() - 1); // Backtrack
+            if (result.size() >= MAX_COMBINATIONS) break; // Optimization break
         }
     }
 }

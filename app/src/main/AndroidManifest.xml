@@ -57,7 +57,7 @@
         <activity android:name=".I_Profile_AddModels" />
         <activity android:name=".I_ProfileModelFans_List" />
         <activity android:name=".C_SignInProfilePhoto" />
-        <activity android:name="H6_RecommendationActivity"/>
+        <activity android:name=".I1_ProfileActivity"/>
 
 
 
@@ -66,7 +66,7 @@
 
         <!-- 📌 Main Launcher -->
         <activity
-            android:name=".I1_ProfileActivity"
+            android:name=".H6_RecommendationActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

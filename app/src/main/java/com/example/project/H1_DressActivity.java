@@ -72,11 +72,6 @@ public class H1_DressActivity extends AppCompatActivity {
     private ImageButton btnToggleCarousel, btnBack, btnRotate;
     private String uid;
 
-    // --- Reco List Variables ---
-    private RecyclerView recyclerSuggestions;
-    private SuggestionAdapter suggestionAdapter;
-    private List<Map<String, String>> suggestionList = new ArrayList<>();
-
     private static final int REQ_CODE_POST_NOTIFICATIONS = 101;
 
     @SuppressLint("MissingInflatedId")
@@ -106,8 +101,6 @@ public class H1_DressActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Initialize Suggestions RecyclerView
-        setupSuggestionsRecycler();
 
         btnRotate.setVisibility(View.GONE);
 
@@ -132,20 +125,7 @@ public class H1_DressActivity extends AppCompatActivity {
         });
 
         // Save button
-        btnSave.setOnClickListener(v -> {
-            Bitmap bitmap = outfitView.exportToBitmap();
-            if (bitmap != null) {
-                String path = saveBitmapToFile(bitmap);
-                if (path != null) {
-                    saveToPermanentCategory(path);
-                    showSavePopup(path);
-                } else {
-                    Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                Toast.makeText(this, "Nothing to save", Toast.LENGTH_SHORT).show();
-            }
-        });
+
     }
 
     private void initCloudinary() {
@@ -208,38 +188,7 @@ public class H1_DressActivity extends AppCompatActivity {
         }
     }
 
-    private void saveToPermanentCategory(String photoPath) {
-        if (uid == null) return;
-        File permanentCategoryDir = new File(getFilesDir(), "ClosetImages/" + uid + "/PermanentCategory");
-        if (!permanentCategoryDir.exists()) permanentCategoryDir.mkdirs();
 
-        if (photoPath != null && !photoPath.isEmpty()) {
-            File sourceFile = new File(photoPath);
-            File destFile = new File(permanentCategoryDir, sourceFile.getName());
-
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                }
-
-                DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
-                        .child(uid).child("categories").child("permanent_category_id").child("photos");
-
-                String pushId = dbRef.push().getKey();
-                if (pushId != null) {
-                    Map<String, Object> photoData = new HashMap<>();
-                    photoData.put("url", destFile.getAbsolutePath());
-                    photoData.put("tagCloth", "Outfit");
-                    photoData.put("tagColor", "Mixed");
-                    dbRef.child(pushId).setValue(photoData);
-                }
-                Toast.makeText(this, "Saved to Permanent Category", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
 
     private void showSavePopup(String localImagePath) {
         View popupView = getLayoutInflater().inflate(R.layout.h5_dresser_save_popup, null);
@@ -475,105 +424,5 @@ public class H1_DressActivity extends AppCompatActivity {
             @Override
             public void onCancelled(@NonNull DatabaseError error) {}
         });
-    }
-
-    // ---------------------------------------------------------
-    // NEW: Load Temporary Suggestions from H6
-    // ---------------------------------------------------------
-
-    private void setupSuggestionsRecycler() {
-        recyclerSuggestions = findViewById(R.id.recyclerSuggestions);
-        if (recyclerSuggestions != null) {
-            recyclerSuggestions.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-            loadTempSuggestions();
-        }
-    }
-
-    private void loadTempSuggestions() {
-        if (uid == null) return;
-        DatabaseReference tempRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("temp_suggestions");
-
-        tempRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                suggestionList.clear();
-                for (DataSnapshot data : snapshot.getChildren()) {
-                    Map<String, String> outfit = new HashMap<>();
-                    outfit.put("topUrl", data.child("topUrl").getValue(String.class));
-                    outfit.put("bottomUrl", data.child("bottomUrl").getValue(String.class));
-                    suggestionList.add(outfit);
-                }
-                if (suggestionAdapter == null) {
-                    suggestionAdapter = new SuggestionAdapter(suggestionList);
-                    if (recyclerSuggestions != null) recyclerSuggestions.setAdapter(suggestionAdapter);
-                } else {
-                    suggestionAdapter.notifyDataSetChanged();
-                }
-            }
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("H1_DressActivity", "Failed to load suggestions", error.toException());
-            }
-        });
-    }
-
-    // --- Inner Adapter Class for Suggestions ---
-    class SuggestionAdapter extends RecyclerView.Adapter<SuggestionAdapter.ViewHolder> {
-        List<Map<String, String>> data;
-
-        SuggestionAdapter(List<Map<String, String>> data) { this.data = data; }
-
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            // Ensure you have created res/layout/item_outfit_suggestion.xml
-            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_outfit_suggestion, parent, false);
-            return new ViewHolder(v);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            String topUrl = data.get(position).get("topUrl");
-            String bottomUrl = data.get(position).get("bottomUrl");
-
-            Glide.with(H1_DressActivity.this).load(topUrl).into(holder.top);
-            Glide.with(H1_DressActivity.this).load(bottomUrl).into(holder.bottom);
-
-            // Click listener: Load this outfit onto the main H2_Dresser_OutfitView
-            holder.itemView.setOnClickListener(v -> {
-                Toast.makeText(H1_DressActivity.this, "Loading Outfit...", Toast.LENGTH_SHORT).show();
-                loadAndAddImageToCanvas(topUrl);
-                loadAndAddImageToCanvas(bottomUrl);
-            });
-        }
-
-        private void loadAndAddImageToCanvas(String url) {
-            if (url == null) return;
-            Glide.with(H1_DressActivity.this)
-                    .asBitmap()
-                    .load(url)
-                    .into(new CustomTarget<Bitmap>() {
-                        @Override
-                        public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                            if (outfitView != null) {
-                                outfitView.addImage(resource);
-                            }
-                        }
-                        @Override
-                        public void onLoadCleared(@Nullable Drawable placeholder) {}
-                    });
-        }
-
-        @Override
-        public int getItemCount() { return data.size(); }
-
-        class ViewHolder extends RecyclerView.ViewHolder {
-            ImageView top, bottom;
-            ViewHolder(View itemView) {
-                super(itemView);
-                top = itemView.findViewById(R.id.imgRecTop);
-                bottom = itemView.findViewById(R.id.imgRecBottom);
-            }
-        }
     }
 }
