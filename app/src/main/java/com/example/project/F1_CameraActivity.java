@@ -2,6 +2,7 @@ package com.example.project;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
@@ -99,6 +100,18 @@ public class F1_CameraActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.f1_camera_act); // Ensure XML matches this name
+
+        // --- NEW CODE: Handle Back Button to go to Feed ---
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                Intent intent = new Intent(F1_CameraActivity.this, D1_FeedActivity.class);
+                // Clear stack so they can't go "back" to calendar from feed easily
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+            }
+        });
 
         // 1. Initialize UI
         previewView = findViewById(R.id.previewView);
@@ -798,7 +811,7 @@ public class F1_CameraActivity extends AppCompatActivity {
                     .addOnSuccessListener(aVoid -> {
                         progressBar.setVisibility(View.GONE);
                         Toast.makeText(F1_CameraActivity.this, "Item Saved Successfully!", Toast.LENGTH_SHORT).show();
-                        finish(); // Close activity and go back
+                        navigateToCloset();
                     })
                     .addOnFailureListener(e -> {
                         progressBar.setVisibility(View.GONE);
@@ -818,4 +831,13 @@ public class F1_CameraActivity extends AppCompatActivity {
         chip.setOnClickListener(listener);
         group.addView(chip);
     }
+
+    private void navigateToCloset() {
+        Intent intent = new Intent(F1_CameraActivity.this, G1_ClosetActivity.class);
+        // Clear the back stack so the user can't press "Back" to return to the camera
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish(); // Close the Camera Activity
+    }
+
 }

@@ -6,7 +6,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.VibrationEffect;
+import android.os.Handler;
 import android.os.Vibrator;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -18,8 +18,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.LayoutInflater;
@@ -30,14 +28,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.view.LayoutInflater;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -50,31 +45,54 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import android.Manifest;
+import android.app.AlarmManager;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+import android.util.Log;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.CheckBox;
+import android.widget.EditText;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.cloudinary.android.MediaManager;
+import com.cloudinary.android.callback.ErrorInfo;
+import com.cloudinary.android.callback.UploadCallback;
+import com.google.android.material.textfield.TextInputLayout;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
 
 public class H6_RecommendationActivity extends AppCompatActivity {
-
-    private FrameLayout canvasContainer;
-
-    // Replaces btnShuffle
-    private Button btnGenerate;
-
-    // --- NEW BUBBLE MENU VARIABLES ---
+    private static final int REQ_CODE_POST_NOTIFICATIONS = 101;
+    private FrameLayout canvasContainer, resultsContainer, manualPickerContainer;
+    private RecyclerView rvResults, rvManualPhotoGrid;
+    private ImageButton btnCloseResults, btnClosePicker;
+    private CardView boxBeingEdited, currentlySelectedCard;
     private FloatingActionButton fabMenu, fabHistory, fabAddBox, fabPremade;
-    private boolean isFabMenuOpen = false;
-    // ----------------------------------
-
-    // Results variables
-    private FrameLayout resultsContainer;
-    private ImageButton btnCloseResults;
-    private RecyclerView rvResults;
+    private Button btnGenerate;
+    private MaterialSwitch switchMode;
     private ResultsAdapter resultsAdapter;
+    private boolean isFabMenuOpen = false;
+    private List<String> selectedColorsList = new ArrayList<>(), clothingTypesList = new ArrayList<>();
     private List<HistorySnapshot> resultsList = new ArrayList<>();
-
-
-    private CardView currentlySelectedCard;
-    // ------------------------------------
-
-    private List<String> clothingTypesList = new ArrayList<>();
     private List<ClothingItem> allItems = new ArrayList<>();
 
     @Override
@@ -82,11 +100,14 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.h6_recommendation);
 
+        initCloudinary();
+
         // Initialize Views
         canvasContainer = findViewById(R.id.canvasContainer);
 
         // 1. Initialize Generate Button (Renamed from Shuffle)
         btnGenerate = findViewById(R.id.btnGenerate);
+
 
         // 2. Initialize FAB Menu Views
         fabMenu = findViewById(R.id.fabMenu);
@@ -106,10 +127,32 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         btnGenerate.setOnClickListener(v -> shuffleAllBoxes());
 
         // Back Button
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        findViewById(R.id.btnBack).setOnClickListener(v -> {
+            Intent intent = new Intent(H6_RecommendationActivity.this, G1_ClosetActivity.class); // Verify your class name is A1_ClosetActivity
+            startActivity(intent);
+            finish();
+        });
 
         // Setup FAB Menu Logic (Bubble animation)
         setupFabMenu();
+// --- Initialize Manual Picker UI ---
+        switchMode = findViewById(R.id.switchMode);
+        manualPickerContainer = findViewById(R.id.manualPickerContainer);
+        rvManualPhotoGrid = findViewById(R.id.rvManualPhotoGrid);
+        btnClosePicker = findViewById(R.id.btnClosePicker);
+
+// Setup Grid Layout for the picker
+        rvManualPhotoGrid.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 3));
+
+// Close button logic
+        if (btnClosePicker != null) {
+            btnClosePicker.setOnClickListener(v -> manualPickerContainer.setVisibility(View.GONE));
+        }
+
+// Ensure default state
+        if (switchMode != null) {
+            switchMode.setChecked(true); // Default to "Generate/Old Function"
+        }
 
 
         // Setup Results RecyclerView
@@ -125,13 +168,391 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         // Results Panel Close Button
         btnCloseResults.setOnClickListener(v -> resultsContainer.setVisibility(View.GONE));
 
+            View btnSave = findViewById(R.id.btnSave);
+
+            checkAndRequestPermissions();
+
+            if (btnSave != null) {
+                btnSave.setOnClickListener(v -> {
+                    // 1. Check if canvas has content
+                    if (canvasContainer.getWidth() > 0 && canvasContainer.getHeight() > 0) {
+                        // 2. Capture Bitmap
+                        Bitmap outfitBitmap = getBitmapFromView(canvasContainer);
+
+                        // 3. Save Locally
+                        String localPath = saveBitmapToFile(outfitBitmap);
+
+                        // 4. Show Popup
+                        if (localPath != null) {
+                            showSavePopup(localPath);
+                        } else {
+                            Toast.makeText(this, "Error saving image locally", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(this, "Canvas is not ready", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
         // Load Data
         fetchCategoriesFromFirebase();
         loadClothesData();
+
+    }
+    private void initCloudinary() {
+        try {
+            Map<String, Object> config = new HashMap<>();
+            config.put("cloud_name", BuildConfig.CLOUDINARY_CLOUD_NAME);
+            config.put("api_key", BuildConfig.CLOUDINARY_API_KEY);
+            config.put("api_secret", BuildConfig.CLOUDINARY_API_SECRET);
+            MediaManager.init(this, config);
+        } catch (Exception e) {
+            // Already initialized
+        }
     }
 
-    // --- FAB Menu Animation Logic ---
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private Bitmap getBitmapFromView(View view) {
+        // 1. Store visibility states to restore them later
+        Map<View, Integer> originalVisibility = new HashMap<>();
+
+        if (view instanceof ViewGroup) {
+            ViewGroup container = (ViewGroup) view;
+
+            // --- NEW: Hide the main Hint Text specifically ---
+            View hintView = container.findViewById(R.id.hint);
+            if (hintView != null && hintView.getVisibility() == View.VISIBLE) {
+                originalVisibility.put(hintView, hintView.getVisibility());
+                hintView.setVisibility(View.GONE);
+            }
+            // ------------------------------------------------
+
+            for (int i = 0; i < container.getChildCount(); i++) {
+                View childBox = container.getChildAt(i);
+
+                // Skip the hint view since we already handled it above
+                if (childBox.getId() == R.id.hint) continue;
+
+                // LOGIC FOR BOXES: Check if this box has an image
+                boolean hasImage = false;
+
+                if (childBox instanceof ViewGroup) {
+                    ViewGroup boxLayout = (ViewGroup) childBox;
+                    // Iterate through the box's children to find an ImageView
+                    for (int j = 0; j < boxLayout.getChildCount(); j++) {
+                        View innerView = boxLayout.getChildAt(j);
+                        if (innerView instanceof ImageView) {
+                            if (((ImageView) innerView).getDrawable() != null) {
+                                hasImage = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // If no image was found in this box, hide it
+                if (!hasImage) {
+                    originalVisibility.put(childBox, childBox.getVisibility());
+                    childBox.setVisibility(View.GONE);
+                }
+            }
+        }
+
+        // 2. Create Bitmap (Empty boxes and hint are now GONE)
+        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        Drawable bgDrawable = view.getBackground();
+        if (bgDrawable != null) {
+            bgDrawable.draw(canvas);
+        } else {
+            canvas.drawColor(Color.WHITE);
+        }
+
+        view.draw(canvas);
+
+        // 3. Restore original visibility (Show empty boxes and hint again)
+        for (Map.Entry<View, Integer> entry : originalVisibility.entrySet()) {
+            entry.getKey().setVisibility(entry.getValue());
+        }
+
+        return bitmap;
+    }
+    private String saveBitmapToFile(Bitmap bitmap) {
+        try {
+            File dir = new File(getFilesDir(), "outfits");
+            if (!dir.exists()) dir.mkdirs();
+
+            String fileName = "outfit_" + System.currentTimeMillis() + ".png";
+            File file = new File(dir, fileName);
+
+            FileOutputStream out = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+            out.flush();
+            out.close();
+
+            return file.getAbsolutePath();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    private void showSavePopup(String localImagePath) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View popupView = getLayoutInflater().inflate(R.layout.h5_dresser_save_popup, null);
+        builder.setView(popupView);
+        AlertDialog dialog = builder.create();
+
+        // Bind Popup Views
+        EditText etTitle = popupView.findViewById(R.id.etTitle);
+        EditText etDate = popupView.findViewById(R.id.etDate);
+        EditText etTime = popupView.findViewById(R.id.etTime);
+        CheckBox cbEnableAlarm = popupView.findViewById(R.id.cbEnableAlarm);
+        TextInputLayout layoutReminder = popupView.findViewById(R.id.layoutReminder);
+        AutoCompleteTextView spinnerReminder = popupView.findViewById(R.id.spinnerReminder);
+        Button btnCancel = popupView.findViewById(R.id.btnCancel);
+        Button btnPopupSave = popupView.findViewById(R.id.btnSave); // The Save button INSIDE the popup
+
+        final Calendar selectedDate = Calendar.getInstance();
+
+        // 1. Date Picker
+        etDate.setOnClickListener(v -> {
+            Calendar now = Calendar.getInstance();
+            DatePickerDialog dateDialog = new DatePickerDialog(this, (view, year, month, day) -> {
+                selectedDate.set(Calendar.YEAR, year);
+                selectedDate.set(Calendar.MONTH, month);
+                selectedDate.set(Calendar.DAY_OF_MONTH, day);
+                etDate.setText(String.format(Locale.getDefault(), "%02d/%02d/%d", day, month + 1, year));
+            }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH));
+            dateDialog.show();
+        });
+
+        // 2. Time Picker
+        etTime.setOnClickListener(v -> {
+            Calendar now = Calendar.getInstance();
+            TimePickerDialog timeDialog = new TimePickerDialog(this, (view, hourOfDay, minute) -> {
+                selectedDate.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                selectedDate.set(Calendar.MINUTE, minute);
+                etTime.setText(String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute));
+            }, now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE), false);
+            timeDialog.show();
+        });
+
+        // 3. Reminder Dropdown
+        String[] reminders = {"None", "1 hour before", "45 min before", "30 min before", "15 min before"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, reminders);
+        spinnerReminder.setAdapter(adapter);
+        spinnerReminder.setText(reminders[0], false);
+
+        // 4. Checkbox Toggle
+        cbEnableAlarm.setOnCheckedChangeListener((buttonView, isChecked) ->
+                layoutReminder.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+
+        // 5. Cancel Button
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        // 6. Save (Upload) Button
+        btnPopupSave.setOnClickListener(v -> {
+            String title = etTitle.getText().toString().trim();
+            String reminder = spinnerReminder.getText().toString();
+            String timeStr = etTime.getText().toString();
+            String dateString = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selectedDate.getTime());
+
+            if (title.isEmpty()) {
+                Toast.makeText(this, "Title required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            btnPopupSave.setEnabled(false);
+            btnPopupSave.setText("Uploading...");
+
+            // Get User ID
+            String uid = FirebaseAuth.getInstance().getCurrentUser() != null ?
+                    FirebaseAuth.getInstance().getCurrentUser().getUid() : "anon";
+
+            // Upload to Cloudinary
+            MediaManager.get().upload(localImagePath)
+                    .option("folder", "ClosetImages/" + uid + "/Events")
+                    .callback(new UploadCallback() {
+                        @Override
+                        public void onStart(String requestId) {}
+
+                        @Override
+                        public void onProgress(String requestId, long bytes, long totalBytes) {}
+
+                        @Override
+                        public void onSuccess(String requestId, Map resultData) {
+                            String cloudUrl = (String) resultData.get("secure_url");
+                            runOnUiThread(() -> {
+                                // 1. Save data to Firebase
+                                saveEventToFirebase(title, dateString, timeStr, reminder, cloudUrl);
+
+                                // 2. Dismiss the input form dialog
+                                dialog.dismiss();
+
+                                // 3. Show "Stay or Go" Confirmation Dialog
+                                new AlertDialog.Builder(H6_RecommendationActivity.this)
+                                        .setTitle("Outfit Saved!")
+                                        .setMessage("Do you want to stay here or view your Calendar?")
+                                        .setPositiveButton("Go to Calendar", (d, w) -> {
+                                            // Navigate to Calendar Activity
+                                            Intent intent = new Intent(H6_RecommendationActivity.this, E1_CalendarActivity.class);
+                                            startActivity(intent);
+                                            finish(); // Optional: Close current activity
+                                        })
+                                        .setNegativeButton("Stay Here", (d, w) -> {
+                                            // Just dismiss and let user continue
+                                            d.dismiss();
+                                            // Reset button state in case they open the save menu again
+                                            btnPopupSave.setEnabled(true);
+                                            btnPopupSave.setText("Save");
+                                        })
+                                        .setCancelable(false) // Force a choice
+                                        .show();
+                            });
+                        }
+
+                        @Override
+                        public void onError(String requestId, ErrorInfo error) {
+                            runOnUiThread(() -> {
+                                btnPopupSave.setEnabled(true);
+                                btnPopupSave.setText("Save");
+                                Toast.makeText(H6_RecommendationActivity.this, "Upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+                            });
+                        }
+
+                        @Override
+                        public void onReschedule(String requestId, ErrorInfo error) {}
+                    })
+                    .dispatch();
+        });
+
+        dialog.show();
+    }
+    private void saveEventToFirebase(String title, String date, String time, String reminder, String imageUrl) {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("Events").push();
+
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put("title", title);
+        eventData.put("date", date);
+        eventData.put("time", time);
+        eventData.put("reminder", reminder);
+        eventData.put("imageUrl", imageUrl);
+        eventData.put("timestamp", System.currentTimeMillis());
+
+        ref.setValue(eventData)
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to save to database", Toast.LENGTH_SHORT).show());
+    }
+    private void checkAndRequestPermissions() {
+        // Android 13+ Notification Permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_CODE_POST_NOTIFICATIONS);
+            }
+        }
+
+        // Android 12+ Alarm Permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+            if (am != null && !am.canScheduleExactAlarms()) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_CODE_POST_NOTIFICATIONS) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("H6_Recommendation", "POST_NOTIFICATIONS granted by user");
+            } else {
+                Toast.makeText(this, "Notifications are disabled. Reminders won't work.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+    private void loadManualImagesForCategory(String category) {
+        List<ClothingItem> filteredList = new ArrayList<>();
+
+        // Filter the global 'allItems' list for this category
+        for (ClothingItem item : allItems) {
+            // Check against category or sub-category only (ignoring color)
+            boolean matchesCategory = item.category != null && item.category.equalsIgnoreCase(category);
+            boolean matchesSubCategory = item.subCategory != null && item.subCategory.equalsIgnoreCase(category);
+
+            if (matchesCategory || matchesSubCategory) {
+                filteredList.add(item);
+            }
+        }
+        // Set the adapter
+        rvManualPhotoGrid.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            @NonNull
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                ImageView iv = new ImageView(parent.getContext());
+                iv.setLayoutParams(new ViewGroup.LayoutParams(300, 300)); // Fixed size for grid
+                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                iv.setPadding(4, 4, 4, 4);
+                return new RecyclerView.ViewHolder(iv) {};
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                ClothingItem item = filteredList.get(position);
+                ImageView iv = (ImageView) holder.itemView;
+
+                // Load image (assuming you use Glide or similar, modify as needed)
+                com.bumptech.glide.Glide.with(H6_RecommendationActivity.this)
+                        .load(item.imageUrl)
+                        .into(iv);
+
+                // CLICK LISTENER: When user picks an image
+                iv.setOnClickListener(v -> {
+                    if (boxBeingEdited != null) {
+                        // 1. Update the image inside the movable box
+                        FrameLayout inner = (FrameLayout) boxBeingEdited.getChildAt(0);
+                        ImageView boxImage = (ImageView) inner.getChildAt(0);
+
+                        com.bumptech.glide.Glide.with(H6_RecommendationActivity.this)
+                                .load(item.imageUrl)
+                                .into(boxImage);
+
+                        // 2. Update the box's data tag so it remembers this URL
+                        Object[] currentTag = (Object[]) boxBeingEdited.getTag();
+                        // Update the URL index (assuming index 2 is url based on your code: [filters, locked, url])
+                        currentTag[2] = item.imageUrl;
+                        boxBeingEdited.setTag(currentTag);
+                    }
+                    // Close the picker
+                    manualPickerContainer.setVisibility(View.GONE);
+                });
+            }
+
+            @Override
+            public int getItemCount() {
+                return filteredList.size();
+            }
+        });
+    }
     private void setupFabMenu() {
         // Main menu button toggles the sub-buttons
         fabMenu.setOnClickListener(v -> toggleFabMenu());
@@ -154,7 +575,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             toggleFabMenu(); // Close menu after selection
         });
     }
-
     private void toggleFabMenu() {
         isFabMenuOpen = !isFabMenuOpen;
 
@@ -173,7 +593,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             hideFab(fabPremade, 50);
         }
     }
-
     private void showFab(View fab, long startDelay) {
         fab.setVisibility(View.VISIBLE);
         fab.setAlpha(0f);
@@ -188,7 +607,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                 .setListener(null)
                 .start();
     }
-
     private void hideFab(View fab, long startDelay) {
         fab.animate()
                 .scaleX(0f)
@@ -204,10 +622,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                 })
                 .start();
     }
-
-
-    // --- Firebase Loading ---
-
     private void fetchCategoriesFromFirebase() {
         if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -244,8 +658,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             }
         });
     }
-
-
     private void loadClothesData() {
         if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -300,23 +712,29 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                                 }
                             }
 
-                            // If no colors found, treat as empty so item still loads
                             if (detectedColors.isEmpty()) {
                                 detectedColors.add("");
                             }
 
-                            // 3. Add an item for EACH color found
-                            // This ensures "Black" and "White" appear as separate filter chips
+
                             if (url != null) {
-                                for (String color : detectedColors) {
-                                    allItems.add(new ClothingItem(
-                                            itemSnap.getKey(),
-                                            url,
-                                            cat != null ? cat.toLowerCase() : "",
-                                            sub != null ? sub.toLowerCase() : "",
-                                            color.toLowerCase()
-                                    ));
+                                // Convert all colors in the list to lowercase for consistency
+                                List<String> finalColors = new ArrayList<>();
+                                for (String c : detectedColors) {
+                                    finalColors.add(c.toLowerCase());
                                 }
+
+                                // Pass the LIST (finalColors), not a single string
+                                allItems.add(new ClothingItem(
+                                        itemSnap.getKey(),
+                                        url,
+                                        cat != null ? cat.toLowerCase() : "",
+                                        sub != null ? sub.toLowerCase() : "",
+                                        finalColors // <--- Pass the whole list here
+                                ));
+
+// --- FIX ENDS HERE ---
+
                             }
                         }
                     }
@@ -329,13 +747,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             }
         });
     }
-
-
-
-
-
-    // --- UI Logic ---
-
     private void showAddBoxMenu() {
         if (clothingTypesList.isEmpty()) {
             Toast.makeText(this, "Categories are loading or empty...", Toast.LENGTH_SHORT).show();
@@ -373,7 +784,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             @NonNull
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                // Programmatically create a nice looking Card for each item
                 CardView card = new CardView(parent.getContext());
 
                 // Layout Params for the Card (Width, Height, Margins)
@@ -428,47 +838,38 @@ public class H6_RecommendationActivity extends AppCompatActivity {
 
         dialog.show();
     }
-
     private void addMovableBox(String category) {
-        // Create CardView
+        // ... [Keep your existing CardView creation code same as before] ...
         CardView card = new CardView(this);
         card.setId(View.generateViewId());
 
         BoxConfig config = BoxConfig.getSize(category);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(config.widthPx, config.heightPx);
-
-        // Center initially
         params.gravity = Gravity.CENTER;
-
         card.setLayoutParams(params);
         card.setRadius(20f);
         card.setCardElevation(10f);
         card.setUseCompatPadding(true);
 
-        // Container Layout inside Card
         FrameLayout innerLayout = new FrameLayout(this);
         card.addView(innerLayout);
 
-        // 1. Main ImageView
         ImageView img = new ImageView(this);
         img.setScaleType(ImageView.ScaleType.CENTER_CROP);
         img.setImageResource(android.R.drawable.ic_menu_gallery);
         img.setAlpha(0.9f);
         innerLayout.addView(img, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-
-        // 3. Lock Icon Indicator (Hidden by default, shows when locked)
         ImageView lockIndicator = new ImageView(this);
-        lockIndicator.setImageResource(android.R.drawable.ic_secure); // Use a lock icon
+        lockIndicator.setImageResource(android.R.drawable.ic_secure);
         lockIndicator.setColorFilter(Color.RED);
-        lockIndicator.setVisibility(View.GONE); // Hidden initially
+        lockIndicator.setVisibility(View.GONE);
         FrameLayout.LayoutParams lpLockInd = new FrameLayout.LayoutParams(40, 40);
         lpLockInd.gravity = Gravity.TOP | Gravity.END;
         lpLockInd.setMargins(0, 10, 10, 0);
         lockIndicator.setLayoutParams(lpLockInd);
         innerLayout.addView(lockIndicator);
 
-        // --- LOGIC ---
         List<String> initialFilters = new ArrayList<>();
         initialFilters.add(category);
         // Tags: [0]=Filters, [1]=isLocked, [2]=url
@@ -477,26 +878,21 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         canvasContainer.addView(card);
         refreshBoxImage(card);
 
-        // --- HANDLERS ---
-
-        // Card Interaction (Move + Long Press)
-// Inside the addMovableBox() method, find card.setOnTouchListener...
-
+        // --- HANDLERS (Restored Drag & Click) ---
         card.setOnTouchListener(new View.OnTouchListener() {
             float dX, dY;
             float startX, startY;
             boolean isMoving = false;
             long startTime;
             boolean isLongPress = false;
+            final Handler handler = new Handler();
 
-            // This runnable for long-press is correct, no changes here.
+            // Runnable for Long Press (Optional: remove if you only want Drag + Click)
             final Runnable longPressRunnable = () -> {
                 isLongPress = true;
                 currentlySelectedCard = card;
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                if (v != null) {
-                    v.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE));
-                }
+                if (v != null) v.vibrate(50);
                 showFloatingToolbar(card, lockIndicator);
             };
 
@@ -513,14 +909,18 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                         startTime = System.currentTimeMillis();
                         isMoving = false;
                         isLongPress = false;
-                        v.postDelayed(longPressRunnable, 500); // Set delay for long press
                         v.bringToFront();
+
+                        // Start Long Press Timer
+                        handler.postDelayed(longPressRunnable, 500);
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
-                        if (Math.abs(event.getRawX() - startX) > 20 || Math.abs(event.getRawY() - startY) > 20) {
-                            v.removeCallbacks(longPressRunnable); // Cancel long press if dragging
-                            if (!isLongPress && !isLocked) {
+                        // If moved significantly, it is a DRAG
+                        if (Math.abs(event.getRawX() - startX) > 10 || Math.abs(event.getRawY() - startY) > 10) {
+                            handler.removeCallbacks(longPressRunnable); // Cancel long press
+
+                            if (!isLocked && !isLongPress) {
                                 isMoving = true;
                                 hideFloatingToolbar();
                                 float parentWidth = canvasContainer.getWidth();
@@ -533,33 +933,32 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                         return true;
 
                     case MotionEvent.ACTION_UP:
-                        v.removeCallbacks(longPressRunnable); // Always cancel runnable on up
+                        handler.removeCallbacks(longPressRunnable); // Stop checking for long press
                         long duration = System.currentTimeMillis() - startTime;
 
-                        // *** THIS IS THE CORRECTED LOGIC ***
-                        // If it was a short tap (not a drag or a long press), show the filter menu.
-                        if (!isMoving && !isLongPress && duration < 200) {
-                            // Find the label to pass to the menu
-                            TextView filterLabel = v.findViewWithTag("filterLabelTag");
-                            if (filterLabel != null) {
-                                showFilterMenu((CardView) v, filterLabel);
-                            }
-                            hideFloatingToolbar(); // Also hide the toolbar just in case
-                        }
-                        // The single click to refresh the image is now replaced by the filter menu.
-                        // refreshBoxImage(card) will be called from within the filter menu's listener.
+                        // CLICK LOGIC: If not moving and not a long press
+                        if (!isMoving && !isLongPress && duration < 500) {
 
+                            // 1. CHECK THE MODE SWITCH
+                            if (switchMode != null && switchMode.isChecked()) {
+                                // --- SWITCH ON: SHOW FLOATING TOOLBAR ---
+                                currentlySelectedCard = card;
+                                showFloatingToolbar(card, lockIndicator);
+                            } else {
+                                // --- SWITCH OFF: MANUAL PICKER ---
+                                boxBeingEdited = (CardView) v;
+                                manualPickerContainer.setVisibility(View.VISIBLE);
+                                loadManualImagesForCategory(category);
+                                hideFloatingToolbar();
+                            }
+                        }
                         return true;
                 }
                 return false;
             }
         });
-
     }
-
-    // Declare this at class level
     private LinearLayout floatingToolbar;
-
     private void hideFloatingToolbar() {
         if (floatingToolbar == null) {
             floatingToolbar = findViewById(R.id.floating_toolbar);
@@ -568,8 +967,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             floatingToolbar.setVisibility(View.GONE);
         }
     }
-
-
     private void showFloatingToolbar(CardView selectedCard, ImageView lockIndicator) {
         if (floatingToolbar == null) {
             floatingToolbar = findViewById(R.id.floating_toolbar);
@@ -637,129 +1034,8 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                 showSubtagFilterDialog(selectedCard, currentCategory);
                 hideFloatingToolbar();
             });
-
-            // --- 6. Color Filter Button ---
-            ImageButton btnFilterColor = findViewById(R.id.btn_toolbar_filter_color);
-
-            // Logic: If subtag is "All", show this. If a specific subtag is selected,
-            // we usually rely on the automatic chain, but let's allow manual access if "All" is selected.
-            if (currentSubtag.equals("All")) {
-                btnFilterColor.setVisibility(View.VISIBLE);
-            } else {
-                // Per requirement: "if not all hide"
-                btnFilterColor.setVisibility(View.GONE);
-            }
-
-            btnFilterColor.setOnClickListener(v -> {
-                showColorFilterDialog(selectedCard, currentCategory);
-                hideFloatingToolbar();
-            });
         }
     }
-
-
-    // Add this method to your H6_RecommendationActivity class
-    private void showFilterMenu(CardView card, TextView filterLabel) {
-        // 1. Find the hidden filter menu container included in your layout
-        // (Assuming the XML snippet you provided is inside a view with ID 'filter_menu_container')
-        View filterMenuContainer = findViewById(R.id.filter_options_container);
-
-        if (filterMenuContainer == null) {
-            Toast.makeText(this, "Filter menu layout not found", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // 2. Show the menu
-        filterMenuContainer.setVisibility(View.VISIBLE);
-        filterMenuContainer.bringToFront(); // Ensure it sits on top of the canvas
-
-        // 3. Get references to internal views
-        TextView title = filterMenuContainer.findViewById(R.id.filter_options_container);
-        ChipGroup chipGroup = filterMenuContainer.findViewById(R.id.chip_group_filters);
-        TextView btnFinish = filterMenuContainer.findViewById(R.id.btn_filter_finish);
-
-        // 4. Get current state from the card tag
-        // Tag structure: [0]=List<String> filters, [1]=boolean isLocked, [2]=String url
-        Object[] tags = (Object[]) card.getTag();
-        List<String> currentFilters = (List<String>) tags[0];
-        String category = currentFilters.get(0); // The main category (e.g., "Tops")
-
-        // 5. Set Title
-        title.setText("Filter " + category);
-
-        // 6. Populate Chips
-        chipGroup.removeAllViews();
-
-        // Get sub-tags for this specific category from your data source
-        // (Assuming 'clothingItems' contains the raw data loaded from Firebase)
-        Set<String> availableSubTags = new HashSet<>();
-        for (ClothingItem item : allItems) {
-            if (item.category.equalsIgnoreCase(category) && !item.subCategory.isEmpty()) {
-                availableSubTags.add(item.subCategory); // Collect unique subtags
-            }
-        }
-
-        // Add a "Clear / All" chip
-        com.google.android.material.chip.Chip allChip = new com.google.android.material.chip.Chip(this);
-        allChip.setText("All");
-        allChip.setCheckable(true);
-        // Check if "All" or nothing specific is currently selected
-        boolean isAllSelected = currentFilters.size() < 2 || currentFilters.get(1).equals("All");
-        allChip.setChecked(isAllSelected);
-        chipGroup.addView(allChip);
-
-        // Add chips for specific sub-tags
-        for (String subTag : availableSubTags) {
-            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(this);
-            chip.setText(subTag);
-            chip.setCheckable(true);
-
-            // Check if this specific tag is currently active on the box
-            if (!isAllSelected && currentFilters.size() >= 2 && currentFilters.get(1).equalsIgnoreCase(subTag)) {
-                chip.setChecked(true);
-            }
-
-            chipGroup.addView(chip);
-        }
-
-        // Ensure single selection behavior (optional, based on your logic)
-        chipGroup.setSingleSelection(true);
-
-        // 7. Handle "Finish" Button Click
-        btnFinish.setOnClickListener(v -> {
-            // Determine which chip is selected
-            String selectedSubTag = "All";
-            int checkedId = chipGroup.getCheckedChipId();
-            if (checkedId != View.NO_ID) {
-                com.google.android.material.chip.Chip selectedChip = chipGroup.findViewById(checkedId);
-                selectedSubTag = selectedChip.getText().toString();
-            }
-
-            // Update the Card's filter data
-            // We preserve the category (index 0) and update the subtag (index 1)
-            if (currentFilters.size() < 2) {
-                currentFilters.add(selectedSubTag);
-            } else {
-                currentFilters.set(1, selectedSubTag);
-            }
-
-            // Update the UI Label on the box
-            if (!selectedSubTag.equals("All")) {
-                filterLabel.setText(category + "\n(" + selectedSubTag + ")");
-            } else {
-                filterLabel.setText(category);
-            }
-
-            // Hide the menu
-            filterMenuContainer.setVisibility(View.GONE);
-
-            // Trigger image refresh based on new filter
-            refreshBoxImage(card);
-        });
-    }
-
-    // --- 1. Subtag (Type) Dialog ---
-    // Flow: User clicks a chip -> Updates data -> dismisses -> Opens Color Dialog
     private void showSubtagFilterDialog(CardView card, String category) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Select Type");
@@ -831,9 +1107,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancel", (d, w) -> d.dismiss());
         dialog.show();
     }
-
-    // --- 2. Color Dialog ---
-    // Flow: Multiple Select -> Finish -> Refresh Image
     private void showColorFilterDialog(CardView card, String category) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Select Colors (Multiple)");
@@ -845,45 +1118,43 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         chipGroup.setSingleSelection(false); // Allow multiple colors
         scrollView.addView(chipGroup);
 
-        // Get Current Filters
-        Object[] tags = (Object[]) card.getTag();
-        List<String> filters = (List<String>) tags[0];
+            // 1. Get the filters from the selected box
+            Object[] tags = (Object[]) card.getTag();
+            List<String> filters = (List<String>) tags[0];
+
+            // 2. Define the variables that were causing the error
+            String currentCategory = filters.size() > 0 ? filters.get(0) : "All";
+            // This defines the variable 'currentSubTag' that was missing:
+            String currentSubTag = filters.size() > 1 ? filters.get(1) : "All";
         String currentColors = filters.size() > 2 ? filters.get(2) : "All";
 
-        // Parse current selection
-        List<String> selectedColorsList = new ArrayList<>();
-        if (!currentColors.equals("All")) {
-            String[] split = currentColors.split(",");
-            for (String s : split) selectedColorsList.add(s.trim());
-        }
+            Set<String> availableColors = new HashSet<>();
 
-        // Fetch Unique Colors dynamically from 'allItems' based on category
-        // Fetch Unique Colors dynamically from 'allItems' based on category AND sub-tag
-        Set<String> availableColors = new HashSet<>();
+            // 3. Now your loop will work because currentSubTag is defined
+            for (ClothingItem item : allItems) {
+                if (!item.category.equalsIgnoreCase(currentCategory)) {
+                    continue;
+                }
 
-        // Get the currently selected sub-tag (if any)
-        String currentSubTag = filters.size() > 1 ? filters.get(1) : "All";
+                // This line caused the error before, now it works:
+                if (!currentSubTag.equalsIgnoreCase("All") && !currentSubTag.equalsIgnoreCase("none")) {
+                    // Check if item.subCategory matches
+                    if (item.subCategory == null || !item.subCategory.toLowerCase().contains(currentSubTag.toLowerCase())) {
+                        continue;
+                    }
+                }
 
-        for (ClothingItem item : allItems) {
-            // 1. Must match Category
-            if (!item.category.equalsIgnoreCase(category)) {
-                continue;
-            }
-
-            // 2. Must match Sub-Tag (if not "All")
-            // If currentSubTag is "Scarf", we only want colors from Scarves.
-            if (!currentSubTag.equalsIgnoreCase("All") && !currentSubTag.equalsIgnoreCase("none")) {
-                // Assuming item.subCategory holds the tag like "Scarf"
-                if (item.subCategory == null || !item.subCategory.toLowerCase().contains(currentSubTag.toLowerCase())) {
-                    continue; // Skip this item if it's not a Scarf
+                // Add all colors from this item
+                if (item.colors != null) {
+                    for(String c : item.colors) {
+                        availableColors.add(capitalize(c));
+                    }
                 }
             }
 
-            // Add the color
-            if (item.color != null && !item.color.isEmpty()) {
-                availableColors.add(capitalize(item.color));
-            }
-        }
+
+
+
 
 
         List<String> sortedColors = new ArrayList<>(availableColors);
@@ -969,32 +1240,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         builder.setNegativeButton("Cancel", null);
         builder.show();
     }
-
-
-    private void addChipToGroup(com.google.android.material.chip.ChipGroup group, String text, CardView card, int filterIndex, boolean triggerNextDialog) {
-        com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(this);
-        chip.setText(text);
-        chip.setCheckable(true);
-        chip.setClickable(true);
-
-        chip.setOnClickListener(v -> {
-            applyFilterUpdate(card, text, filterIndex);
-
-            // Close the current dialog (handled by AlertDialog behavior usually,
-            // but since we want to chain immediately, we rely on the visual update)
-
-            // Logic: "Show dialog box select chips... then next is color?"
-            if (triggerNextDialog && filterIndex == 1 && !text.equals("All")) {
-                // Small delay to allow the first dialog to close visually if needed,
-                // or simply open the next one on top.
-                Object[] tags = (Object[]) card.getTag();
-                List<String> filters = (List<String>) tags[0];
-                showColorFilterDialog(card, filters.get(0));
-            }
-        });
-        group.addView(chip);
-    }
-
     private void applyFilterUpdate(CardView card, String newValue, int index) {
         Object[] tags = (Object[]) card.getTag();
         List<String> filters = (List<String>) tags[0];
@@ -1008,47 +1253,10 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         // Refresh the image based on new filters
         refreshBoxImage(card);
     }
-
     private String capitalize(String str) {
         if (str == null || str.isEmpty()) return str;
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
-
-    private List<ClothingItem> getFilteredItems(String category, String subTag, String color) {
-        List<ClothingItem> filteredList = new ArrayList<>();
-        for (ClothingItem item : allItems) {
-            // 1. Match Category (e.g., "Accessories")
-            // 1. Match Category (e.g., "Accessories")
-            if (item.category == null || !item.category.equalsIgnoreCase(category)) {
-                continue;
-            }
-
-            // 2. Match SubCategory / SubTag (e.g., "Scarf")
-            // Logic: If a specific sub-tag is selected (and is not "none" or "All"), the item must match it.
-            if (subTag != null && !subTag.isEmpty() && !subTag.equalsIgnoreCase("none") && !subTag.equalsIgnoreCase("All")) {
-                // Check if item has sub-category data and if it contains the selected tag (case-insensitive)
-                if (item.subCategory == null || !item.subCategory.toLowerCase().contains(subTag.toLowerCase())) {
-                    continue;
-                }
-            }
-
-            // 3. Match Color
-            // Logic: "the color who has scarf will show if not none"
-            // If a specific color is selected (and is not "none" or "All"), the item must match it.
-            if (color != null && !color.isEmpty() && !color.equalsIgnoreCase("none") && !color.equalsIgnoreCase("All")) {
-                if (item.color == null || !item.color.equalsIgnoreCase(color)) {
-                    continue;
-                }
-            }
-
-            filteredList.add(item);
-
-        }
-        return filteredList;
-    }
-
-
-
     private void refreshBoxImage(CardView card) {
         Object[] tags = (Object[]) card.getTag();
         if ((boolean) tags[1]) return; // Locked
@@ -1071,22 +1279,36 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             boolean matchSub = fSubtag.equals("All") || item.subCategory.equalsIgnoreCase(fSubtag);
 
             // 3. Check Color (Supports multi-select like "Red,Blue")
+            // 3. Check Color (Supports multi-select like "Red,Blue")
             boolean matchColor;
             if (fColor.equals("All")) {
                 matchColor = true;
             } else {
-                // We wrap with commas to ensure exact match (e.g., ",red,blue," contains ",red,")
-                // ensuring "Light Blue" doesn't accidentally match "Blue" unless intended.
-                String searchList = "," + fColor.toLowerCase() + ",";
-                String itemColor = item.color != null ? item.color.toLowerCase() : "";
+                // This part needs to change.
+                matchColor = false; // Assume no match until one is found.
+                String[] selectedColors = fColor.toLowerCase().split(",");
 
-                // If item has no color, it fails match unless filter is All
-                matchColor = !itemColor.isEmpty() && searchList.contains("," + itemColor + ",");
+                // Check if any of the item's colors are in the list of selected filter colors.
+                if (item.colors != null && !item.colors.isEmpty()) {
+                    for (String selectedColor : selectedColors) {
+                        // Use .contains() for case-insensitive check by converting item's colors to lowercase
+                        List<String> itemColorsLowerCase = new ArrayList<>();
+                        for (String c : item.colors) {
+                            itemColorsLowerCase.add(c.toLowerCase());
+                        }
+
+                        if (itemColorsLowerCase.contains(selectedColor.trim())) {
+                            matchColor = true;
+                            break; // Found a match, no need to check other colors.
+                        }
+                    }
+                }
             }
 
             if (matchCategory && matchSub && matchColor) {
                 candidates.add(item);
             }
+
         }
 
         ImageView imgView = (ImageView) ((FrameLayout) card.getChildAt(0)).getChildAt(0);
@@ -1104,267 +1326,257 @@ public class H6_RecommendationActivity extends AppCompatActivity {
             tags[2] = null;
         }
     }
+    private void shuffleAllBoxes() {
+        OutfitGenerator.generate(
+                this,
+                canvasContainer,
+                allItems,
+                new OutfitGenerator.GeneratorCallback() {
+                    @Override
+                    public void onCombinationsGenerated(List<HistorySnapshot> generatedSnapshots) {
+                        resultsList.clear();
+                        resultsList.addAll(generatedSnapshots);
+                        resultsAdapter.notifyDataSetChanged();
+                        resultsContainer.setVisibility(View.VISIBLE);
+                        Toast.makeText(H6_RecommendationActivity.this, "Generated " + generatedSnapshots.size() + " results!", Toast.LENGTH_SHORT).show();
+                    }
 
-
-private void shuffleAllBoxes() {
-    OutfitGenerator.generate(
-            this,
-            canvasContainer,
-            allItems,
-            new OutfitGenerator.GeneratorCallback() {
-                @Override
-                public void onCombinationsGenerated(List<HistorySnapshot> generatedSnapshots) {
-                    resultsList.clear();
-                    resultsList.addAll(generatedSnapshots);
-                    resultsAdapter.notifyDataSetChanged();
-                    resultsContainer.setVisibility(View.VISIBLE);
-                    Toast.makeText(H6_RecommendationActivity.this, "Generated " + generatedSnapshots.size() + " results!", Toast.LENGTH_SHORT).show();
+                    @Override
+                    public void onFirstCombinationApplied(List<String> firstComboUrls) {
+                    }
                 }
-
-                @Override
-                public void onFirstCombinationApplied(List<String> firstComboUrls) {
-                }
-            }
-    );
-}
-
-private void applySnapshotToCanvas(HistorySnapshot snapshot) {
-    if (snapshot == null || snapshot.boxStates == null) return;
-    for (BoxState state : snapshot.boxStates) {
-        CardView card = canvasContainer.findViewById(state.viewId);
-        if (card != null) {
-            Object[] tags = (Object[]) card.getTag();
-            boolean isLocked = false;
-            if (tags != null && tags.length > 1 && tags[1] instanceof Boolean) {
-                isLocked = (boolean) tags[1];
-            }
-            if (isLocked) continue;
-
-            card.setX(state.x);
-            card.setY(state.y);
-            ViewGroup.LayoutParams params = card.getLayoutParams();
-            if (params.width != state.width || params.height != state.height) {
-                params.width = state.width;
-                params.height = state.height;
-                card.setLayoutParams(params);
-            }
-            if (tags != null && tags.length > 2) {
-                tags[2] = state.url;
-            }
-            if (card.getChildCount() > 0 && card.getChildAt(0) instanceof FrameLayout) {
-                FrameLayout inner = (FrameLayout) card.getChildAt(0);
-                if (inner.getChildCount() > 0 && inner.getChildAt(0) instanceof ImageView) {
-                    ImageView imgView = (ImageView) inner.getChildAt(0);
-                    Glide.with(this).load(state.url).centerCrop().into(imgView);
-                }
-            }
-        }
+        );
     }
-}
-
-// --- Data Models ---
-
-public static class ClothingItem {
-    public String id;
-    public String imageUrl;
-    public String category;
-    public String subCategory; // previously subTags
-    public String color;       // <--- ADD THIS FIELD
-
-    public ClothingItem(String id, String url, String category, String subCategory, String color) {
-        this.id = id;
-        this.imageUrl = url;
-        this.category = category;
-        this.subCategory = subCategory;
-        this.color = color;
-    }
-}
-
-
-public static class BoxState {
-    int viewId;
-    String url;
-    float x, y;
-    int width, height;
-
-    public BoxState(int viewId, String url, float x, float y, int width, int height) {
-        this.viewId = viewId;
-        this.url = url;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-    }
-}
-
-public static class HistorySnapshot {
-    List<BoxState> boxStates;
-    String timestamp;
-
-    public HistorySnapshot(List<BoxState> states) {
-        this.boxStates = states;
-        this.timestamp = String.valueOf(System.currentTimeMillis());
-    }
-}
-
-public static class BoxConfig {
-    public int widthPx;
-    public int heightPx;
-
-    public BoxConfig(int w, int h) {
-        widthPx = w;
-        heightPx = h;
-    }
-
-    public static BoxConfig getSize(String category) {
-        DisplayMetrics dm = Resources.getSystem().getDisplayMetrics();
-        float screenW = dm.widthPixels;
-        float screenH = dm.heightPixels;
-        float density = dm.density;
-
-        float baseWidth = screenW * 0.35f;
-        float baseHeight = screenH * 0.20f;
-        float w, h;
-
-        switch (category.toLowerCase()) {
-            case "hat":
-                w = baseWidth * 0.7f;
-                h = baseHeight * 0.48f;
-                break;
-            case "accessories":
-                w = baseWidth * 0.60f;
-                h = baseHeight * 0.60f;
-                break;
-            case "shoes":
-                w = baseWidth * 1.0f;
-                h = baseHeight * 0.56f;
-                break;
-            case "bag":
-                w = baseWidth * 0.85f;
-                h = baseHeight * 0.75f;
-                break;
-            case "outer":
-                w = baseWidth * 1.375f;
-                h = baseHeight * 1.52f;
-                break;
-            case "top":
-                w = baseWidth * 1.25f;
-                h = baseHeight * 1.28f;
-                break;
-            case "bottom":
-                w = baseWidth * 1.25f;
-                h = baseHeight * 1.44f;
-                break;
-            case "dress":
-                w = baseWidth * 1.8f;
-                h = baseHeight * 2.2f;
-                break;
-
-            default:
-                w = baseWidth;
-                h = baseHeight;
-                break;
-        }
-
-        float maxPx = 560f * density;
-        if (w > maxPx) w = maxPx;
-        if (h > maxPx) h = maxPx;
-
-        float minPx = 90f * density;
-        if (w < minPx) w = minPx;
-        if (h < minPx) h = minPx;
-
-        return new BoxConfig((int) w, (int) h);
-    }
-}
-
-// --- Results Adapter ---
-public static class ResultsAdapter extends RecyclerView.Adapter<ResultsAdapter.Holder> {
-    private List<HistorySnapshot> list;
-    private OnItemClickListener listener;
-    private View canvas;
-
-    public interface OnItemClickListener {
-        void onItemClick(HistorySnapshot snapshot);
-    }
-
-    public ResultsAdapter(List<HistorySnapshot> list, OnItemClickListener listener, View canvas) {
-        this.list = list;
-        this.listener = listener;
-        this.canvas = canvas;
-    }
-
-    @NonNull
-    @Override
-    public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_history_outfit, parent, false);
-        return new Holder(view);
-    }
-
-    @Override
-    public void onBindViewHolder(@NonNull Holder holder, int position) {
-        HistorySnapshot snapshot = list.get(position);
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onItemClick(snapshot);
-            }
-        });
-
-        holder.miniCanvas.removeAllViews();
-        float originalCanvasWidth = canvas.getWidth();
-        float originalCanvasHeight = canvas.getHeight();
-        if (originalCanvasWidth == 0) {
-            originalCanvasWidth = holder.itemView.getResources().getDisplayMetrics().widthPixels;
-            originalCanvasHeight = holder.itemView.getResources().getDisplayMetrics().heightPixels;
-        }
-
-        int targetWidth = holder.itemView.getResources().getDisplayMetrics().widthPixels - 100;
-        float scaleRatio = targetWidth / originalCanvasWidth;
-        int targetHeight = (int) (originalCanvasHeight * scaleRatio);
-
-        ViewGroup.LayoutParams canvasParams = holder.miniCanvas.getLayoutParams();
-        canvasParams.width = targetWidth;
-        canvasParams.height = targetHeight;
-        holder.miniCanvas.setLayoutParams(canvasParams);
-
+    private void applySnapshotToCanvas(HistorySnapshot snapshot) {
+        if (snapshot == null || snapshot.boxStates == null) return;
         for (BoxState state : snapshot.boxStates) {
-            ImageView iv = new ImageView(holder.itemView.getContext());
-            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            CardView card = canvasContainer.findViewById(state.viewId);
+            if (card != null) {
+                Object[] tags = (Object[]) card.getTag();
+                boolean isLocked = false;
+                if (tags != null && tags.length > 1 && tags[1] instanceof Boolean) {
+                    isLocked = (boolean) tags[1];
+                }
+                if (isLocked) continue;
 
-            int w = (int) (state.width * scaleRatio);
-            int h = (int) (state.height * scaleRatio);
-            int x = (int) (state.x * scaleRatio);
-            int y = (int) (state.y * scaleRatio);
+                card.setX(state.x);
+                card.setY(state.y);
+                ViewGroup.LayoutParams params = card.getLayoutParams();
+                if (params.width != state.width || params.height != state.height) {
+                    params.width = state.width;
+                    params.height = state.height;
+                    card.setLayoutParams(params);
+                }
+                if (tags != null && tags.length > 2) {
+                    tags[2] = state.url;
+                }
+                if (card.getChildCount() > 0 && card.getChildAt(0) instanceof FrameLayout) {
+                    FrameLayout inner = (FrameLayout) card.getChildAt(0);
+                    if (inner.getChildCount() > 0 && inner.getChildAt(0) instanceof ImageView) {
+                        ImageView imgView = (ImageView) inner.getChildAt(0);
+                        Glide.with(this).load(state.url).centerCrop().into(imgView);
+                    }
+                }
+            }
+        }
+    }
+    public static class ClothingItem {
+        public String id;
+        public String imageUrl;
+        public String category;
+        public String subCategory;
+        public List<String> colors; // <--- Must be List<String>
 
-            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h);
-            lp.leftMargin = x;
-            lp.topMargin = y;
-            lp.gravity = Gravity.TOP | Gravity.START;
+        // Update Constructor
+        public ClothingItem(String id, String url, String category, String subCategory, List<String> colors) {
+            this.id = id;
+            this.imageUrl = url;
+            this.category = category;
+            this.subCategory = subCategory;
+            this.colors = colors;
+        }
+    }
+    public static class BoxState {
+        int viewId;
+        String url;
+        float x, y;
+        int width, height;
 
-            iv.setLayoutParams(lp);
-            iv.setBackgroundColor(Color.WHITE);
-            iv.setPadding(2, 2, 2, 2);
+        public BoxState(int viewId, String url, float x, float y, int width, int height) {
+            this.viewId = viewId;
+            this.url = url;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }
+    }
+    public static class HistorySnapshot {
+        List<BoxState> boxStates;
+        String timestamp;
 
-            Glide.with(holder.itemView.getContext()).load(state.url).override(w, h).into(iv);
-            holder.miniCanvas.addView(iv);
+        public HistorySnapshot(List<BoxState> states) {
+            this.boxStates = states;
+            this.timestamp = String.valueOf(System.currentTimeMillis());
+        }
+    }
+    public static class BoxConfig {
+        public int widthPx;
+        public int heightPx;
+
+        public BoxConfig(int w, int h) {
+            widthPx = w;
+            heightPx = h;
+        }
+
+        public static BoxConfig getSize(String category) {
+            DisplayMetrics dm = Resources.getSystem().getDisplayMetrics();
+            float screenW = dm.widthPixels;
+            float screenH = dm.heightPixels;
+            float density = dm.density;
+
+            float baseWidth = screenW * 0.35f;
+            float baseHeight = screenH * 0.20f;
+            float w, h;
+
+            switch (category.toLowerCase()) {
+                case "hat":
+                    w = baseWidth * 0.7f;
+                    h = baseHeight * 0.48f;
+                    break;
+                case "accessories":
+                    w = baseWidth * 0.60f;
+                    h = baseHeight * 0.60f;
+                    break;
+                case "shoes":
+                    w = baseWidth * 1.0f;
+                    h = baseHeight * 0.56f;
+                    break;
+                case "bag":
+                    w = baseWidth * 0.85f;
+                    h = baseHeight * 0.75f;
+                    break;
+                case "outer":
+                    w = baseWidth * 1.375f;
+                    h = baseHeight * 1.52f;
+                    break;
+                case "top":
+                    w = baseWidth * 1.25f;
+                    h = baseHeight * 1.28f;
+                    break;
+                case "bottom":
+                    w = baseWidth * 1.25f;
+                    h = baseHeight * 1.44f;
+                    break;
+                case "dress":
+                    w = baseWidth * 1.8f;
+                    h = baseHeight * 2.2f;
+                    break;
+
+                default:
+                    w = baseWidth;
+                    h = baseHeight;
+                    break;
+            }
+
+            float maxPx = 560f * density;
+            if (w > maxPx) w = maxPx;
+            if (h > maxPx) h = maxPx;
+
+            float minPx = 90f * density;
+            if (w < minPx) w = minPx;
+            if (h < minPx) h = minPx;
+
+            return new BoxConfig((int) w, (int) h);
+        }
+    }
+    public static class ResultsAdapter extends RecyclerView.Adapter<ResultsAdapter.Holder> {
+        private List<HistorySnapshot> list;
+        private OnItemClickListener listener;
+        private View canvas;
+
+        public interface OnItemClickListener {
+            void onItemClick(HistorySnapshot snapshot);
+        }
+
+        public ResultsAdapter(List<HistorySnapshot> list, OnItemClickListener listener, View canvas) {
+            this.list = list;
+            this.listener = listener;
+            this.canvas = canvas;
+        }
+
+        @NonNull
+        @Override
+        public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_history_outfit, parent, false);
+            return new Holder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull Holder holder, int position) {
+            HistorySnapshot snapshot = list.get(position);
+            holder.itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onItemClick(snapshot);
+                }
+            });
+
+            holder.miniCanvas.removeAllViews();
+            float originalCanvasWidth = canvas.getWidth();
+            float originalCanvasHeight = canvas.getHeight();
+            if (originalCanvasWidth == 0) {
+                originalCanvasWidth = holder.itemView.getResources().getDisplayMetrics().widthPixels;
+                originalCanvasHeight = holder.itemView.getResources().getDisplayMetrics().heightPixels;
+            }
+
+            int targetWidth = holder.itemView.getResources().getDisplayMetrics().widthPixels - 100;
+            float scaleRatio = targetWidth / originalCanvasWidth;
+            int targetHeight = (int) (originalCanvasHeight * scaleRatio);
+
+            ViewGroup.LayoutParams canvasParams = holder.miniCanvas.getLayoutParams();
+            canvasParams.width = targetWidth;
+            canvasParams.height = targetHeight;
+            holder.miniCanvas.setLayoutParams(canvasParams);
+
+            for (BoxState state : snapshot.boxStates) {
+                ImageView iv = new ImageView(holder.itemView.getContext());
+                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
+                int w = (int) (state.width * scaleRatio);
+                int h = (int) (state.height * scaleRatio);
+                int x = (int) (state.x * scaleRatio);
+                int y = (int) (state.y * scaleRatio);
+
+                FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, h);
+                lp.leftMargin = x;
+                lp.topMargin = y;
+                lp.gravity = Gravity.TOP | Gravity.START;
+
+                iv.setLayoutParams(lp);
+                iv.setBackgroundColor(Color.WHITE);
+                iv.setPadding(2, 2, 2, 2);
+
+                Glide.with(holder.itemView.getContext()).load(state.url).override(w, h).into(iv);
+                holder.miniCanvas.addView(iv);
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return list.size();
+        }
+
+        public class Holder extends RecyclerView.ViewHolder {
+            FrameLayout miniCanvas;
+
+            public Holder(@NonNull View itemView) {
+                super(itemView);
+                miniCanvas = itemView.findViewById(R.id.miniCanvas);
+            }
         }
     }
 
-    @Override
-    public int getItemCount() {
-        return list.size();
-    }
-
-    public class Holder extends RecyclerView.ViewHolder {
-        FrameLayout miniCanvas;
-
-        public Holder(@NonNull View itemView) {
-            super(itemView);
-            miniCanvas = itemView.findViewById(R.id.miniCanvas);
-        }
-    }
-}
 }
 
 

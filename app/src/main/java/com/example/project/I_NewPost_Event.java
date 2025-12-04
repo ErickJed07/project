@@ -4,10 +4,11 @@ import java.util.List;
 import java.util.Map;
 
 public class I_NewPost_Event {
+    private String postId;
     private String username;
     private String caption;
     private List<String> imageUrls;
-    private String postId;
+
     private String date;
     private String userId;  // Added userId to the post data
     private int heartCount;  // Field to track the number of hearts (likes)

@@ -1,5 +1,6 @@
 package com.example.project;
 
+import android.annotation.SuppressLint;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,6 +12,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+
 import androidx.core.content.FileProvider;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -50,10 +52,20 @@ public class D1_FeedActivity extends AppCompatActivity {
     // For handling the download ID
     private long downloadId = -1;
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.d1_feed);
+
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                finishAffinity(); // Closes this activity and all parent activities
+                System.exit(0);   // Optional: Ensures the process is killed
+            }
+        });
+
 
         // Initialize Views
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
@@ -137,13 +149,13 @@ public class D1_FeedActivity extends AppCompatActivity {
     }
 
     private void showUpdateDialog(final String apkUrl) {
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("New Update Available")
-                .setMessage("A new version of the app is available. Downloading will happen in the background.")
-                .setPositiveButton("Update Now", (dialog, which) -> downloadAndInstallApk(apkUrl))
-                .setNegativeButton("Later", null)
-                .setCancelable(false)
-                .show();
+//        new android.app.AlertDialog.Builder(this)
+//                .setTitle("New Update Available")
+//                .setMessage("A new version of the app is available. Downloading will happen in the background.")
+//                .setPositiveButton("Update Now", (dialog, which) -> downloadAndInstallApk(apkUrl))
+//                .setNegativeButton("Later", null)
+//                .setCancelable(false)
+//                .show();
     }
 
     private void downloadAndInstallApk(String apkUrl) {
@@ -218,6 +230,10 @@ public class D1_FeedActivity extends AppCompatActivity {
                 for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
                     I_NewPost_Event postEvent = postSnapshot.getValue(I_NewPost_Event.class);
                     if (postEvent != null) {
+
+                        // --- CRITICAL CHANGE: Set the Post ID from the Firebase key ---
+                        String postId = postSnapshot.getKey();
+                        postEvent.setPostId(postId);
                         postList.add(postEvent);
                     }
                 }

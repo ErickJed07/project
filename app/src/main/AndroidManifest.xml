@@ -14,6 +14,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
@@ -54,8 +55,7 @@
 
         <!-- 📌 Activities -->
         <activity android:name=".E1_CalendarActivity" android:exported="true" />
-        <activity android:name=".G1_ClosetActivity" android:exported="true" />
-        <activity android:name=".H1_DressActivity" android:exported="true" />
+        <activity android:name=".H6_RecommendationActivity" android:exported="true" />
         <activity android:name=".I_NewPost_UploadActivity" android:exported="true" />
         <activity android:name=".G2_Closet_CategoryActivity" android:exported="true" />
         <activity android:name=".F1_CameraActivity" android:exported="true" />
@@ -63,7 +63,7 @@
         <activity android:name=".D1_FeedActivity" android:exported="true" />
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
-        <activity android:name=".H6_RecommendationActivity"/>
+        <activity android:name=".G1_ClosetActivity"/>
         <activity android:name=".I_ProfileUploadContent_GridViewer"/>
         <activity android:name=".I_ProfileLikedContent_GridViewer"/>
         <activity android:name=".I_ProfileFavContent_GridViewer"/>

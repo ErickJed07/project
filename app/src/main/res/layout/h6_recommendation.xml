@@ -14,25 +14,43 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_margin="16dp"
+        android:layout_marginStart="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Back"
         android:src="@android:drawable/ic_menu_revert"
-        app:tint="#000000"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:contentDescription="Back" />
+        app:tint="#000000" />
 
     <TextView
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Free-Form Builder"
+        android:layout_marginStart="8dp"
+        android:text="OutFitGenerator"
+        android:textColor="#000000"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="#000000"
         app:layout_constraintBottom_toBottomOf="@id/btnBack"
         app:layout_constraintStart_toEndOf="@id/btnBack"
-        app:layout_constraintTop_toTopOf="@id/btnBack"
-        android:layout_marginStart="8dp"/>
+        app:layout_constraintTop_toTopOf="@id/btnBack" />
+
+    <!-- SAVE BUTTON -->
+    <TextView
+        android:id="@+id/btnSave"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:text="Save"
+        android:textColor="#6C5CE7"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:padding="8dp"
+        android:background="?attr/selectableItemBackground"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/btnBack"/>
+
 
     <!-- CANVAS AREA -->
     <FrameLayout
@@ -47,15 +65,16 @@
         app:layout_constraintTop_toBottomOf="@id/btnBack">
 
         <TextView
+            android:id="@+id/hint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Use the menu to add items.\nDrag to move. Hold to edit."
             android:layout_gravity="center"
             android:gravity="center"
-            android:textColor="#999999"/>
+            android:text="Use the menu to add items.\nDrag to move. Click to edit."
+            android:textColor="#999999" />
     </FrameLayout>
 
-    <!-- BOTTOM CONTROLS (Generate Button) -->
+    <!-- BOTTOM CONTROLS: Switch added here to the left of the button -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
@@ -69,6 +88,15 @@
         android:clipToPadding="false"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- Mode Toggle Switch (Manual vs Generate) -->
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:textColor="#000000"
+            android:checked="false" />
+
         <Button
             android:id="@+id/btnGenerate"
             android:layout_width="0dp"
@@ -78,6 +106,8 @@
             android:textColor="#FFFFFF"
             android:backgroundTint="#6C5CE7"/>
     </LinearLayout>
+
+    <!-- ... (Rest of file remains the same: floating_toolbar, resultsContainer, FABs, manualPickerContainer) ... -->
 
     <!-- NEW VERTICAL FLOATING TOOLBAR (Initially Hidden) -->
     <LinearLayout
@@ -95,6 +125,7 @@
         app:layout_constraintBottom_toTopOf="@+id/bottomBar"
         app:layout_constraintStart_toStartOf="parent">
 
+        <!-- ... Toolbar contents ... -->
         <!-- Delete Button -->
         <ImageButton
             android:id="@+id/btn_toolbar_filter_subtag"
@@ -106,18 +137,6 @@
             android:padding="8dp"
             android:scaleType="fitCenter"
             android:src="@android:drawable/ic_menu_sort_by_size"
-            app:tint="#6C5CE7" />
-
-        <ImageButton
-            android:id="@+id/btn_toolbar_filter_color"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/newoutfit_background"
-            android:contentDescription="Filter Colors"
-            android:padding="8dp"
-            android:scaleType="fitCenter"
-            android:src="@android:drawable/ic_menu_gallery"
             app:tint="#6C5CE7" />
 
         <View
@@ -175,14 +194,7 @@
             android:scaleType="fitCenter"
             android:src="@android:drawable/ic_lock_idle_lock"
             app:tint="#6C5CE7" />
-
-        <!-- Divider -->
-
-        <!-- Filter by Subtag (Icon representing tags) -->
-
-        <!-- Filter by Color (Icon representing color/edit) -->
     </LinearLayout>
-
 
     <androidx.cardview.widget.CardView
         android:id="@+id/filter_options_container"
@@ -217,7 +229,6 @@
                     app:singleLine="false"
                     app:singleSelection="false">
 
-                    <!-- Example Chips (Populate these programmatically based on selection) -->
                     <com.google.android.material.chip.Chip
                         style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
@@ -233,7 +244,6 @@
                 </com.google.android.material.chip.ChipGroup>
             </ScrollView>
 
-            <!-- Action Buttons Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -255,11 +265,7 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- ... existing code ... -->
-
-
-
-    <!-- RESULTS OVERLAY (Hidden by default) -->
+    <!-- GENERATED RESULTS OVERLAY (Existing) -->
     <FrameLayout
         android:id="@+id/resultsContainer"
         android:layout_width="match_parent"
@@ -273,42 +279,40 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- Results Header -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
                 android:background="#FFFFFF"
-                android:elevation="4dp">
+                android:elevation="4dp"
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
                     android:text="Generated Results"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
                     android:textColor="#000000"
-                    android:layout_centerVertical="true"/>
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
                 <ImageButton
                     android:id="@+id/btnCloseResults"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:src="@android:drawable/ic_menu_close_clear_cancel"
-                    android:background="?attr/selectableItemBackgroundBorderless"
                     android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"/>
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel" />
             </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvResults"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="16dp"
-                android:clipToPadding="false"/>
+                android:clipToPadding="false"
+                android:padding="16dp" />
         </LinearLayout>
     </FrameLayout>
-
 
     <!-- BUBBLE ACTION BUTTONS -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -371,5 +375,66 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:contentDescription="Menu" />
+
+    <!-- NEW: Manual Image Picker Overlay (Pop-up Dialog) -->
+    <FrameLayout
+        android:id="@+id/manualPickerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:clickable="true"
+        android:elevation="30dp"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <!-- Bottom Sheet / Dialog Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="500dp"
+            android:layout_gravity="bottom"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Picker Header -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Select Photo"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <ImageButton
+                        android:id="@+id/btnClosePicker"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_alignParentEnd="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        app:tint="#000000" />
+                </RelativeLayout>
+
+                <!-- Grid for Photos (Set SpanCount to 3 in Java/Kotlin) -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvManualPhotoGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:scrollbars="vertical" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

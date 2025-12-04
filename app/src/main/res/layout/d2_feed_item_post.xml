@@ -7,7 +7,7 @@
     android:layout_margin="2dp"
     android:layout_marginTop="8dp"
     android:background="@android:color/white"
-
+    android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <!-- Header -->
@@ -69,6 +69,19 @@
             app:layout_constraintStart_toEndOf="@+id/profile_pic"
             app:layout_constraintTop_toBottomOf="@+id/userName_post" />
 
+
+        <ImageView
+            android:id="@+id/menu_options"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/dots"
+            android:padding="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Actions -->
@@ -109,8 +122,8 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="10dp"
-        app:layout_constraintBottom_toTopOf="@+id/constraintLayout11"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/dotsIndicator"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/constraintLayout13" />
@@ -128,6 +141,20 @@
         app:layout_constraintEnd_toEndOf="@+id/post_Pic"
         app:layout_constraintTop_toTopOf="@+id/post_Pic" />
 
+
+    <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator
+        android:id="@+id/dotsIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        app:dotsColor="@color/black"
+        app:dotsSize="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/constraintLayout11"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/post_Pic">
+
+    </com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout11"
@@ -193,21 +220,6 @@
             app:layout_constraintStart_toEndOf="@+id/fav_post"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator
-            android:id="@+id/dotsIndicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:dotsColor="@color/black"
-            app:dotsSize="10dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.50"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.50">
-
-        </com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator>
-
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/sharebutton"
             android:layout_width="wrap_content"
@@ -217,7 +229,8 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="1.0"
             app:layout_constraintStart_toEndOf="@+id/dotsIndicator"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="NotSibling">
 
             <ImageView
                 android:id="@+id/share_post"
@@ -227,7 +240,8 @@
                 android:padding="2dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/share"
-                app:layout_constraintEnd_toStartOf="@+id/share_num" />
+                app:layout_constraintEnd_toStartOf="@+id/share_num"
+                tools:ignore="MissingConstraints" />
 
             <TextView
                 android:id="@+id/share_num"
@@ -238,7 +252,8 @@
                 android:textColor="@color/black"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:ignore="MissingConstraints" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

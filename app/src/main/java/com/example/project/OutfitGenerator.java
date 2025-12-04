@@ -86,13 +86,25 @@ public class OutfitGenerator {
                         }
 
                         // 3. Check Color (Must match if filter is present)
+                        // 3. Check Color (Must match if filter is present)
                         if (isMatch && !reqColor.isEmpty()) {
-                            // Note: Assuming your ClothingItem class has a 'color' field.
-                            // If it is named 'primaryColor' or implies a list, adjust .color below.
-                            if (item.color == null || !item.color.equalsIgnoreCase(reqColor)) {
+                            boolean colorFound = false;
+
+                            // Check the list of colors
+                            if (item.colors != null) {
+                                for (String c : item.colors) {
+                                    if (c.equalsIgnoreCase(reqColor)) {
+                                        colorFound = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (!colorFound) {
                                 isMatch = false;
                             }
                         }
+
 
                         // If it passed all active filters, add it
                         if (isMatch) {

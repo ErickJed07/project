@@ -1,5 +1,6 @@
 package com.example.project;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -48,10 +49,34 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
     private DatabaseReference categoryRef; // Points to specific category
     private String uid;
 
+    // NEW: Track sort order (Default: true = Latest/Newest first)
+    private boolean isLatestFirst = true;
+
+
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.g2_closet_gallery);
+
+
+        // --- NEW CODE: Sort Button ---
+        View sortBtn = findViewById(R.id.sortButton);
+        if (sortBtn != null) {
+            sortBtn.setOnClickListener(v -> {
+                isLatestFirst = !isLatestFirst; // Toggle the boolean
+                sortImages(); // Apply sort
+            });
+        }
+        // -----------------------------
+
+
+        // --- NEW CODE: Handle Back Arrow Click ---
+        findViewById(R.id.btnbackcloset).setOnClickListener(v -> {
+            // Triggers the same logic as the hardware back button (goes to Feed)
+            getOnBackPressedDispatcher().onBackPressed();
+        });
+        // -----------------------------------------
 
         // 1. Get Data from Intent
         categoryName = getIntent().getStringExtra("CATEGORY_NAME");
@@ -76,8 +101,8 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         if (categoryId != null) {
             categoryRef = FirebaseDatabase.getInstance().getReference("Users")
                     .child(uid)
-                    .child("categories") // Removed "closetData"
-                    .child(categoryId);
+                    .child("categories") // Looks inside the specific user's categories
+                    .child(categoryId);  // Looks inside the specific category (e.g., "Tops")
         } else {
             Toast.makeText(this, "Error: Category ID missing", Toast.LENGTH_SHORT).show();
             finish();
@@ -113,11 +138,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         });
     }
 
-    // ---------------------------------------------------------
-    // FIREBASE LOADING
-    // ---------------------------------------------------------
     private void loadImagesFromFirebase() {
-        // Listen to the "photos" node inside this category
         categoryRef.child("photos").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -125,29 +146,13 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                 urlToKeyMap.clear();
 
                 for (DataSnapshot photoSnap : snapshot.getChildren()) {
-                    // The key (e.g. -OfOd...)
                     String key = photoSnap.getKey();
                     String url = null;
 
-                    // ---------------------------------------------------------
-                    // UPDATE: Handle both Object Structure and Legacy Strings
-                    // ---------------------------------------------------------
-
-                    // 1. Check new Object structure (has "url" child)
-                    if (photoSnap.hasChild("url")) {
+                    if (photoSnap.hasChild("imageUrl")) {
+                        url = photoSnap.child("imageUrl").getValue(String.class);
+                    } else if (photoSnap.hasChild("url")) {
                         url = photoSnap.child("url").getValue(String.class);
-                    }
-                    // 2. Fallback/Legacy: Check if the value itself is a String
-                    else {
-                        Object value = photoSnap.getValue();
-                        if (value instanceof String) {
-                            url = (String) value;
-                        } else if (value instanceof Map) {
-                            Map map = (Map) value;
-                            if (map.containsKey("url")) {
-                                url = (String) map.get("url");
-                            }
-                        }
                     }
 
                     if (url != null && !url.isEmpty()) {
@@ -156,12 +161,13 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                     }
                 }
 
-                adapter.notifyDataSetChanged();
+                // --- NEW: Apply Sort immediately after loading ---
+                sortImages();
+                // Note: sortImages calls notifyDataSetChanged, so we don't need to call it twice
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(G2_Closet_CategoryActivity.this, "Failed to load images", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -227,22 +233,97 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
     // ---------------------------------------------------------
     // DELETION LOGIC (Firebase)
     // ---------------------------------------------------------
+    // ---------------------------------------------------------
+    // DELETION LOGIC (Firebase + Cloudinary)
+    // ---------------------------------------------------------
     private void deleteSelectedImages() {
         if (selectedUrls.isEmpty()) return;
 
-        for (String url : selectedUrls) {
+        // Create a copy of the set to iterate over safely
+        Set<String> urlsToDelete = new HashSet<>(selectedUrls);
+
+        for (String url : urlsToDelete) {
             String key = urlToKeyMap.get(url);
+
+            // 1. DELETE FROM FIREBASE
             if (key != null) {
-                // Remove from Firebase: categories/[id]/photos/[key]
-                // Note: "categoryRef" is already set up in onCreate without "closetData"
                 categoryRef.child("photos").child(key).removeValue();
             }
+
+            // 2. DELETE FROM CLOUDINARY (Run in background thread)
+            new Thread(() -> {
+                try {
+                    String publicId = extractPublicId(url);
+                    if (publicId != null) {
+                        // This requires MediaManager to be initialized with api_secret
+                        com.cloudinary.android.MediaManager.get().getCloudinary()
+                                .uploader().destroy(publicId, com.cloudinary.utils.ObjectUtils.emptyMap());
+
+                        android.util.Log.d("Delete", "Deleted from Cloudinary: " + publicId);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    android.util.Log.e("Delete", "Cloudinary delete failed (Check API Secret): " + e.getMessage());
+                }
+            }).start();
         }
 
         selectedUrls.clear();
         exitMultiSelectMode();
         Toast.makeText(this, "Images deleted", Toast.LENGTH_SHORT).show();
     }
+
+    // HELPER: Extract the 'public_id' from a Cloudinary URL
+    private String extractPublicId(String url) {
+        try {
+            // URL format example: .../upload/v12345/CategoriesPhotos/image_name.png
+            if (url.contains("/upload/")) {
+                String[] parts = url.split("/upload/");
+                if (parts.length > 1) {
+                    String temp = parts[1];
+
+                    // Remove version number (e.g., v16789/) if present
+                    if (temp.matches("^v\\d+/.*")) {
+                        temp = temp.substring(temp.indexOf("/") + 1);
+                    }
+
+                    // Remove file extension (e.g., .png)
+                    if (temp.contains(".")) {
+                        temp = temp.substring(0, temp.lastIndexOf("."));
+                    }
+                    return temp; // Returns "CategoriesPhotos/image_name"
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    private void sortImages() {
+        if (imageUrlList.isEmpty()) return;
+
+        java.util.Collections.sort(imageUrlList, (url1, url2) -> {
+            String key1 = urlToKeyMap.get(url1);
+            String key2 = urlToKeyMap.get(url2);
+
+            if (key1 == null || key2 == null) return 0;
+
+            // Firebase Keys are time-based.
+            if (isLatestFirst) {
+                return key2.compareTo(key1); // Descending (Newest first)
+            } else {
+                return key1.compareTo(key2); // Ascending (Oldest first)
+            }
+        });
+
+        adapter.notifyDataSetChanged();
+
+        String message = isLatestFirst ? "Sorted by Latest" : "Sorted by Oldest";
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
 
     // ---------------------------------------------------------
     // NAVIGATION

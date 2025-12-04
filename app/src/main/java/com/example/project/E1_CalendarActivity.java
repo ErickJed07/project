@@ -62,16 +62,35 @@ public class E1_CalendarActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.e1_calendar);
 
+        // --- NEW CODE: Handle Back Button to go to Feed ---
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                Intent intent = new Intent(E1_CalendarActivity.this, D1_FeedActivity.class);
+                // Clear stack so they can't go "back" to calendar from feed easily
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+            }
+        });
+
         // Firebase setup
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            // Path matches H1 save logic: CalendarEvents -> userId
-            eventsRef = FirebaseDatabase.getInstance().getReference("CalendarEvents").child(userId);
+
+            // --- CHANGE THIS LINE ---
+            // OLD: eventsRef = FirebaseDatabase.getInstance().getReference("CalendarEvents").child(userId);
+
+            // NEW: Match the path used in H6_RecommendationActivity (Users -> uid -> Events)
+            eventsRef = FirebaseDatabase.getInstance().getReference("Users").child(userId).child("Events");
+
         } else {
-            // Handle not logged in
             finish();
             return;
         }
+
+        // ... rest of your code
+
 
         // Request notification permission for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -331,7 +350,8 @@ public class E1_CalendarActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) { }
+            public void onCancelled(@NonNull DatabaseError error) {
+            }
         });
     }
 

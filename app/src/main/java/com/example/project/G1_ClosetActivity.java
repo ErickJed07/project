@@ -47,6 +47,20 @@ public class G1_ClosetActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.g1_closet);
 
+        // --- NEW CODE: Handle Back Button to go to Feed ---
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                Intent intent = new Intent(G1_ClosetActivity.this, D1_FeedActivity.class);
+                // Clear stack so the user can't go "back" to the closet easily
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+            }
+        });
+
+
+
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference("Users");
         storage = FirebaseStorage.getInstance();
@@ -63,7 +77,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         initializeDefaultCategories();
 
         findViewById(R.id.newoutfit).setOnClickListener(view ->
-                startActivity(new Intent(G1_ClosetActivity.this, H1_DressActivity.class))
+                startActivity(new Intent(G1_ClosetActivity.this, H6_RecommendationActivity.class))
         );
     }
 
@@ -113,15 +127,27 @@ public class G1_ClosetActivity extends AppCompatActivity {
 
         String firstImageUrl = "";
 
+        // UPDATED: More robust photo finding logic
         if (child.hasChild("photos")) {
             for (DataSnapshot photoSnap : child.child("photos").getChildren()) {
+                // Check Case 1: The photo object has a "url" child (e.g., photos -> key -> url: "http...")
                 if (photoSnap.hasChild("url")) {
                     String url = photoSnap.child("url").getValue(String.class);
                     if (url != null && !url.isEmpty()) {
                         firstImageUrl = url;
                         break;
                     }
-                } else {
+                }
+                // Check Case 2: The photo object has an "imageUrl" child (common variation)
+                else if (photoSnap.hasChild("imageUrl")) {
+                    String url = photoSnap.child("imageUrl").getValue(String.class);
+                    if (url != null && !url.isEmpty()) {
+                        firstImageUrl = url;
+                        break;
+                    }
+                }
+                // Check Case 3: The value itself is the URL string (e.g., photos -> key: "http...")
+                else {
                     Object value = photoSnap.getValue();
                     if (value instanceof String) {
                         String url = (String) value;
@@ -138,6 +164,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
             addCategoryToUI(categoryId, name, firstImageUrl);
         }
     }
+
 
     public void onAddCategoryClicked(View view) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -197,7 +224,6 @@ public class G1_ClosetActivity extends AppCompatActivity {
         int cardSize = (int) (100 * scale);
 
         CardView card = new CardView(this);
-//        card.setRadius(24f);
         card.setCardElevation(6f);
         card.setUseCompatPadding(true);
         card.setCardBackgroundColor(getResources().getColor(R.color.white));
@@ -219,17 +245,27 @@ public class G1_ClosetActivity extends AppCompatActivity {
         imagePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
         imagePreview.setClipToOutline(true);
 
-        // CHANGED: Logic to show default icons if no user photo exists
-        if (imageUrl != null && !imageUrl.isEmpty()) {
+
+        // --- UPDATED LOGIC: Force Default Icon for Default Categories ---
+
+        // 1. If it is a Default Category (Hat, Top, etc.), ALWAYS use its icon
+        if (isDefaultCategory(categoryName)) {
+            int defaultIconResId = getDefaultCategoryIcon(categoryName);
+            imagePreview.setImageResource(defaultIconResId);
+        }
+        // 2. If it's a Custom Category AND has a photo inside, use that photo
+        else if (imageUrl != null && !imageUrl.isEmpty()) {
             Glide.with(this)
                     .load(imageUrl)
                     .placeholder(R.drawable.ic_placeholder_2)
                     .into(imagePreview);
-        } else {
-            // Use the helper method to get the specific drawable
-            int defaultIconResId = getDefaultCategoryIcon(categoryName);
-            imagePreview.setImageResource(defaultIconResId);
         }
+        // 3. Fallback for empty Custom Categories
+        else {
+            imagePreview.setImageResource(R.drawable.ic_placeholder_2);
+        }
+
+        // ----------------------------------------------------------------
 
         TextView label = new TextView(this);
         label.setText(categoryName);
@@ -278,6 +314,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         categoryViews.put(categoryId, card);
     }
 
+
     private boolean isDefaultCategory(String name) {
         String[] defaults = {
                 "PreOutfit", "Hat", "Accessories", "Outer",
@@ -294,25 +331,25 @@ public class G1_ClosetActivity extends AppCompatActivity {
     private int getDefaultCategoryIcon(String categoryName) {
         switch (categoryName) {
             case "PreOutfit":
-                return R.drawable.box_background; // e.g. R.drawable.ic_pre_outfit
+                return R.drawable.preoutfit; // e.g. R.drawable.ic_pre_outfit
             case "Hat":
-                return R.drawable.box_background; // e.g. R.drawable.ic_hat
+                return R.drawable.hat; // e.g. R.drawable.ic_hat
             case "Accessories":
-                return R.drawable.box_background; // e.g. R.drawable.ic_accessories
+                return R.drawable.accesories; // e.g. R.drawable.ic_accessories
             case "Outer":
-                return R.drawable.box_background; // e.g. R.drawable.ic_outer
+                return R.drawable.outer; // e.g. R.drawable.ic_outer
             case "Top":
-                return R.drawable.box_background; // e.g. R.drawable.ic_top
+                return R.drawable.top; // e.g. R.drawable.ic_top
             case "Bag":
-                return R.drawable.box_background; // e.g. R.drawable.ic_bag
+                return R.drawable.bag; // e.g. R.drawable.ic_bag
             case "Bottom":
-                return R.drawable.box_background; // e.g. R.drawable.ic_bottom
+                return R.drawable.botttom; // e.g. R.drawable.ic_bottom
             case "Shoes":
-                return R.drawable.box_background; // e.g. R.drawable.ic_shoes
+                return R.drawable.shoes; // e.g. R.drawable.ic_shoes
             case "Dress":
-                return R.drawable.box_background; // e.g. R.drawable.ic_dress
+                return R.drawable.dresss; // e.g. R.drawable.ic_dress
             default:
-                return R.drawable.box_background;
+                return R.drawable.ic_placeholder_2;
         }
     }
 
@@ -347,6 +384,20 @@ public class G1_ClosetActivity extends AppCompatActivity {
                 @Override
                 public void onCancelled(DatabaseError databaseError) { }
             });
+        }
+    }
+    public void onButtonClicked(View view) {
+        Intent intent = null;
+        int viewId = view.getId();
+        if (viewId == R.id.home_menu) intent = new Intent(this, D1_FeedActivity.class);
+        else if (viewId == R.id.calendar_menu) intent = new Intent(this, E1_CalendarActivity.class);
+        else if (viewId == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
+        else if (viewId == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
+        else if (viewId == R.id.profile_menu) intent = new Intent(this, I1_ProfileActivity.class);
+
+        if (intent != null) {
+            startActivity(intent);
+            finish();
         }
     }
 }

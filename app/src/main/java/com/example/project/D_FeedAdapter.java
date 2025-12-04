@@ -1,21 +1,23 @@
 package com.example.project;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent; // Added Import
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.HashMap;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -33,6 +35,7 @@ import com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,17 +57,22 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         View view = LayoutInflater.from(context).inflate(R.layout.d2_feed_item_post, parent, false);
         return new PostViewHolder(view);
     }
-    
+
     @Override
     public void onBindViewHolder(PostViewHolder holder, int position) {
         I_NewPost_Event postEvent = postList.get(position);
 
-        // --- 1. Set Basic Data ---
+        // --- 1. MENU LOGIC (Follow/Report) ---
+        holder.menuOptions.setOnClickListener(v -> {
+            showPopupMenu(holder.menuOptions, postEvent);
+        });
+
+        // --- 2. Set Basic Data ---
         holder.userNameTextView.setText(postEvent.getUsername());
         holder.captionTextView.setText(postEvent.getCaption());
         holder.dateTextView.setText(getRelativeTime(postEvent.getDate()));
 
-        // --- 2. Get IDs Safely ---
+        // --- 3. Get IDs Safely ---
         String currentUserId = "";
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -73,7 +81,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         String postId = postEvent.getPostId();
         String postAuthorId = postEvent.getUserId(); // Get the author's ID
 
-        // --- FETCH PROFILE PHOTO FROM FIREBASE USERS NODE ---
+        // --- 4. FETCH PROFILE PHOTO FROM FIREBASE USERS NODE ---
         if (postAuthorId != null && !postAuthorId.isEmpty()) {
             DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(postAuthorId);
             userRef.child("profilePhoto").addListenerForSingleValueEvent(new ValueEventListener() {
@@ -87,16 +95,14 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                             try {
                                 Glide.with(context)
                                         .load(profilePhotoUrl)
-                                        .placeholder(R.drawable.ic_placeholder_2) // Make sure you have a placeholder drawable
+                                        .placeholder(R.drawable.ic_placeholder_2)
                                         .error(R.drawable.ic_placeholder_2)
                                         .circleCrop()
                                         .into(holder.profilePic);
                             } catch (Exception e) {
-                                // Context might be destroyed if user navigated away quickly
                                 e.printStackTrace();
                             }
                         } else {
-                            // Load default image if URL is missing or "default"
                             Glide.with(context).load(R.drawable.ic_placeholder_2).circleCrop().into(holder.profilePic);
                         }
                     }
@@ -104,23 +110,19 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
                 @Override
                 public void onCancelled(@NonNull DatabaseError error) {
-                    // Handle error if needed
                 }
             });
         }
 
-        // --- 3. DYNAMIC IMAGE RESIZING (WARP CONTENT LOGIC) ---
+        // --- 5. DYNAMIC IMAGE RESIZING (WARP CONTENT LOGIC) ---
         if (postEvent.getImageUrls() != null && !postEvent.getImageUrls().isEmpty()) {
 
-            // Get the first image URL to determine the aspect ratio
             String firstImageUrl = postEvent.getImageUrls().get(0);
 
-            // Reset ViewPager height temporarily to avoid layout glitches
             ViewGroup.LayoutParams resetParams = holder.viewPager2.getLayoutParams();
             resetParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
             holder.viewPager2.setLayoutParams(resetParams);
 
-            // Use Glide to download the bitmap size BEFORE displaying it fully
             Glide.with(context)
                     .asBitmap()
                     .load(firstImageUrl)
@@ -130,23 +132,16 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                             int imageWidth = resource.getWidth();
                             int imageHeight = resource.getHeight();
 
-                            // Prevent division by zero
                             if (imageWidth > 0) {
-                                // Calculate Aspect Ratio
                                 float aspectRatio = (float) imageHeight / imageWidth;
-
-                                // Get the screen width (or width of the viewpager)
                                 int viewPagerWidth = holder.viewPager2.getWidth();
 
-                                // If viewPager hasn't laid out yet, use screen width as fallback
                                 if (viewPagerWidth == 0) {
                                     viewPagerWidth = context.getResources().getDisplayMetrics().widthPixels;
                                 }
 
-                                // Calculate the new height for the ViewPager
                                 int newHeight = (int) (viewPagerWidth * aspectRatio);
 
-                                // Apply the height
                                 ViewGroup.LayoutParams layoutParams = holder.viewPager2.getLayoutParams();
                                 layoutParams.height = newHeight;
                                 holder.viewPager2.setLayoutParams(layoutParams);
@@ -155,18 +150,13 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
                         @Override
                         public void onLoadCleared(@Nullable Drawable placeholder) {
-                            // Do nothing
                         }
                     });
 
-            // Set the internal Adapter for the ViewPager
             D_Feed_ImageViewAdapter imageAdapter = new D_Feed_ImageViewAdapter(context, postEvent.getImageUrls());
             holder.viewPager2.setAdapter(imageAdapter);
-
-            // Bind indicator
             holder.dotsIndicator.setViewPager2(holder.viewPager2);
 
-            // Page number display
             holder.viewPager2.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
                 @Override
                 public void onPageSelected(int position) {
@@ -175,7 +165,6 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                 }
             });
 
-            // Visibility logic
             if (imageAdapter.getItemCount() <= 1) {
                 holder.dotsIndicator.setVisibility(View.GONE);
                 holder.photoIndicator.setVisibility(View.GONE);
@@ -184,12 +173,10 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                 holder.photoIndicator.setVisibility(View.VISIBLE);
             }
         } else {
-            // Handle posts with no images (optional: hide viewpager)
             holder.viewPager2.setVisibility(View.GONE);
         }
 
-
-        // --- 4. Initial UI State Setup ---
+        // --- 6. Initial UI State Setup ---
         updateHeartIcon(holder.heartButton, postEvent.getHeartLiked(), currentUserId);
         if (postEvent.getHeartLiked() != null) {
             holder.heartNumTextView.setText(String.valueOf(postEvent.getHeartLiked().size()));
@@ -204,14 +191,12 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
             holder.favNumTextView.setText("0");
         }
 
-        // --- 5. Click Listeners ---
+        // --- 7. Click Listeners ---
 
-        // Profile Picture Click Listener
+        // Profile Picture Click
         holder.profilePic.setOnClickListener(v -> {
             if (postAuthorId != null && !postAuthorId.isEmpty()) {
                 Intent intent = new Intent(context, I1_ProfileActivity.class);
-                // Pass the user ID so ProfileActivity knows whose profile to show
-                // Note: You may need to update I1_ProfileActivity to read this intent extra
                 intent.putExtra("USER_ID", postAuthorId);
                 context.startActivity(intent);
             }
@@ -254,7 +239,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
             });
         });
 
-        // Fav Button
+        // Favorite Button
         holder.favButton.setOnClickListener(v -> {
             if (postId == null || finalCurrentUserId.isEmpty()) {
                 Toast.makeText(context, "Please log in to save", Toast.LENGTH_SHORT).show();
@@ -299,16 +284,214 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         // Share Button
         holder.shareButton.setOnClickListener(v -> {
             String shareContent = postEvent.getUsername() + " posted: " + "\n" + postEvent.getCaption();
-            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setType("text/plain");
-            shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Check out this post!");
-            shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareContent);
-            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share post via"));
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Check out this post!");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareContent);
+            context.startActivity(Intent.createChooser(shareIntent, "Share post via"));
         });
     }
 
+    // --- HELPER METHODS FOR MENU & ACTIONS ---
+    private void showPopupMenu(android.view.View view, I_NewPost_Event post) {
+        // USE THIS CONSTRUCTOR (API 22+):
+        // Arguments: Context, Anchor, Gravity, Attribute, STYLE RESOURCE
+        // This forces the R.style.PurplePopupMenu to apply.
+        PopupMenu popupMenu = new PopupMenu(context, view);
 
-    // --- HELPER METHODS ---
+        // Constants
+        final int ID_FOLLOW = 1;
+        final int ID_REPORT = 2;
+
+        // Get User ID
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+
+        // Check Database (ModelsList)
+        DatabaseReference followRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(currentUserId)
+                .child("ModelsList")
+                .child(post.getUserId());
+
+        followRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                String followText = snapshot.exists() ? "Unfollow" : "Follow";
+
+                // 1. Add Follow Item
+                popupMenu.getMenu().add(0, ID_FOLLOW, 0, followText);
+
+                // 2. Add Report Item with RED Text
+                android.text.SpannableString reportSpan = new android.text.SpannableString("Report");
+                reportSpan.setSpan(new android.text.style.ForegroundColorSpan(android.graphics.Color.RED), 0, reportSpan.length(), 0);
+                popupMenu.getMenu().add(0, ID_REPORT, 1, reportSpan);
+
+                popupMenu.show();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                popupMenu.getMenu().add(0, ID_FOLLOW, 0, "Follow");
+
+                android.text.SpannableString reportSpan = new android.text.SpannableString("Report");
+                reportSpan.setSpan(new android.text.style.ForegroundColorSpan(android.graphics.Color.RED), 0, reportSpan.length(), 0);
+                popupMenu.getMenu().add(0, ID_REPORT, 1, reportSpan);
+
+                popupMenu.show();
+            }
+        });
+
+        popupMenu.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == ID_FOLLOW) {
+                followUser(post.getUserId());
+                return true;
+            } else if (id == ID_REPORT) {
+                reportPost(post.getPostId());
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void followUser(String userToFollowId) {
+        if (userToFollowId == null || userToFollowId.isEmpty()) return;
+
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (currentUserId.equals(userToFollowId)) {
+            Toast.makeText(context, "You cannot follow yourself.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+
+        // Change reference to check 'ModelsList' inside the current user's node
+        DatabaseReference followRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(currentUserId)
+                .child("ModelsList")
+                .child(userToFollowId);
+
+        followRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // --- CASE: ALREADY FOLLOWING -> UNFOLLOW ---
+
+                    // 1. Remove from "ModelsList" (Me -> Them)
+                    followRef.removeValue();
+
+                    // 2. Remove from "FansList" (Them -> Me)
+                    FirebaseDatabase.getInstance().getReference().child("Users").child(userToFollowId)
+                            .child("FansList").child(currentUserId).removeValue();
+
+                    // 3. Update Counts (-1)
+                    updateCount(currentUserId, "Models", -1);
+                    updateCount(userToFollowId, "Fans", -1);
+
+                    Toast.makeText(context, "Unfollowed user.", Toast.LENGTH_SHORT).show();
+
+                } else {
+                    // --- CASE: NOT FOLLOWING -> FOLLOW ---
+
+                    // 1. Add to "ModelsList" (Me -> Them)
+                    followRef.setValue(true);
+
+                    // 2. Add to "FansList" (Them -> Me)
+                    FirebaseDatabase.getInstance().getReference().child("Users").child(userToFollowId)
+                            .child("FansList").child(currentUserId).setValue(true);
+
+                    // 3. Update Counts (+1)
+                    updateCount(currentUserId, "Models", 1);
+                    updateCount(userToFollowId, "Fans", 1);
+
+                    Toast.makeText(context, "User followed!", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(context, "Action failed: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void updateCount(String userId, String field, int increment) {
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(userId).child(field);
+        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                long currentCount = 0;
+                if (snapshot.exists()) {
+                    try {
+                        currentCount = Long.parseLong(snapshot.getValue().toString());
+                    } catch (Exception e) {
+                        currentCount = 0;
+                    }
+                }
+                // Don't allow negative numbers
+                long newCount = Math.max(0, currentCount + increment);
+                ref.setValue(newCount);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+            }
+        });
+    }
+
+    private void reportPost(String postId) {
+        if (postId == null || postId.isEmpty()) return;
+
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        // CHANGED: Now saving reports inside PostEvents -> [postId] -> reports
+        DatabaseReference reportRef = FirebaseDatabase.getInstance().getReference("PostEvents")
+                .child(postId)
+                .child("reports");
+
+        // Check if user already reported this post
+        reportRef.child(currentUserId).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult().exists()) {
+                Toast.makeText(context, "You have already reported this post.", Toast.LENGTH_SHORT).show();
+            } else {
+                // Add new report
+                reportRef.child(currentUserId).setValue(true).addOnCompleteListener(reportTask -> {
+                    if (reportTask.isSuccessful()) {
+                        Toast.makeText(context, "Post reported. Thank you.", Toast.LENGTH_SHORT).show();
+                        // Check if we should delete
+                        checkReportCount(postId);
+                    }
+                });
+            }
+        });
+    }
+
+    private void checkReportCount(String postId) {
+        // CHANGED: Checking count inside PostEvents -> [postId] -> reports
+        DatabaseReference reportRef = FirebaseDatabase.getInstance().getReference("PostEvents")
+                .child(postId)
+                .child("reports");
+
+        reportRef.get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                long reportCount = task.getResult().getChildrenCount();
+
+                // Logic: If 10 or more users reported it, delete the post
+                if (reportCount >= 10) {
+                    deletePost(postId);
+                }
+            }
+        });
+    }
+
+    private void deletePost(String postId) {
+        DatabaseReference postRef = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);
+        postRef.removeValue().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                // Reports are now child nodes of the post, so they are deleted automatically when the post is deleted.
+                Toast.makeText(context, "Post removed due to community reports.", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
 
     private void updateHeartIcon(ImageView heartButton, Map<String, Boolean> heartLiked, String userId) {
         if (heartLiked != null && heartLiked.containsKey(userId)) {
@@ -358,17 +541,16 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
     }
 
     public static class PostViewHolder extends RecyclerView.ViewHolder {
-        ImageView profilePic; // Added profilePic
+        ImageView profilePic;
         TextView userNameTextView, captionTextView, dateTextView, photoIndicator;
         TextView favNumTextView, heartNumTextView;
         ViewPager2 viewPager2;
         WormDotsIndicator dotsIndicator;
-        ImageView heartButton, favButton , shareButton;
+        ImageView heartButton, favButton, shareButton, menuOptions; // Added menuOptions
 
         public PostViewHolder(View itemView) {
             super(itemView);
-            profilePic = itemView.findViewById(R.id.profile_pic); // Bind to ID
-
+            profilePic = itemView.findViewById(R.id.profile_pic);
             userNameTextView = itemView.findViewById(R.id.userName_post);
             captionTextView = itemView.findViewById(R.id.caption_post);
             dateTextView = itemView.findViewById(R.id.postdate);
@@ -381,6 +563,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
             favButton = itemView.findViewById(R.id.fav_post);
             favNumTextView = itemView.findViewById(R.id.fav_num);
             shareButton = itemView.findViewById(R.id.share_post);
+            menuOptions = itemView.findViewById(R.id.menu_options); // Bind menuOptions
         }
     }
 }
