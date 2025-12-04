@@ -16,6 +16,21 @@ android {
     namespace = "com.example.project"
     compileSdk = 35
 
+    // ↓↓↓ ADD THIS ENTIRE BLOCK ↓↓↓
+    signingConfigs {
+        create("release") {
+            // Read signing properties from local.properties
+            val keystoreFile = localProperties.getProperty("keystore.file")
+            if (keystoreFile != null && rootProject.file(keystoreFile).exists()) {
+                storeFile = rootProject.file(keystoreFile)
+                storePassword = localProperties.getProperty("keystore.password")
+                keyAlias = localProperties.getProperty("key.alias")
+                keyPassword = localProperties.getProperty("key.password")
+            }
+        }
+    }
+    // ↑↑↑ END OF NEW BLOCK ↑↑↑
+
     defaultConfig {
         applicationId = "com.example.project"
         minSdk = 28
@@ -43,6 +58,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // ↓↓↓ APPLY THE SIGNING CONFIG TO THE RELEASE BUILD ↓↓↓
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -53,7 +70,8 @@ android {
 }
 
 dependencies {
-    // AndroidX + UI Libraries
+
+// AndroidX + UI Libraries
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
