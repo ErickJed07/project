@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- This maps to the getExternalFilesDir() folder used in D1_FeedActivity -->
-    <external-files-path
-        name="external_files"
-        path="." />
+    <external-files-path name="my_updates" path="." />
 </paths>

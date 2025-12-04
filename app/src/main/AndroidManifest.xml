@@ -36,14 +36,14 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.project.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
-            <!-- 👇 THIS IS THE LINE TO CHANGE 👇 -->
             <meta-data
-                android:name="androidx.core.content.FileProvider"
+                android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+
 
 
 
