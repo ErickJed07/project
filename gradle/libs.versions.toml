@@ -1,5 +1,5 @@
 [versions]
-agp = "8.12.3"
+agp = "8.10.0"
 cardview = "1.0.0"
 junit = "4.13.2"
 junitVersion = "1.1.5"
@@ -17,6 +17,8 @@ viewpager2 = "1.1.0"
 exifinterface = "1.4.1"
 firebaseFirestore = "26.0.2"
 carUiLib = "2.6.0"
+leanbackGrid = "1.0.0"
+volley = "1.2.1"
 
 [libraries]
 cardview = { module = "androidx.cardview:cardview", version.ref = "cardview" }
@@ -36,7 +38,8 @@ viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref =
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
 car-ui-lib = { group = "com.android.car.ui", name = "car-ui-lib", version.ref = "carUiLib" }
-
+leanback-grid = { group = "androidx.leanback", name = "leanback-grid", version.ref = "leanbackGrid" }
+volley = { group = "com.android.volley", name = "volley", version.ref = "volley" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 
