@@ -46,7 +46,9 @@ public class D1_FeedActivity extends AppCompatActivity {
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;  // Progress bar to show download progress
 
-    private static final String VERSION_URL = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json";
+    // Add ?t= + System.currentTimeMillis() to force a fresh download every time
+    private static final String VERSION_URL = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json?t=" + System.currentTimeMillis();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +58,9 @@ public class D1_FeedActivity extends AppCompatActivity {
         // Initialize Views
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         recyclerView = findViewById(R.id.feedrecyclerView);
-        progressBar = findViewById(R.id.progressBar); // Progress bar for download
+        // In onCreate()
+        progressBar = findViewById(R.id.my_progress_bar);
+        // Progress bar for download
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
@@ -86,23 +90,28 @@ public class D1_FeedActivity extends AppCompatActivity {
         StringRequest stringRequest = new StringRequest(Request.Method.GET, VERSION_URL,
                 new Response.Listener<String>() {
                     @Override
+                    // Inside D1_FeedActivity.java -> checkForUpdates()
                     public void onResponse(String response) {
                         try {
-                            // Parse the response (JSON)
                             JSONObject jsonObject = new JSONObject(response);
                             int latestVersionCode = jsonObject.getInt("version_code");
                             String apkUrl = jsonObject.getString("apk_url");
 
-                            // Compare with the current app version
+                            // LOGGING FOR DEBUGGING
+                            System.out.println("Current Version: " + BuildConfig.VERSION_CODE);
+                            System.out.println("Remote Version: " + latestVersionCode);
+
                             if (latestVersionCode > BuildConfig.VERSION_CODE) {
-                                // Show the update dialog if the version is newer
                                 showUpdateDialog(apkUrl);
+                            } else {
+                                // Temporary Toast to confirm the check ran successfully
+                                Toast.makeText(D1_FeedActivity.this, "App is up to date", Toast.LENGTH_SHORT).show();
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            Toast.makeText(D1_FeedActivity.this, "Error parsing update info", Toast.LENGTH_SHORT).show();
                         }
                     }
+
                 }, error -> {
             // Handle error
             Toast.makeText(D1_FeedActivity.this, "Error fetching version info", Toast.LENGTH_SHORT).show();
