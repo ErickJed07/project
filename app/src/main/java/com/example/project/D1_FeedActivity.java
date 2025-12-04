@@ -149,8 +149,15 @@ public class D1_FeedActivity extends AppCompatActivity {
     private void downloadAndInstallApk(String apkUrl) {
         Toast.makeText(this, "Downloading update...", Toast.LENGTH_LONG).show();
 
-        // 1. Prepare the file path in app-specific storage (No permissions needed here)
-        File file = new File(getExternalFilesDir(null), "update.apk");
+        // 1. Define the destination file
+        File destinationDir = getExternalFilesDir(null);
+
+        // FIX: Create the directory if it doesn't exist
+        if (destinationDir != null && !destinationDir.exists()) {
+            destinationDir.mkdirs();
+        }
+
+        File file = new File(destinationDir, "update.apk");
         if (file.exists()) {
             file.delete();
         }
@@ -161,7 +168,11 @@ public class D1_FeedActivity extends AppCompatActivity {
         request.setDescription("Downloading new version...");
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
 
-        // IMPORTANT: This ensures the file is saved where FileProvider can read it
+        // IMPORTANT: Allowed network types
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+        request.setAllowedOverMetered(true);
+        request.setAllowedOverRoaming(true);
+
         request.setDestinationInExternalFilesDir(this, null, "update.apk");
         request.setMimeType("application/vnd.android.package-archive");
 
@@ -169,6 +180,7 @@ public class D1_FeedActivity extends AppCompatActivity {
         DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
         downloadId = manager.enqueue(request);
     }
+
 
     private void installApk() {
         try {
