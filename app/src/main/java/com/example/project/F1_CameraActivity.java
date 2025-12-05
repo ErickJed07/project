@@ -11,7 +11,6 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -23,9 +22,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.Space;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -58,6 +57,7 @@ import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -66,6 +66,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+// --- OKHTTP IMPORTS FOR BG REMOVAL ---
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class F1_CameraActivity extends AppCompatActivity {
 
@@ -90,7 +100,6 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     private List<String> clothingTypesList = new ArrayList<>();
 
-
     private final String[] CLOTHING_COLORS = {
             "Black", "White", "Grey", "Beige", "Red", "Blue",
             "Green", "Yellow", "Orange", "Purple", "Pink", "Brown", "Multi"
@@ -99,14 +108,13 @@ public class F1_CameraActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.f1_camera_act); // Ensure XML matches this name
+        setContentView(R.layout.f1_camera_act);
 
-        // --- NEW CODE: Handle Back Button to go to Feed ---
+        // --- Handle Back Button to go to Feed ---
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 Intent intent = new Intent(F1_CameraActivity.this, D1_FeedActivity.class);
-                // Clear stack so they can't go "back" to calendar from feed easily
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 finish();
@@ -140,7 +148,7 @@ public class F1_CameraActivity extends AppCompatActivity {
             }
         });
 
-        // If user cancels but wants to start over
+        // If user cancels but wants to start over (Fallback)
         btnSave.setOnClickListener(v -> showCategorySelectionDialog());
 
         try {
@@ -148,12 +156,9 @@ public class F1_CameraActivity extends AppCompatActivity {
         } catch (Exception e) {
             // Already initialized
         }
-            // 1. Add Default items (Safety net)
 
-            fetchCategoriesFromFirebase();
-
-
-
+        // 4. Load Categories
+        fetchCategoriesFromFirebase();
     }
 
     private boolean checkSelfPermission() {
@@ -179,7 +184,6 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     private void fetchCategoriesFromFirebase() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-
         if (currentUser == null) return;
 
         String uid = currentUser.getUid();
@@ -192,27 +196,17 @@ public class F1_CameraActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     List<String> firebaseCategories = new ArrayList<>();
-
                     for (DataSnapshot data : snapshot.getChildren()) {
-                        // 1. Try getting "name" field (based on your addNewCategoryToFirebase logic)
                         String name = data.child("name").getValue(String.class);
-
-                        // 2. Fallback: If "name" is null, use the Key (e.g., "Hat")
-                        if (name == null) {
-                            name = data.getKey();
-                        }
-
-                        // 3. Only add if name exists and isn't empty
+                        if (name == null) name = data.getKey();
                         if (name != null && !name.trim().isEmpty()) {
                             firebaseCategories.add(name);
                         }
                     }
-
                     if (!firebaseCategories.isEmpty()) {
                         clothingTypesList.clear();
                         clothingTypesList.addAll(firebaseCategories);
                         Collections.sort(clothingTypesList);
-                        Log.d("F1_Camera", "Loaded categories: " + clothingTypesList.toString());
                     }
                 }
             }
@@ -223,10 +217,6 @@ public class F1_CameraActivity extends AppCompatActivity {
             }
         });
     }
-
-
-
-
 
     private void initCloudinary() {
         Map<String, Object> config = new HashMap<>();
@@ -248,7 +238,6 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     private void startCamera() {
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
@@ -262,7 +251,6 @@ public class F1_CameraActivity extends AppCompatActivity {
                 CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
                 cameraProvider.unbindAll();
                 camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
-
                 setupZoom();
 
             } catch (ExecutionException | InterruptedException e) {
@@ -321,9 +309,9 @@ public class F1_CameraActivity extends AppCompatActivity {
             imagePreview.setImageBitmap(bitmap);
 
             btnTakePhoto.setVisibility(View.GONE);
-            statusTextView.setText("Processing Image...");
 
-            new RemoveBgTask().execute(bitmap);
+            // --- AUTOMATICALLY REMOVE BACKGROUND HERE ---
+            removeBackground(bitmap);
         }
     }
 
@@ -351,28 +339,86 @@ public class F1_CameraActivity extends AppCompatActivity {
         return null;
     }
 
-    // -------------------------- 3. BACKGROUND REMOVAL TASK --------------------------
+    // -------------------------- 3. AUTOMATIC BACKGROUND REMOVAL --------------------------
 
-    private class RemoveBgTask extends AsyncTask<Bitmap, Void, Bitmap> {
-        @Override
-        protected Bitmap doInBackground(Bitmap... bitmaps) {
-            // Placeholder for BG removal logic
-            return bitmaps[0];
-        }
+    private void removeBackground(Bitmap originalBitmap) {
+        // 1. Show loading
+        runOnUiThread(() -> {
+            progressBar.setVisibility(View.VISIBLE);
+            statusTextView.setText("Removing Background...");
+        });
 
-        @Override
-        protected void onPostExecute(Bitmap result) {
-            progressBar.setVisibility(View.GONE);
-            processedBitmap = (result != null) ? result : originalBitmap;
-            imagePreview.setImageBitmap(processedBitmap);
+        // 2. Convert Bitmap to Byte Array
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        originalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+        byte[] byteArray = stream.toByteArray();
 
-            // Start the Step-by-Step Dialog Flow immediately
-            showCategorySelectionDialog();
+        // 3. Build API Request
+        OkHttpClient client = new OkHttpClient();
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("image_file", "image.jpg",
+                        RequestBody.create(byteArray, MediaType.parse("image/jpeg")))
+                .addFormDataPart("size", "auto")
+                .build();
 
-            btnSave.setText("Restart Tagging");
-            btnSave.setVisibility(View.VISIBLE);
-            statusTextView.setText("Select Tags");
-        }
+        Request request = new Request.Builder()
+                .url("https://api.remove.bg/v1.0/removebg")
+                // --- YOUR API KEY IS HERE ---
+                .addHeader("X-Api-Key", "qqik5T9DJ5XyZBGXzA52Xe6B")
+                .post(requestBody)
+                .build();
+
+        // 4. Execute Request
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(F1_CameraActivity.this, "Bg Removal Failed (Net)", Toast.LENGTH_SHORT).show();
+
+                    // Fallback: Use original image
+                    processedBitmap = originalBitmap;
+                    onBgRemovalFinished();
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.isSuccessful() && response.body() != null) {
+                    byte[] responseBytes = response.body().bytes();
+                    Bitmap noBgBitmap = BitmapFactory.decodeByteArray(responseBytes, 0, responseBytes.length);
+
+                    runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        // SUCCESS: Update processedBitmap
+                        processedBitmap = noBgBitmap;
+                        imagePreview.setImageBitmap(processedBitmap); // Update preview to show transparent image
+                        Toast.makeText(F1_CameraActivity.this, "Background Removed!", Toast.LENGTH_SHORT).show();
+
+                        onBgRemovalFinished();
+                    });
+                } else {
+                    runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(F1_CameraActivity.this, "Bg Error: " + response.code(), Toast.LENGTH_SHORT).show();
+
+                        // Fallback: Use original image
+                        processedBitmap = originalBitmap;
+                        onBgRemovalFinished();
+                    });
+                }
+            }
+        });
+    }
+
+    // Helper to trigger the next step after BG removal
+    private void onBgRemovalFinished() {
+        btnSave.setText("Restart Tagging");
+        btnSave.setVisibility(View.VISIBLE);
+        statusTextView.setText("Select Tags");
+        // Automatically open the dialog
+        showCategorySelectionDialog();
     }
 
     // -------------------------- 4. SUB-TAG DATA LOGIC --------------------------
@@ -388,8 +434,7 @@ public class F1_CameraActivity extends AppCompatActivity {
             case "Bottom": return Arrays.asList("pants", "jeans", "shorts", "skirt", "trousers", "cargo", "leggings");
             case "Shoes": return Arrays.asList("sneakers", "boots", "heels", "sandals", "slippers", "loafers");
             case "Dress": return Arrays.asList("dress", "gown", "casual dress", "long dress", "mini dress");
-
-            default: return new ArrayList<>(); // Returns empty list for unknown categories
+            default: return new ArrayList<>();
         }
     }
 
@@ -398,11 +443,10 @@ public class F1_CameraActivity extends AppCompatActivity {
     // STEP 1: Main Category
     private void showNewCategoryInputDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(60, 60, 60, 60);
-        layout.setBackgroundResource(R.drawable.round_image_clip); // Assuming you have this drawable
+        layout.setBackgroundResource(R.drawable.round_image_clip);
 
         TextView title = new TextView(this);
         title.setText("New Category Name");
@@ -412,7 +456,6 @@ public class F1_CameraActivity extends AppCompatActivity {
         title.setGravity(Gravity.CENTER);
         layout.addView(title);
 
-        // Input field for the new category
         EditText input = new EditText(this);
         input.setHint("e.g. Scarf, Hat");
         layout.addView(input);
@@ -433,16 +476,9 @@ public class F1_CameraActivity extends AppCompatActivity {
         btnCreate.setOnClickListener(v -> {
             String newCategoryName = input.getText().toString().trim();
             if (!newCategoryName.isEmpty()) {
-                // Capitalize first letter for consistency
                 String formattedName = newCategoryName.substring(0, 1).toUpperCase() + newCategoryName.substring(1);
-
                 dialog.dismiss();
-
-                // 1. Save this new category to Firebase
                 addNewCategoryToFirebase(formattedName);
-
-                // 2. Continue the flow (Go to Step 2: Sub-Category)
-                // Since it's a new category, showSubCategorySelectionDialog will handle it as "unknown" and ask for details
                 showSubCategorySelectionDialog(formattedName);
             } else {
                 input.setError("Please enter a name");
@@ -452,13 +488,11 @@ public class F1_CameraActivity extends AppCompatActivity {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
-
         dialog.show();
     }
 
     private void showCategorySelectionDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(60, 60, 60, 60);
@@ -482,20 +516,14 @@ public class F1_CameraActivity extends AppCompatActivity {
         builder.setView(mainLayout);
         AlertDialog dialog = builder.create();
 
-        // Loop through the dynamic list fetched from Firebase
         for (String type : clothingTypesList) {
-            // Filter out "Pre - Outfit"
-            if (type.equals("PreOutfit")) {
-                continue;
-            }
-
+            if (type.equals("PreOutfit")) continue;
             addChip(chipGroup, type, v -> {
                 dialog.dismiss();
                 showSubCategorySelectionDialog(type);
             });
         }
 
-        // Logic for "Others": Open a dialog to CREATE a new category
         addChip(chipGroup, "Other", v -> {
             dialog.dismiss();
             showNewCategoryInputDialog();
@@ -507,9 +535,9 @@ public class F1_CameraActivity extends AppCompatActivity {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
-
         dialog.show();
     }
+
     private void addNewCategoryToFirebase(String categoryName) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return;
@@ -520,7 +548,6 @@ public class F1_CameraActivity extends AppCompatActivity {
                 .child(uid)
                 .child("categories");
 
-        // Check if it already exists locally to avoid duplicate logic, though Firebase handles overwrites
         if (!clothingTypesList.contains(categoryName)) {
             clothingTypesList.add(categoryName);
 
@@ -529,17 +556,15 @@ public class F1_CameraActivity extends AppCompatActivity {
             categoryData.put("id", safeId);
             categoryData.put("name", categoryName);
 
-
             dbRef.child(categoryName).setValue(categoryData)
                     .addOnSuccessListener(aVoid -> Toast.makeText(this, "Category Added!", Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(e -> Toast.makeText(this, "Failed to add category", Toast.LENGTH_SHORT).show());
         }
     }
 
-    // STEP 2: Sub-Category (Handles both Chips and Manual Entry)
+    // STEP 2: Sub-Category
     private void showSubCategorySelectionDialog(String mainCategory) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(60, 60, 60, 60);
@@ -560,9 +585,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         builder.setView(mainLayout);
         AlertDialog dialog = builder.create();
 
-        // LOGIC: IF subTags exist, show Chips. IF NOT, show EditText.
         if (!subTags.isEmpty()) {
-            // --- SCENARIO A: KNOWN CATEGORY (Show Chips) ---
             ScrollView scrollView = new ScrollView(this);
             ChipGroup chipGroup = new ChipGroup(this);
             chipGroup.setPadding(10, 10, 10, 10);
@@ -578,7 +601,6 @@ public class F1_CameraActivity extends AppCompatActivity {
                 });
             }
 
-            // Option for manual entry even if chips exist
             addChip(chipGroup, "Other ", v -> {
                 dialog.dismiss();
                 List<String> selection = new ArrayList<>();
@@ -590,7 +612,6 @@ public class F1_CameraActivity extends AppCompatActivity {
             mainLayout.addView(scrollView);
 
         } else {
-            // --- SCENARIO B: NEW/UNKNOWN CATEGORY (Show EditText) ---
             EditText editText = new EditText(this);
             editText.setHint("what do you want to add");
             editText.setBackgroundResource(android.R.drawable.edit_text);
@@ -633,14 +654,12 @@ public class F1_CameraActivity extends AppCompatActivity {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
-
         dialog.show();
     }
 
     // STEP 3: Color Selection
     private void showColorSelectionDialog(String category, List<String> subTags) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(60, 60, 60, 60);
@@ -659,7 +678,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         ScrollView scrollView = new ScrollView(this);
         ChipGroup chipGroup = new ChipGroup(this);
         chipGroup.setPadding(10, 10, 10, 10);
-        chipGroup.setSingleSelection(false); // Allow multiple colors
+        chipGroup.setSingleSelection(false);
 
         builder.setView(mainLayout);
         AlertDialog dialog = builder.create();
@@ -672,7 +691,6 @@ public class F1_CameraActivity extends AppCompatActivity {
             chip.setCheckable(true);
             chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#E0E0E0")));
 
-            // Color circles
             int colorValue;
             switch(color) {
                 case "Black": colorValue = Color.BLACK; break;
@@ -691,7 +709,7 @@ public class F1_CameraActivity extends AppCompatActivity {
             GradientDrawable drawable = new GradientDrawable();
             drawable.setShape(GradientDrawable.OVAL);
             drawable.setColor(colorValue);
-            drawable.setStroke(2, Color.GRAY); // Border for visibility (esp white)
+            drawable.setStroke(2, Color.GRAY);
             drawable.setSize(40, 40);
             drawable.setBounds(0, 0, 40, 40);
             chip.setChipIcon(drawable);
@@ -717,7 +735,6 @@ public class F1_CameraActivity extends AppCompatActivity {
         scrollView.addView(chipGroup);
         mainLayout.addView(scrollView);
 
-        // Finish / Upload Button
         Button btnFinish = new Button(this);
         btnFinish.setText("Save & Upload");
         btnFinish.setBackgroundColor(Color.BLACK);
@@ -735,7 +752,6 @@ public class F1_CameraActivity extends AppCompatActivity {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
-
         dialog.show();
     }
 
@@ -750,10 +766,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         byte[] byteArray = stream.toByteArray();
 
         MediaManager.get().upload(byteArray)
-                // 1. This sets the fixed folder path "Categories/Photos"
-                // This removes the specific category name (like "Top") from the folder structure
                 .option("folder", "CategoriesPhotos")
-
                 .callback(new UploadCallback() {
                     @Override
                     public void onStart(String requestId) {}
@@ -764,7 +777,6 @@ public class F1_CameraActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(String requestId, Map resultData) {
                         String imageUrl = (String) resultData.get("secure_url");
-                        // 2. We still pass the 'category' to Firebase so the database knows what it is
                         saveToFirebase(imageUrl, category, subTags, colors);
                     }
 
@@ -781,7 +793,6 @@ public class F1_CameraActivity extends AppCompatActivity {
                 .dispatch();
     }
 
-
     private void saveToFirebase(String imageUrl, String category, List<String> subTags, List<String> colors) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -795,7 +806,6 @@ public class F1_CameraActivity extends AppCompatActivity {
                 .child("categories")
                 .child(category)
                 .child("photos");
-        // Or whatever your database node is named
 
         String itemId = databaseRef.push().getKey();
 
@@ -820,7 +830,6 @@ public class F1_CameraActivity extends AppCompatActivity {
         }
     }
 
-
     // Helper to add Chips
     private void addChip(ChipGroup group, String text, View.OnClickListener listener) {
         Chip chip = new Chip(this);
@@ -834,10 +843,8 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     private void navigateToCloset() {
         Intent intent = new Intent(F1_CameraActivity.this, G1_ClosetActivity.class);
-        // Clear the back stack so the user can't press "Back" to return to the camera
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-        finish(); // Close the Camera Activity
+        finish();
     }
-
 }

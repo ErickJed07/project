@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.material.v1120)
     implementation(libs.leanback.grid)
     implementation(libs.volley)
+    implementation ("com.squareup.okhttp3:okhttp:4.10.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

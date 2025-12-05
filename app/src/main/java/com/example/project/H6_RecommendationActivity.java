@@ -266,12 +266,6 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                         }
                     }
                 }
-
-                // If no image was found in this box, hide it
-                if (!hasImage) {
-                    originalVisibility.put(childBox, childBox.getVisibility());
-                    childBox.setVisibility(View.GONE);
-                }
             }
         }
 
@@ -848,8 +842,10 @@ public class H6_RecommendationActivity extends AppCompatActivity {
         params.gravity = Gravity.CENTER;
         card.setLayoutParams(params);
         card.setRadius(20f);
-        card.setCardElevation(10f);
-        card.setUseCompatPadding(true);
+        card.setCardElevation(0);
+        card.setUseCompatPadding(false);
+        card.setCardBackgroundColor(Color.TRANSPARENT);
+
 
         FrameLayout innerLayout = new FrameLayout(this);
         card.addView(innerLayout);
