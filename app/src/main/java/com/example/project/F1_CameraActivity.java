@@ -114,7 +114,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                Intent intent = new Intent(F1_CameraActivity.this, D1_FeedActivity.class);
+                Intent intent = new Intent(F1_CameraActivity.this, D_FeedActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 finish();

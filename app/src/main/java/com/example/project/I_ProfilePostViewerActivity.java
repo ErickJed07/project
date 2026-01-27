@@ -31,43 +31,42 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
+public class I_ProfilePostViewerActivity extends AppCompatActivity {
+
+    public static final String EXTRA_TYPE = "VIEW_TYPE";
+    public static final String TYPE_UPLOAD = "UPLOAD";
+    public static final String TYPE_LIKED = "LIKED";
+    public static final String TYPE_FAVORITE = "FAVORITE";
+    public static final String EXTRA_POST_ID = "POST_ID";
 
     private ViewPager2 mainVerticalViewPager;
     private VerticalPostAdapter verticalAdapter;
+    private List<I_NewPost_Event> posts = new ArrayList<>();
+    private List<String> postIds = new ArrayList<>();
 
-    // Changed list names to reflect context (Favorites)
-    private List<I_NewPost_Event> favPosts = new ArrayList<>();
-    private List<String> favPostIds = new ArrayList<>();
-
-    private ImageView backButton;
+    private String viewType;
     private String startPostId;
     private String currentUserId;
 
-    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Reusing the same layout as the upload/liked viewer since the UI is identical
         setContentView(R.layout.i_profile_contents_gridview);
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         currentUserId = (user != null) ? user.getUid() : "";
 
-        startPostId = getIntent().getStringExtra("POST_ID");
+        viewType = getIntent().getStringExtra(EXTRA_TYPE);
+        startPostId = getIntent().getStringExtra(EXTRA_POST_ID);
 
-        backButton = findViewById(R.id.postcontentback_button);
+        ImageView backButton = findViewById(R.id.postcontentback_button);
         if (backButton != null) {
             backButton.setOnClickListener(v -> finish());
         }
 
-        // Setup ViewPager for Vertical Scrolling
         mainVerticalViewPager = findViewById(R.id.postcontentview2);
-
         if (mainVerticalViewPager != null) {
             mainVerticalViewPager.setOrientation(ViewPager2.ORIENTATION_VERTICAL);
-
-            // Standard page transformer logic
             mainVerticalViewPager.setPageTransformer((page, position) -> {
                 if (position < -1) {
                     page.setAlpha(0f);
@@ -77,64 +76,60 @@ public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
                     page.setTranslationX(0f);
                     page.setScaleX(1f);
                     page.setScaleY(1f);
-
-                    float minAlpha = 0.5f;
-                    float alpha = Math.max(minAlpha, 1 - Math.abs(position));
+                    float alpha = Math.max(0.5f, 1 - Math.abs(position));
                     page.setAlpha(alpha);
                 } else {
                     page.setAlpha(0f);
                 }
             });
 
-            verticalAdapter = new VerticalPostAdapter(this, favPosts, favPostIds, currentUserId);
+            verticalAdapter = new VerticalPostAdapter(this, posts, postIds, currentUserId);
             mainVerticalViewPager.setAdapter(verticalAdapter);
         }
 
         if (!currentUserId.isEmpty()) {
-            loadFavPosts();
+            loadPosts();
         }
     }
 
-    private void loadFavPosts() {
+    private void loadPosts() {
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference("PostEvents");
-
-        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+        ValueEventListener listener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                favPosts.clear();
-                favPostIds.clear();
-
+                posts.clear();
+                postIds.clear();
                 for (DataSnapshot ds : snapshot.getChildren()) {
                     I_NewPost_Event post = ds.getValue(I_NewPost_Event.class);
+                    if (post == null) continue;
+                    post.setPostId(ds.getKey());
 
-                    if (post != null) {
-                        // 1. Check if the current user Favorites (Saved) the post
+                    boolean isCreator = post.getUserId() != null && post.getUserId().equals(currentUserId);
+                    boolean shouldAdd = false;
+
+                    if (TYPE_UPLOAD.equals(viewType)) {
+                        shouldAdd = isCreator;
+                    } else if (TYPE_LIKED.equals(viewType)) {
+                        Map<String, Boolean> likes = post.getHeartLiked();
+                        shouldAdd = (likes != null && Boolean.TRUE.equals(likes.get(currentUserId))) && !isCreator;
+                    } else if (TYPE_FAVORITE.equals(viewType)) {
                         Map<String, Boolean> favs = post.getFavList();
-                        boolean isFav = (favs != null && Boolean.TRUE.equals(favs.get(currentUserId)));
+                        shouldAdd = (favs != null && Boolean.TRUE.equals(favs.get(currentUserId))) && !isCreator;
+                    }
 
-                        // 2. Check if the current user Created the post
-                        boolean isCreator = (post.getUserId() != null && post.getUserId().equals(currentUserId));
-
-                        // 3. Add if isFav is TRUE AND isCreator is FALSE.
-                        // This matches the logic used in "Liked" content to avoid showing own posts.
-                        if (isFav && !isCreator) {
-                            favPosts.add(post);
-                            favPostIds.add(ds.getKey());
-                        }
+                    if (shouldAdd) {
+                        posts.add(post);
+                        postIds.add(ds.getKey());
                     }
                 }
 
-                // Reverse to show newest favorites first
-                Collections.reverse(favPosts);
-                Collections.reverse(favPostIds);
+                Collections.reverse(posts);
+                Collections.reverse(postIds);
 
-                if (verticalAdapter != null) {
-                    verticalAdapter.notifyDataSetChanged();
-                }
+                if (verticalAdapter != null) verticalAdapter.notifyDataSetChanged();
 
-                // Handle jumping to a specific post if passed via intent
                 if (startPostId != null && mainVerticalViewPager != null) {
-                    int startIndex = favPostIds.indexOf(startPostId);
+                    int startIndex = postIds.indexOf(startPostId);
                     if (startIndex != -1) {
                         mainVerticalViewPager.setCurrentItem(startIndex, false);
                     }
@@ -143,14 +138,18 @@ public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(I_ProfileFavContent_GridViewer.this, "Error loading favorites", Toast.LENGTH_SHORT).show();
+                Toast.makeText(I_ProfilePostViewerActivity.this, "Error loading posts", Toast.LENGTH_SHORT).show();
             }
-        });
+        };
+
+        if (TYPE_UPLOAD.equals(viewType)) {
+            ref.orderByChild("userId").equalTo(currentUserId).addListenerForSingleValueEvent(listener);
+        } else {
+            ref.addListenerForSingleValueEvent(listener);
+        }
     }
 
-    // Using a static inner class for the adapter, identical to the LikedViewer but independent
     public static class VerticalPostAdapter extends RecyclerView.Adapter<VerticalPostAdapter.PostViewHolder> {
-
         private List<I_NewPost_Event> posts;
         private List<String> postIds;
         private AppCompatActivity context;
@@ -175,68 +174,47 @@ public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
             I_NewPost_Event post = posts.get(position);
             String postId = postIds.get(position);
 
-            // --- Image Slider Setup ---
             if (holder.imagesViewPager != null) {
                 ImageSliderAdapter imageAdapter = new ImageSliderAdapter(context, post.getImageUrls());
                 holder.imagesViewPager.setAdapter(imageAdapter);
                 holder.imagesViewPager.setOrientation(ViewPager2.ORIENTATION_HORIZONTAL);
 
                 int totalPhotos = imageAdapter.getItemCount();
-
-                if (holder.dotsIndicator != null) {
-                    holder.dotsIndicator.setViewPager2(holder.imagesViewPager);
-                }
-
-                if (holder.photoIndicator != null) {
-                    holder.photoIndicator.setText("1/" + totalPhotos);
-                }
+                if (holder.dotsIndicator != null) holder.dotsIndicator.setViewPager2(holder.imagesViewPager);
+                if (holder.photoIndicator != null) holder.photoIndicator.setText("1/" + totalPhotos);
 
                 holder.imagesViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
                     @Override
-                    public void onPageSelected(int position) {
-                        if (holder.photoIndicator != null) {
-                            holder.photoIndicator.setText((position + 1) + "/" + totalPhotos);
-                        }
+                    public void onPageSelected(int pos) {
+                        if (holder.photoIndicator != null) holder.photoIndicator.setText((pos + 1) + "/" + totalPhotos);
                     }
                 });
 
-                if (totalPhotos <= 1) {
-                    if (holder.dotsIndicator != null) holder.dotsIndicator.setVisibility(View.GONE);
-                    if (holder.photoIndicator != null) holder.photoIndicator.setVisibility(View.GONE);
-                } else {
-                    if (holder.dotsIndicator != null) holder.dotsIndicator.setVisibility(View.VISIBLE);
-                    if (holder.photoIndicator != null) holder.photoIndicator.setVisibility(View.VISIBLE);
-                }
+                boolean showIndicators = totalPhotos > 1;
+                if (holder.dotsIndicator != null) holder.dotsIndicator.setVisibility(showIndicators ? View.VISIBLE : View.GONE);
+                if (holder.photoIndicator != null) holder.photoIndicator.setVisibility(showIndicators ? View.VISIBLE : View.GONE);
             }
 
-            // --- Interaction Buttons ---
-
             if (holder.heartButton != null) {
-                updateHeartIcon(holder.heartButton, post.getHeartLiked(), currentUserId);
-                holder.heartButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Heart", position));
+                updateIcon(holder.heartButton, post.getHeartLiked(), currentUserId, R.drawable.heart2, R.drawable.heart);
+                holder.heartButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Heart"));
             }
 
             if (holder.favButton != null) {
-                updateFavIcon(holder.favButton, post.getFavList(), currentUserId);
-                holder.favButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Fav", position));
+                updateIcon(holder.favButton, post.getFavList(), currentUserId, R.drawable.fav2, R.drawable.fav);
+                holder.favButton.setOnClickListener(v -> toggleInteraction(holder, post, postId, "Fav"));
             }
 
-            // --- Delete Button Logic ---
             if (holder.deleteButton != null) {
-                // Only allow deletion if the current user OWNS the post
-                if (post.getUserId() != null && post.getUserId().equals(currentUserId)) {
-                    holder.deleteButton.setVisibility(View.VISIBLE);
-                    holder.deleteButton.setOnClickListener(v -> deletePost(position, postId));
-                } else {
-                    holder.deleteButton.setVisibility(View.GONE);
-                }
+                boolean isOwner = post.getUserId() != null && post.getUserId().equals(currentUserId);
+                holder.deleteButton.setVisibility(isOwner ? View.VISIBLE : View.GONE);
+                holder.deleteButton.setOnClickListener(v -> deletePost(position, postId));
             }
 
             if (holder.shareButton != null) {
                 holder.shareButton.setOnClickListener(v -> {
                     android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
                     shareIntent.setType("text/plain");
-                    shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "Check out this post!");
                     shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, "Check out this post!");
                     context.startActivity(android.content.Intent.createChooser(shareIntent, "Share post via"));
                 });
@@ -244,88 +222,63 @@ public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
         }
 
         @Override
-        public int getItemCount() {
-            return posts.size();
-        }
+        public int getItemCount() { return posts.size(); }
 
         private void deletePost(int position, String postId) {
             DatabaseReference ref = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);
             ref.removeValue().addOnSuccessListener(aVoid -> {
                 Toast.makeText(context, "Post Deleted", Toast.LENGTH_SHORT).show();
-                try {
-                    posts.remove(position);
-                    postIds.remove(position);
-                    notifyItemRemoved(position);
-                    notifyItemRangeChanged(position, posts.size());
-                } catch (IndexOutOfBoundsException e) {
-                    // Handle race condition
-                }
+                posts.remove(position);
+                postIds.remove(position);
+                notifyItemRemoved(position);
+                notifyItemRangeChanged(position, posts.size());
+                
+                // Decrement post count if it was user's own post
+                DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(currentUserId).child("posts");
+                userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        Long count = snapshot.getValue(Long.class);
+                        if (count != null && count > 0) userRef.setValue(count - 1);
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
             });
         }
 
-        private void toggleInteraction(PostViewHolder holder, I_NewPost_Event post, String postId, String type, int position) {
+        private void toggleInteraction(PostViewHolder holder, I_NewPost_Event post, String postId, String type) {
             DatabaseReference postRef = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);
-
-            if (type.equals("Heart")) {
+            if ("Heart".equals(type)) {
                 Map<String, Boolean> likes = post.getHeartLiked();
                 if (likes == null) likes = new HashMap<>();
-
-                if (likes.containsKey(currentUserId)) {
-                    likes.remove(currentUserId);
-                } else {
-                    likes.put(currentUserId, true);
-                }
-
+                if (likes.containsKey(currentUserId)) likes.remove(currentUserId);
+                else likes.put(currentUserId, true);
                 post.setHeartLiked(likes);
                 post.setHeartCount(likes.size());
-                updateHeartIcon(holder.heartButton, likes, currentUserId);
-
-            } else if (type.equals("Fav")) {
+                updateIcon(holder.heartButton, likes, currentUserId, R.drawable.heart2, R.drawable.heart);
+            } else {
                 Map<String, Boolean> favs = post.getFavList();
                 if (favs == null) favs = new HashMap<>();
-
-                if (favs.containsKey(currentUserId)) {
-                    favs.remove(currentUserId);
-                    // Optional: remove from list immediately if un-favorited in this view
-                    // posts.remove(position); postIds.remove(position); notifyItemRemoved(position);
-                    Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show();
-                } else {
-                    favs.put(currentUserId, true);
-                    Toast.makeText(context, "Saved to favorites", Toast.LENGTH_SHORT).show();
-                }
-
+                if (favs.containsKey(currentUserId)) favs.remove(currentUserId);
+                else favs.put(currentUserId, true);
                 post.setFavList(favs);
                 post.setFavCount(favs.size());
-                updateFavIcon(holder.favButton, favs, currentUserId);
+                updateIcon(holder.favButton, favs, currentUserId, R.drawable.fav2, R.drawable.fav);
             }
             postRef.setValue(post);
         }
 
-        private void updateHeartIcon(ConstraintLayout btn, Map<String, Boolean> map, String uid) {
+        private void updateIcon(ConstraintLayout btn, Map<String, Boolean> map, String uid, int activeRes, int inactiveRes) {
             if (btn == null || btn.getChildCount() == 0) return;
             ImageView icon = (ImageView) btn.getChildAt(0);
-            if (map != null && Boolean.TRUE.equals(map.get(uid))) {
-                icon.setImageResource(R.drawable.heart2);
-            } else {
-                icon.setImageResource(R.drawable.heart);
-            }
-        }
-
-        private void updateFavIcon(ConstraintLayout btn, Map<String, Boolean> map, String uid) {
-            if (btn == null || btn.getChildCount() == 0) return;
-            ImageView icon = (ImageView) btn.getChildAt(0);
-            if (map != null && Boolean.TRUE.equals(map.get(uid))) {
-                icon.setImageResource(R.drawable.fav2);
-            } else {
-                icon.setImageResource(R.drawable.fav);
-            }
+            icon.setImageResource(map != null && Boolean.TRUE.equals(map.get(uid)) ? activeRes : inactiveRes);
         }
 
         static class PostViewHolder extends RecyclerView.ViewHolder {
             ViewPager2 imagesViewPager;
             ConstraintLayout heartButton, favButton, shareButton;
             ImageButton deleteButton;
-
             WormDotsIndicator dotsIndicator;
             TextView photoIndicator;
 
@@ -336,7 +289,6 @@ public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
                 favButton = itemView.findViewById(R.id.Favbutton);
                 shareButton = itemView.findViewById(R.id.Sharebutton);
                 deleteButton = itemView.findViewById(R.id.deletebutton);
-
                 dotsIndicator = itemView.findViewById(R.id.dotindicatoruploadcontent);
                 photoIndicator = itemView.findViewById(R.id.photoindicatoruploadcontent);
             }
@@ -346,41 +298,18 @@ public class I_ProfileFavContent_GridViewer extends AppCompatActivity {
     private static class ImageSliderAdapter extends RecyclerView.Adapter<ImageSliderAdapter.ImageViewHolder> {
         private Context context;
         private List<String> imageUrls;
-
-        ImageSliderAdapter(Context context, List<String> imageUrls) {
-            this.context = context;
-            this.imageUrls = imageUrls;
+        ImageSliderAdapter(Context context, List<String> imageUrls) { this.context = context; this.imageUrls = imageUrls; }
+        @NonNull @Override public ImageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            ImageView iv = new ImageView(context);
+            iv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            return new ImageViewHolder(iv);
         }
-
-        @NonNull
-        @Override
-        public ImageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            ImageView imageView = new ImageView(context);
-            imageView.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            return new ImageViewHolder(imageView);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-            if (imageUrls != null && position < imageUrls.size()) {
-                Glide.with(context).load(imageUrls.get(position)).into(holder.imageView);
-            }
-        }
-
-        @Override
-        public int getItemCount() {
-            return (imageUrls != null) ? imageUrls.size() : 0;
-        }
-
+        @Override public void onBindViewHolder(@NonNull ImageViewHolder holder, int pos) { Glide.with(context).load(imageUrls.get(pos)).into(holder.imageView); }
+        @Override public int getItemCount() { return imageUrls != null ? imageUrls.size() : 0; }
         static class ImageViewHolder extends RecyclerView.ViewHolder {
             ImageView imageView;
-
-            ImageViewHolder(View itemView) {
-                super(itemView);
-                this.imageView = (ImageView) itemView;
-            }
+            ImageViewHolder(View v) { super(v); imageView = (ImageView) v; }
         }
     }
 }

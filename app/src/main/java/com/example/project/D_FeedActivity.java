@@ -40,16 +40,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class D1_FeedActivity extends AppCompatActivity {
+public class D_FeedActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private D_FeedAdapter postAdapter;
-    private List<I_NewPost_Event> postList;
+    private List<I_PostEvent> postList;
     private DatabaseReference postsRef;
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;
 
-    // For handling the download ID
     private long downloadId = -1;
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -61,13 +60,11 @@ public class D1_FeedActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                finishAffinity(); // Closes this activity and all parent activities
-                System.exit(0);   // Optional: Ensures the process is killed
+                finishAffinity();
+                System.exit(0);
             }
         });
 
-
-        // Initialize Views
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         recyclerView = findViewById(R.id.feedrecyclerView);
         progressBar = findViewById(R.id.my_progress_bar);
@@ -81,17 +78,12 @@ public class D1_FeedActivity extends AppCompatActivity {
 
         postsRef = FirebaseDatabase.getInstance().getReference("PostEvents");
 
-        // Set up the Refresh Listener
         swipeRefreshLayout.setOnRefreshListener(() -> fetchPostsFromFirebase());
         swipeRefreshLayout.setDistanceToTriggerSync(300);
 
-        // Check for updates
         checkForUpdates();
-
-        // Fetch posts from Firebase
         fetchPostsFromFirebase();
 
-        // Register receiver for when download completes
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED);
         } else {
@@ -102,123 +94,44 @@ public class D1_FeedActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        try {
-            unregisterReceiver(onDownloadComplete);
-        } catch (Exception e) {
-            // Receiver might not be registered
-        }
+        try { unregisterReceiver(onDownloadComplete); } catch (Exception e) {}
     }
 
-    // Receiver to detect when download is finished
     private final BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-            if (downloadId == id) {
-                installApk();
-            }
+            if (downloadId == id) installApk();
         }
     };
 
     private void checkForUpdates() {
         String versionUrl = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json?t=" + System.currentTimeMillis();
-
         RequestQueue queue = Volley.newRequestQueue(this);
         StringRequest stringRequest = new StringRequest(Request.Method.GET, versionUrl,
                 response -> {
                     try {
                         JSONObject jsonObject = new JSONObject(response);
-                        int latestVersionCode = jsonObject.getInt("version_code");
-                        String apkUrl = jsonObject.getString("apk_url");
-
-                        if (latestVersionCode > BuildConfig.VERSION_CODE) {
-                            showUpdateDialog(apkUrl);
-                        } else {
-                            // Toast.makeText(D1_FeedActivity.this, "App is up to date", Toast.LENGTH_SHORT).show();
+                        if (jsonObject.getInt("version_code") > BuildConfig.VERSION_CODE) {
+                            // showUpdateDialog(jsonObject.getString("apk_url"));
                         }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                },
-                error -> {
-                    // Error handling
-                });
-
+                    } catch (JSONException e) { e.printStackTrace(); }
+                }, error -> {});
         stringRequest.setShouldCache(false);
         queue.add(stringRequest);
     }
 
-    private void showUpdateDialog(final String apkUrl) {
-//        new android.app.AlertDialog.Builder(this)
-//                .setTitle("New Update Available")
-//                .setMessage("A new version of the app is available. Downloading will happen in the background.")
-//                .setPositiveButton("Update Now", (dialog, which) -> downloadAndInstallApk(apkUrl))
-//                .setNegativeButton("Later", null)
-//                .setCancelable(false)
-//                .show();
-    }
-
-    private void downloadAndInstallApk(String apkUrl) {
-        Toast.makeText(this, "Downloading update...", Toast.LENGTH_LONG).show();
-
-        // 1. Define the destination file
-        File destinationDir = getExternalFilesDir(null);
-
-        // FIX: Create the directory if it doesn't exist
-        if (destinationDir != null && !destinationDir.exists()) {
-            destinationDir.mkdirs();
-        }
-
-        File file = new File(destinationDir, "update.apk");
-        if (file.exists()) {
-            file.delete();
-        }
-
-        // 2. Create Request
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
-        request.setTitle("App Update");
-        request.setDescription("Downloading new version...");
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
-
-        // IMPORTANT: Allowed network types
-        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
-        request.setAllowedOverMetered(true);
-        request.setAllowedOverRoaming(true);
-
-        request.setDestinationInExternalFilesDir(this, null, "update.apk");
-        request.setMimeType("application/vnd.android.package-archive");
-
-        // 3. Enqueue
-        DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-        downloadId = manager.enqueue(request);
-    }
-
-
     private void installApk() {
         try {
             File file = new File(getExternalFilesDir(null), "update.apk");
-
-            // Get the URI using the FileProvider
-            // Authority must match: applicationId + ".fileprovider"
-            Uri apkUri = FileProvider.getUriForFile(
-                    this,
-                    BuildConfig.APPLICATION_ID + ".fileprovider",
-                    file
-            );
-
+            Uri apkUri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".fileprovider", file);
             Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             intent.setData(apkUri);
-            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Required when starting from non-activity context
-
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
-
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Installation failed. Please try again.", Toast.LENGTH_SHORT).show();
-
-            // Fallback: If internal install fails, open browser
-            // openBrowserFallback();
+            Toast.makeText(this, "Installation failed.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -228,12 +141,9 @@ public class D1_FeedActivity extends AppCompatActivity {
             public void onDataChange(DataSnapshot dataSnapshot) {
                 postList.clear();
                 for (DataSnapshot postSnapshot : dataSnapshot.getChildren()) {
-                    I_NewPost_Event postEvent = postSnapshot.getValue(I_NewPost_Event.class);
+                    I_PostEvent postEvent = postSnapshot.getValue(I_PostEvent.class);
                     if (postEvent != null) {
-
-                        // --- CRITICAL CHANGE: Set the Post ID from the Firebase key ---
-                        String postId = postSnapshot.getKey();
-                        postEvent.setPostId(postId);
+                        postEvent.setPostId(postSnapshot.getKey());
                         postList.add(postEvent);
                     }
                 }
@@ -241,10 +151,7 @@ public class D1_FeedActivity extends AppCompatActivity {
                 postAdapter.notifyDataSetChanged();
                 if (swipeRefreshLayout != null) swipeRefreshLayout.setRefreshing(false);
             }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(D1_FeedActivity.this, "Failed to load posts", Toast.LENGTH_SHORT).show();
+            @Override public void onCancelled(DatabaseError error) {
                 if (swipeRefreshLayout != null) swipeRefreshLayout.setRefreshing(false);
             }
         });
@@ -257,24 +164,18 @@ public class D1_FeedActivity extends AppCompatActivity {
                 Date date1 = dateFormat.parse(post1.getDate());
                 Date date2 = dateFormat.parse(post2.getDate());
                 return date2.compareTo(date1);
-            } catch (Exception e) {
-                return 0;
-            }
+            } catch (Exception e) { return 0; }
         });
     }
 
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
-        if (viewId == R.id.home_menu) intent = new Intent(this, D1_FeedActivity.class);
+        if (viewId == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
         else if (viewId == R.id.calendar_menu) intent = new Intent(this, E1_CalendarActivity.class);
         else if (viewId == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
         else if (viewId == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
-        else if (viewId == R.id.profile_menu) intent = new Intent(this, I1_ProfileActivity.class);
-
-        if (intent != null) {
-            startActivity(intent);
-            finish();
-        }
+        else if (viewId == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);
+        if (intent != null) { startActivity(intent); finish(); }
     }
 }

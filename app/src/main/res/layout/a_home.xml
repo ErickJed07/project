@@ -15,11 +15,11 @@
         android:background="#181918"
         app:cardBackgroundColor="#181918"
         app:cardCornerRadius="90dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout3"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.326">
+        app:layout_constraintVertical_bias="0.85">
 
         <ImageView
             android:id="@+id/logo"
@@ -31,13 +31,14 @@
 
     <LinearLayout
         android:id="@+id/linearLayout3"
-        android:layout_width="264dp"
-        android:layout_height="71dp"
+        android:layout_width="0dp"
+        android:layout_height="95dp"
         android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout4"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.84000003">
 
         <TextView
             android:id="@+id/webname"
@@ -52,7 +53,7 @@
         <TextView
             android:id="@+id/motto"
             android:layout_width="match_parent"
-            android:layout_height="42dp"
+            android:layout_height="wrap_content"
             android:fontFamily="@font/poppins"
             android:gravity="center"
             android:text="Let's Find Your Style"
@@ -61,6 +62,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/linearLayout4"
         android:layout_width="361dp"
         android:layout_height="146dp"
         android:orientation="vertical"

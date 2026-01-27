@@ -8,15 +8,12 @@
         android:required="false" />
 
     <!-- ✅ Permissions -->
-    <!-- Needed for notifications on Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
-
     <uses-permission android:name="android.permission.INTERNET"/>
-
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
     <!-- Permissions for accessing images -->
@@ -45,9 +42,6 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-
-
-
         <!-- 📌 Reminder BroadcastReceiver -->
         <receiver
             android:name=".E5_Calendar_ReminderBroadcastReceiver"
@@ -56,26 +50,22 @@
         <!-- 📌 Activities -->
         <activity android:name=".E1_CalendarActivity" android:exported="true" />
         <activity android:name=".H6_RecommendationActivity" android:exported="true" />
-        <activity android:name=".I_NewPost_UploadActivity" android:exported="true" />
+        <activity android:name=".I_PostUploadActivity" android:exported="true" />
         <activity android:name=".G2_Closet_CategoryActivity" android:exported="true" />
         <activity android:name=".F1_CameraActivity" android:exported="true" />
         <activity android:name=".B_LoginActivity" android:exported="true" />
-        <activity android:name=".D1_FeedActivity" android:exported="true" />
+        <activity android:name=".D_FeedActivity" android:exported="true" />
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
         <activity android:name=".G1_ClosetActivity"/>
-        <activity android:name=".I_ProfileUploadContent_GridViewer"/>
-        <activity android:name=".I_ProfileLikedContent_GridViewer"/>
-        <activity android:name=".I_ProfileFavContent_GridViewer"/>
-        <activity android:name=".I_Profile_AddModels" />
-        <activity android:name=".I_ProfileModelFans_List" />
+        
+        <!-- Combined Viewer Activity -->
+        <activity android:name=".I_ProfilePostActivity" android:exported="true" />
+        
+        <activity android:name=".I_ProfileAddActivity" android:exported="true" />
+        <activity android:name=".I_ProfileSocialActivity" android:exported="true" />
         <activity android:name=".C_SignInProfilePhoto" />
-        <activity android:name=".I1_ProfileActivity"/>
-
-
-
-
-
+        <activity android:name=".I_ProfileActivity"/>
 
         <!-- 📌 Main Launcher -->
         <activity

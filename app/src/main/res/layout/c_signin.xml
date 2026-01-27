@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/signin"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -14,11 +15,11 @@
         android:background="#000000"
         app:cardBackgroundColor="#000000"
         app:cardCornerRadius="90dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout6"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.15">
+        app:layout_constraintVertical_bias="0.8">
 
         <ImageView
             android:id="@+id/logo"
@@ -30,182 +31,173 @@
     </androidx.cardview.widget.CardView>
 
     <LinearLayout
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:id="@+id/linearLayout6"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout9"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.32"
-        android:layout_width="264dp"
-        android:layout_height="71dp"
-        android:orientation="vertical">
+        app:layout_constraintVertical_bias="0.90">
 
         <TextView
             android:id="@+id/webname"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/poppins"
             android:gravity="center"
             android:text="PHINDEE"
-            android:textSize="26sp"
+            android:textSize="28sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/motto"
             android:layout_width="match_parent"
-            android:layout_height="42dp"
-            android:fontFamily="@font/poppins"
+            android:layout_height="wrap_content"
             android:gravity="center"
             android:text="Let's Find Your Style"
-            android:textSize="24sp"
-            android:textStyle="normal" />
+            android:textSize="24sp" />
 
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/linearLayout9"
+        android:layout_width="355dp"
+        android:layout_height="300dp"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.63"
-        android:layout_width="354dp"
-        android:layout_height="298dp"
-        android:orientation="vertical">
+        app:layout_constraintVertical_bias="0.65999997">
 
 
         <TextView
             android:id="@+id/email"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
+            android:layout_weight="1"
             android:fontFamily="@font/poppins"
-            android:text="Email*" />
+            android:text="Email*"
+            android:textSize="15dp" />
 
         <EditText
             android:id="@+id/email_info"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="2"
             android:background="@drawable/edittext_border"
-            android:textColorHint="#040000"
-            android:textColor="#040000"
             android:ems="10"
             android:fontFamily="@font/poppins"
             android:hint="Enter your Email"
             android:inputType="text"
             android:padding="10dp"
+            android:textColor="#040000"
+            android:textColorHint="#040000"
             android:textSize="14dp" />
-
-        <TextView
-            android:id="@+id/space2"
-            android:layout_width="match_parent"
-            android:layout_height="10dp"
-            android:layout_weight="2" />
 
         <TextView
             android:id="@+id/create_user"
             android:layout_width="match_parent"
-            android:layout_height="22dp"
-            android:layout_weight="2"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_weight="1"
             android:fontFamily="@font/poppins"
-            android:text="Create Username*" />
+            android:text="Create Username*"
+            android:textSize="15dp" />
 
         <EditText
             android:id="@+id/create_user_info"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="2"
             android:background="@drawable/edittext_border"
             android:ems="10"
-            android:textColorHint="#040000"
-            android:textColor="#040000"
             android:fontFamily="@font/poppins"
-            android:hint=" Enter your username"
+            android:hint="Enter your Username"
             android:inputType="text"
-            android:padding="12dp"
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/space"
-            android:layout_width="match_parent"
-            android:layout_height="10dp"
-            android:layout_weight="2" />
+            android:padding="10dp"
+            android:textColor="#040000"
+            android:textColorHint="#040000"
+            android:textSize="14dp" />
 
         <TextView
             android:id="@+id/create_pass"
             android:layout_width="match_parent"
-            android:layout_height="22dp"
-            android:layout_weight="2"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_weight="1"
             android:fontFamily="@font/poppins"
-            android:text="Create Password*" />
+            android:text="Create Password*"
+            android:textSize="15dp" />
 
         <EditText
             android:id="@+id/create_pass_info"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="2"
             android:background="@drawable/edittext_border"
             android:ems="10"
             android:fontFamily="@font/poppins"
-            android:hint=" Enter your password"
-            android:inputType="textPassword"
-            android:textColorHint="#040000"
+            android:hint="Enter your Password"
+            android:inputType="text"
+            android:padding="10dp"
             android:textColor="#040000"
-            android:padding="12dp"
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/space1"
-            android:layout_width="match_parent"
-            android:layout_height="10dp"
-            android:layout_weight="2" />
+            android:textColorHint="#040000"
+            android:textSize="14dp" />
 
         <TextView
             android:id="@+id/confirm_pass"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
+            android:layout_marginTop="5dp"
+            android:layout_weight="1"
             android:fontFamily="@font/poppins"
-            android:text="Confirm Password*" />
+            android:text="Confirm Password*"
+            android:textSize="15dp" />
 
         <EditText
             android:id="@+id/confirm_pass_info"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="2"
             android:background="@drawable/edittext_border"
             android:ems="10"
-            android:hint="Confirm your password"
-            android:textColorHint="#040000"
-            android:textColor="#040000"
+            android:fontFamily="@font/poppins"
+            android:hint="Confirm your Password"
             android:inputType="text"
-            android:padding="10dp" />
+            android:padding="10dp"
+            android:textColor="#040000"
+            android:textColorHint="#040000"
+            android:textSize="14dp" />
 
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/linearLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.491"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.86"
-        android:layout_width="352dp"
-        android:layout_height="69dp"
-        android:orientation="vertical">
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout9"
+        app:layout_constraintVertical_bias="0.65999997">
 
         <Button
             android:id="@+id/signinbutton"
-            app:cornerRadius="10dp"
-            app:strokeColor="@color/pure_color"
-            app:strokeWidth="2dp"
-            android:layout_width="match_parent"
+            android:layout_width="350dp"
             android:layout_height="60dp"
             android:backgroundTint="@color/pure_color"
             android:text="SIGN IN"
             android:textColor="@color/white"
             android:textSize="18dp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/pure_color"
+            app:strokeWidth="2dp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

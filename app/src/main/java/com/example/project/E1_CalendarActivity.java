@@ -14,7 +14,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -26,7 +25,6 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 // Removed Firestore imports as we are using Realtime Database
 // import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -66,7 +64,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                Intent intent = new Intent(E1_CalendarActivity.this, D1_FeedActivity.class);
+                Intent intent = new Intent(E1_CalendarActivity.this, D_FeedActivity.class);
                 // Clear stack so they can't go "back" to calendar from feed easily
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
@@ -369,7 +367,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
         int viewId = view.getId();
 
         if (viewId == R.id.home_menu) {
-            intent = new Intent(this, D1_FeedActivity.class);
+            intent = new Intent(this, D_FeedActivity.class);
         } else if (viewId == R.id.calendar_menu) {
             return;
         } else if (viewId == R.id.camera_menu) {
@@ -377,7 +375,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
         } else if (viewId == R.id.closet_menu) {
             intent = new Intent(this, G1_ClosetActivity.class);
         } else if (viewId == R.id.profile_menu) {
-            intent = new Intent(this, I1_ProfileActivity.class);
+            intent = new Intent(this, I_ProfileActivity.class);
         }
 
         if (intent != null) {

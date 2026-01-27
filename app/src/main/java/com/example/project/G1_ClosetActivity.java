@@ -51,7 +51,7 @@ public class G1_ClosetActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                Intent intent = new Intent(G1_ClosetActivity.this, D1_FeedActivity.class);
+                Intent intent = new Intent(G1_ClosetActivity.this, D_FeedActivity.class);
                 // Clear stack so the user can't go "back" to the closet easily
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
@@ -389,11 +389,11 @@ public class G1_ClosetActivity extends AppCompatActivity {
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
-        if (viewId == R.id.home_menu) intent = new Intent(this, D1_FeedActivity.class);
+        if (viewId == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
         else if (viewId == R.id.calendar_menu) intent = new Intent(this, E1_CalendarActivity.class);
         else if (viewId == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
         else if (viewId == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
-        else if (viewId == R.id.profile_menu) intent = new Intent(this, I1_ProfileActivity.class);
+        else if (viewId == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);
 
         if (intent != null) {
             startActivity(intent);

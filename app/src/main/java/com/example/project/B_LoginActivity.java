@@ -76,7 +76,7 @@ public class B_LoginActivity extends AppCompatActivity {
                             if (user != null) {
                                 // Show a message and go to Feed Screen
                                 Toast.makeText(this, "Login Successful", Toast.LENGTH_SHORT).show();
-                                startActivity(new Intent(B_LoginActivity.this, D1_FeedActivity.class));
+                                startActivity(new Intent(B_LoginActivity.this, D_FeedActivity.class));
                                 finish(); // Close Login Screen
                             }
                         } else { // If login is wrong

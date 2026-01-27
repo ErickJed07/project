@@ -297,7 +297,7 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
                                 Toast.makeText(I_NewPost_UploadActivity.this, "Post saved successfully!", Toast.LENGTH_SHORT).show();
 
                                 // Navigate to FeedActivity after saving the post
-                                Intent intent = new Intent(I_NewPost_UploadActivity.this, D1_FeedActivity.class);
+                                Intent intent = new Intent(I_NewPost_UploadActivity.this, D_FeedActivity.class);
                                 startActivity(intent);
                                 finish();
                             })

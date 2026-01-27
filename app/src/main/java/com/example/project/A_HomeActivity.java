@@ -22,7 +22,7 @@ public class A_HomeActivity extends AppCompatActivity {
         // Check if the user is already logged in
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             // Go straight to Feed
-            Intent intent = new Intent(A_HomeActivity.this, D1_FeedActivity.class);
+            Intent intent = new Intent(A_HomeActivity.this, D_FeedActivity.class);
             startActivity(intent);
             finish(); // Close the Home screen so they can't go back to it
         }
@@ -80,8 +80,8 @@ public class A_HomeActivity extends AppCompatActivity {
                 Toast.makeText(this, "Developer Bypass Activated", Toast.LENGTH_SHORT).show();
 
                 // Navigate directly to Feed Activity
-                // Make sure D1_FeedActivity matches your actual Feed Activity class name
-                Intent intent = new Intent(A_HomeActivity.this, D1_FeedActivity.class);
+                // Make sure D_FeedActivity matches your actual Feed Activity class name
+                Intent intent = new Intent(A_HomeActivity.this, D_FeedActivity.class);
                 startActivity(intent);
 
             }
