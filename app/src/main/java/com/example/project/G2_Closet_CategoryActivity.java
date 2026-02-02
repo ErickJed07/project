@@ -337,7 +337,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         int id = view.getId();
 
         if (id == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
-        else if (id == R.id.calendar_menu) intent = new Intent(this, E1_CalendarActivity.class);
+        else if (id == R.id.calendar_menu) intent = new Intent(this, E_CalendarActivity.class);
         else if (id == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
         else if (id == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
         else if (id == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);

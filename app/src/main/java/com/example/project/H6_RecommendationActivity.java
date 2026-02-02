@@ -407,7 +407,7 @@ public class H6_RecommendationActivity extends AppCompatActivity {
                                         .setMessage("Do you want to stay here or view your Calendar?")
                                         .setPositiveButton("Go to Calendar", (d, w) -> {
                                             // Navigate to Calendar Activity
-                                            Intent intent = new Intent(H6_RecommendationActivity.this, E1_CalendarActivity.class);
+                                            Intent intent = new Intent(H6_RecommendationActivity.this, E_CalendarActivity.class);
                                             startActivity(intent);
                                             finish(); // Optional: Close current activity
                                         })

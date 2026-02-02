@@ -8,10 +8,6 @@
     android:background="#626060"
     android:fitsSystemWindows="true">
 
-    <!-- Month Header -->
-
-    <!-- Day Labels -->
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout7"
         android:layout_width="0dp"
@@ -23,8 +19,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0">
-
-
 
         <TextView
             android:id="@+id/Closet"
@@ -178,11 +172,6 @@
             android:textSize="18dp"
             android:textStyle="bold" />
     </LinearLayout>
-
-
-    <!-- Calendar Grid -->
-
-    <!-- Bottom Navigation -->
 
     <GridLayout
         android:id="@+id/calendar_grid"
@@ -392,6 +381,5 @@
         </LinearLayout>
 
     </LinearLayout>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

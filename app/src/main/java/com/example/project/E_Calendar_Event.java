@@ -1,6 +1,6 @@
 package com.example.project;
 
-public class E2_Calendar_Event {
+public class E_Calendar_Event {
 
     private String id;
     private String title;
@@ -11,9 +11,9 @@ public class E2_Calendar_Event {
     private long timestamp;
 
     // Required empty constructor for Firebase
-    public E2_Calendar_Event() { }
+    public E_Calendar_Event() { }
 
-    public E2_Calendar_Event(String id, String title, String date, String time, String imageUrl, String reminder, long timestamp) {
+    public E_Calendar_Event(String id, String title, String date, String time, String imageUrl, String reminder, long timestamp) {
         this.id = id;
         this.title = title;
         this.date = date;
@@ -24,8 +24,6 @@ public class E2_Calendar_Event {
     }
 
     // --- GETTERS AND SETTERS ---
-    // Firebase looks for these specifically. They must match the field names.
-
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -38,7 +36,6 @@ public class E2_Calendar_Event {
     public String getTime() { return time; }
     public void setTime(String time) { this.time = time; }
 
-    // IMPORTANT: The getter/setter names must match "ImageUrl"
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 

@@ -172,7 +172,7 @@ public class D_FeedActivity extends AppCompatActivity {
         Intent intent = null;
         int viewId = view.getId();
         if (viewId == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
-        else if (viewId == R.id.calendar_menu) intent = new Intent(this, E1_CalendarActivity.class);
+        else if (viewId == R.id.calendar_menu) intent = new Intent(this, E_CalendarActivity.class);
         else if (viewId == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
         else if (viewId == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
         else if (viewId == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);

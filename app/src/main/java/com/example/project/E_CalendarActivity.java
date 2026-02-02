@@ -23,8 +23,6 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-// Removed Firestore imports as we are using Realtime Database
-// import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,7 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class E1_CalendarActivity extends AppCompatActivity {
+public class E_CalendarActivity extends AppCompatActivity {
 
     private GridLayout calendarGrid;
     private TextView selectedDayLabel;
@@ -43,54 +41,40 @@ public class E1_CalendarActivity extends AppCompatActivity {
     private TextView selectedDayView = null;
 
     private RecyclerView eventRecyclerView;
-    private E4_Calendar_EventAdapter calendarEventAdapter;
-    private List<E2_Calendar_Event> calendarEventList = new ArrayList<>();
+    private E_Calendar_EventAdapter calendarEventAdapter;
+    private List<E_Calendar_Event> calendarEventList = new ArrayList<>();
 
-    private Map<String, List<E2_Calendar_Event>> eventMap = new HashMap<>();
+    private Map<String, List<E_Calendar_Event>> eventMap = new HashMap<>();
     private String selectedDateString = "";
 
     private DatabaseReference eventsRef;
     private String userId;
 
     private GestureDetector gestureDetector;
-    // private ConstraintLayout constraintLayout6; // Unused based on snippet
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.e1_calendar);
+        setContentView(R.layout.e_calendar);
 
-        // --- NEW CODE: Handle Back Button to go to Feed ---
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                Intent intent = new Intent(E1_CalendarActivity.this, D_FeedActivity.class);
-                // Clear stack so they can't go "back" to calendar from feed easily
+                Intent intent = new Intent(E_CalendarActivity.this, D_FeedActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 finish();
             }
         });
 
-        // Firebase setup
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-
-            // --- CHANGE THIS LINE ---
-            // OLD: eventsRef = FirebaseDatabase.getInstance().getReference("CalendarEvents").child(userId);
-
-            // NEW: Match the path used in H6_RecommendationActivity (Users -> uid -> Events)
             eventsRef = FirebaseDatabase.getInstance().getReference("Users").child(userId).child("Events");
-
         } else {
             finish();
             return;
         }
 
-        // ... rest of your code
-
-
-        // Request notification permission for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
@@ -102,25 +86,19 @@ public class E1_CalendarActivity extends AppCompatActivity {
         yearLabel = findViewById(R.id.year_label);
         selectedDayLabel = findViewById(R.id.selected_day_label);
 
-        // Setup RecyclerView
         eventRecyclerView = findViewById(R.id.eventRecyclerView);
         eventRecyclerView.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
-        // Initialize Adapter with Click/Delete Listener
-        calendarEventAdapter = new E4_Calendar_EventAdapter(calendarEventList, (event, position) -> {
+        calendarEventAdapter = new E_Calendar_EventAdapter(calendarEventList, (event, position) -> {
             if (event.getId() != null) {
-                // 1. Cancel local notification
-                E3_Calendar_ReminderUtils.cancelReminder(E1_CalendarActivity.this, event);
-
-                // 2. Remove from Realtime Database
-                // Note: H1 saves directly under userId, NOT under a date node.
+                E_Calendar_ReminderUtils.cancelReminder(E_CalendarActivity.this, event);
                 eventsRef.child(event.getId()).removeValue()
                         .addOnSuccessListener(aVoid ->
-                                Toast.makeText(E1_CalendarActivity.this, "Event Deleted", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(E_CalendarActivity.this, "Event Deleted", Toast.LENGTH_SHORT).show()
                         )
                         .addOnFailureListener(e ->
-                                Toast.makeText(E1_CalendarActivity.this, "Delete Failed", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(E_CalendarActivity.this, "Delete Failed", Toast.LENGTH_SHORT).show()
                         );
             }
         });
@@ -128,7 +106,6 @@ public class E1_CalendarActivity extends AppCompatActivity {
 
         calendar = Calendar.getInstance();
 
-        // Default selected date = today
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         selectedDateString = df.format(calendar.getTime());
 
@@ -138,12 +115,10 @@ public class E1_CalendarActivity extends AppCompatActivity {
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 if (e1.getX() - e2.getX() > 50) {
-                    // Swipe left: next month
                     calendar.add(Calendar.MONTH, 1);
                     updateCalendar();
                     return true;
                 } else if (e2.getX() - e1.getX() > 50) {
-                    // Swipe right: previous month
                     calendar.add(Calendar.MONTH, -1);
                     updateCalendar();
                     return true;
@@ -276,7 +251,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
     }
 
     private View createDayView() {
-        View view = getLayoutInflater().inflate(R.layout.e2_calendar_day, calendarGrid, false);
+        View view = getLayoutInflater().inflate(R.layout.e_calendar, calendarGrid, false);
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
         params.height = 0;
@@ -321,14 +296,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
                 eventMap.clear();
 
                 for (DataSnapshot eventSnapshot : snapshot.getChildren()) {
-                    // --------------------------------------------------------
-                    // Cloudinary Image Logic:
-                    // The Cloudinary URL is stored in the "imagePath" field of
-                    // the Firebase object (saved in H1 Activity).
-                    // E2_Calendar_Event automatically deserializes this URL
-                    // into its imagePath field.
-                    // --------------------------------------------------------
-                    E2_Calendar_Event event = eventSnapshot.getValue(E2_Calendar_Event.class);
+                    E_Calendar_Event event = eventSnapshot.getValue(E_Calendar_Event.class);
 
                     if (event != null) {
                         event.setId(eventSnapshot.getKey());
@@ -339,7 +307,7 @@ public class E1_CalendarActivity extends AppCompatActivity {
                             }
                             eventMap.get(date).add(event);
                         }
-                        E3_Calendar_ReminderUtils.scheduleReminder(E1_CalendarActivity.this, event);
+                        E_Calendar_ReminderUtils.scheduleReminder(E_CalendarActivity.this, event);
                     }
                 }
 
@@ -354,11 +322,10 @@ public class E1_CalendarActivity extends AppCompatActivity {
     }
 
     private void loadEventsForSelectedDate() {
-        List<E2_Calendar_Event> selectedCalendarEvents =
+        List<E_Calendar_Event> selectedCalendarEvents =
                 eventMap.getOrDefault(selectedDateString, new ArrayList<>());
         calendarEventList.clear();
         calendarEventList.addAll(selectedCalendarEvents);
-        // The Adapter (E4) will take these events and use Glide to load the Cloudinary URL
         calendarEventAdapter.notifyDataSetChanged();
     }
 
