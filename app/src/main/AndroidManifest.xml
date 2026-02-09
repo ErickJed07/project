@@ -44,12 +44,11 @@
 
         <!-- 📌 Reminder BroadcastReceiver -->
         <receiver
-            android:name=".E5_Calendar_ReminderBroadcastReceiver"
+            android:name=".E_Calendar_ReminderBroadcastReceiver"
             android:exported="true" />
 
         <!-- 📌 Activities -->
-        <activity android:name=".E1_CalendarActivity" android:exported="true" />
-        <activity android:name=".H6_RecommendationActivity" android:exported="true" />
+        <activity android:name=".E_CalendarActivity" android:exported="true" />
         <activity android:name=".I_PostUploadActivity" android:exported="true" />
         <activity android:name=".G2_Closet_CategoryActivity" android:exported="true" />
         <activity android:name=".F1_CameraActivity" android:exported="true" />
@@ -58,7 +57,8 @@
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
         <activity android:name=".G1_ClosetActivity"/>
-        
+        <activity android:name=".G7_NewOutfitActivity" android:exported="true" />
+
         <!-- Combined Viewer Activity -->
         <activity android:name=".I_ProfilePostActivity" android:exported="true" />
         

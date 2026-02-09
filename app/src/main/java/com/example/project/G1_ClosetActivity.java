@@ -74,11 +74,12 @@ public class G1_ClosetActivity extends AppCompatActivity {
 
         addButtonView.setOnClickListener(v -> onAddCategoryClicked(v));
 
-        initializeDefaultCategories();
+        findViewById(R.id.newoutfit).setOnClickListener(v -> {
+            Intent intent = new Intent(G1_ClosetActivity.this, G7_NewOutfitActivity.class);
+            startActivity(intent);
+        });
 
-        findViewById(R.id.newoutfit).setOnClickListener(view ->
-                startActivity(new Intent(G1_ClosetActivity.this, H6_RecommendationActivity.class))
-        );
+        initializeDefaultCategories();
     }
 
     private void loadCategoriesFromFirebase() {

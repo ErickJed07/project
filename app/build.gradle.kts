@@ -44,6 +44,7 @@ android {
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME")}\"")
         buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("CLOUDINARY_API_KEY")}\"")
         buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("CLOUDINARY_API_SECRET")}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY")}\"")
     }
 
     // 3. Enable the BuildConfig feature so the generated class is created
@@ -117,6 +118,6 @@ dependencies {
     implementation ("com.google.mlkit:image-labeling:17.0.7")
     implementation ("androidx.palette:palette:1.0.0")
 
-
-
+    // Gemini API
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 }

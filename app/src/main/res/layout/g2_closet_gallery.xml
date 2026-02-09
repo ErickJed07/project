@@ -5,273 +5,158 @@
     android:id="@+id/closet_inside"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    android:background="@color/white">
+    android:background="#F8F9FA"
+    android:fitsSystemWindows="true">
 
-    <!-- Top Bar with Back and Title -->
+    <!-- Top Bar -->
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout"
+        android:id="@+id/topBar"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
+        android:layout_height="64dp"
         android:background="@color/white"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/Closet_back"
-            android:layout_width="80dp"
-            android:layout_height="0dp"
-            android:onClick="onCloset_backClicked"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <TextView
-            android:id="@+id/textView2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/archivo_black"
-            android:gravity="center"
-            android:text="Closet"
-            android:textColor="@color/black"
-            android:textSize="24sp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <TextView
-            android:id="@+id/textView4"
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:background="@color/black"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+        android:elevation="4dp"
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/btnbackcloset"
-            android:layout_width="50dp"
-            android:layout_height="30dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="12dp"
+            android:src="@drawable/arrow"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/Closet_back"
-            app:layout_constraintHorizontal_bias="0.137"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/arrow" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!-- Category Title and Sort -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout3"
-        android:layout_width="0dp"
-        android:layout_height="50dp"
-        app:layout_constraintTop_toBottomOf="@id/constraintLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+            app:tint="@color/black" />
 
         <TextView
             android:id="@+id/categoryTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="16dp"
+            android:fontFamily="@font/archivo_black"
             android:text="Category"
+            android:textColor="@color/black"
             android:textSize="20sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/sortButton"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="12dp"
             android:src="@android:drawable/ic_menu_sort_by_size"
-            android:layout_marginEnd="16dp"
-            app:tint="@color/black"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/categoryTitle"
-            app:layout_constraintBottom_toBottomOf="@+id/categoryTitle" />
-
-
-        <TextView
-            android:id="@+id/textView5"
-            android:layout_width="0dp"
-            android:layout_height="0.5dp"
-            android:background="@color/black"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/black" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- RecyclerView Container -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout2"
-        android:layout_width="0dp"
+    <!-- Gallery Container -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/galleryRecyclerView"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:background="@color/light_gray"
+        android:clipToPadding="false"
+        android:padding="4dp"
         app:layout_constraintBottom_toTopOf="@id/bottomBar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/constraintLayout3">
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/galleryRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clipToPadding="false"
-                android:padding="8dp" />
-        </ScrollView>
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        app:layout_constraintTop_toBottomOf="@id/topBar" />
 
     <!-- Bottom Navigation Bar -->
     <LinearLayout
         android:id="@+id/bottomBar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="@color/nav"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/white"
+        android:elevation="8dp"
         android:orientation="horizontal"
-        android:padding="4dp"
-        android:visibility="gone"
         android:weightSum="5"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:id="@+id/home_menu"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:clickable="true"
-            android:foreground="?attr/selectableItemBackground"
+            android:background="?attr/selectableItemBackground"
             android:gravity="center"
             android:onClick="onButtonClicked"
             android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/home_1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Home"
-                android:textSize="12sp" />
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/home" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Home" android:textSize="10sp" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/calendar_menu"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:clickable="true"
-            android:foreground="?attr/selectableItemBackground"
+            android:background="?attr/selectableItemBackground"
             android:gravity="center"
             android:onClick="onButtonClicked"
             android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/calendar_1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Calendar"
-                android:textSize="12sp" />
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/calendar_1" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Calendar" android:textSize="10sp" />
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/add_menu"
+            android:id="@+id/camera_menu"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:clickable="true"
-            android:foreground="?attr/selectableItemBackground"
+            android:background="?attr/selectableItemBackground"
             android:gravity="center"
             android:onClick="onButtonClicked"
             android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/plus" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Add"
-                android:textSize="12sp" />
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/camera" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Camera" android:textSize="10sp" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/closet_menu"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:clickable="true"
-            android:foreground="?attr/selectableItemBackground"
+            android:background="?attr/selectableItemBackground"
             android:gravity="center"
             android:onClick="onButtonClicked"
             android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/closet_2" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Closet"
-                android:textSize="12sp" />
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/closet_2" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Closet" android:textSize="10sp" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/profile_menu"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:clickable="true"
-            android:foreground="?attr/selectableItemBackground"
+            android:background="?attr/selectableItemBackground"
             android:gravity="center"
             android:onClick="onButtonClicked"
             android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/user_1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Profile"
-                android:textSize="12sp" />
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/profile" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Profile" android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Floating Delete Button (moved outside bottom bar) -->
+    <!-- Delete Floating Action Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabDelete"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:contentDescription="Delete"
+        android:layout_margin="24dp"
+        android:contentDescription="Delete selected"
         android:src="@drawable/delete"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:visibility="gone"
+        app:backgroundTint="@color/orange_complement"
+        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@color/white" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

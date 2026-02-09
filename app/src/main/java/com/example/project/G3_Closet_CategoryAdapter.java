@@ -11,30 +11,27 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide; // Import Glide
+import com.bumptech.glide.Glide;
 
 import java.util.List;
 
 public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_CategoryAdapter.PhotoHolder> {
 
     private final Context context;
-    private final List<String> imageUrls; // Changed from File to String
+    private final List<String> imageUrls;
     private final OnImageClickListener clickListener;
     private final OnImageLongClickListener longClickListener;
-    private final UrlSelectionChecker selectionChecker; // Renamed interface
+    private final UrlSelectionChecker selectionChecker;
     private final MultiSelectChecker multiSelectChecker;
 
-    // Interface updated to pass String (URL)
     public interface OnImageClickListener {
         void onClick(String url);
     }
 
-    // Interface updated to pass String (URL)
     public interface OnImageLongClickListener {
         void onLongClick(String url);
     }
 
-    // Interface updated to pass String (URL)
     public interface UrlSelectionChecker {
         boolean isSelected(String url);
     }
@@ -45,7 +42,7 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
 
     public G3_Closet_CategoryAdapter(
             Context context,
-            List<String> imageUrls, // Changed from File to String
+            List<String> imageUrls,
             OnImageClickListener clickListener,
             OnImageLongClickListener longClickListener,
             UrlSelectionChecker selectionChecker,
@@ -62,7 +59,8 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
     @NonNull
     @Override
     public PhotoHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.g_closet_item_photo, parent, false);
+        // Updated to use the correct item layout
+        View view = LayoutInflater.from(context).inflate(R.layout.g3_closet_category_item, parent, false);
         return new PhotoHolder(view);
     }
 
@@ -70,20 +68,25 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
     public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
         String url = imageUrls.get(position);
 
-        // Use Glide to load image from URL
         Glide.with(context)
                 .load(url)
-                .placeholder(R.drawable.box_background) // Optional placeholder
+                .placeholder(R.drawable.box_background)
                 .centerCrop()
                 .into(holder.imageView);
 
         holder.itemView.setAnimation(AnimationUtils.loadAnimation(context, R.anim.fade_scale));
 
         boolean selected = selectionChecker.isSelected(url);
-        boolean showCheckbox = multiSelectChecker.isMultiSelectMode();
+        boolean isMultiSelect = multiSelectChecker.isMultiSelectMode();
 
-        holder.checkBox.setVisibility(showCheckbox ? View.VISIBLE : View.GONE);
+        holder.checkBox.setVisibility(isMultiSelect ? View.VISIBLE : View.GONE);
         holder.checkBox.setChecked(selected);
+        
+        // Optional: show overlay when selected in multi-select mode
+        View overlay = holder.itemView.findViewById(R.id.selectionOverlay);
+        if (overlay != null) {
+            overlay.setVisibility(selected ? View.VISIBLE : View.GONE);
+        }
 
         holder.itemView.setOnClickListener(v -> clickListener.onClick(url));
         holder.itemView.setOnLongClickListener(v -> {
