@@ -26,3 +26,4 @@ public class WardrobeActivity extends AppCompatActivity {
         if (intent != null) { startActivity(intent); finish(); }
     }
 }
+//check
