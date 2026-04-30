@@ -18,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
@@ -149,8 +150,9 @@ public class I_ProfileActivity extends AppCompatActivity {
     private void showPopupMenu(View v) {
         PopupMenu popup = new PopupMenu(this, v);
         popup.getMenu().add(0, 1, 0, "Logout");
-        popup.getMenu().add(0, 3, 1, "Version: " + BuildConfig.VERSION_NAME).setEnabled(false);
-        MenuItem deleteItem = popup.getMenu().add(0, 2, 2, "Delete Account");
+        popup.getMenu().add(0, 4, 1, "Theme Settings");
+        popup.getMenu().add(0, 3, 2, "Version: " + BuildConfig.VERSION_NAME).setEnabled(false);
+        MenuItem deleteItem = popup.getMenu().add(0, 2, 3, "Delete Account");
         SpannableString s = new SpannableString(deleteItem.getTitle());
         s.setSpan(new ForegroundColorSpan(Color.RED), 0, s.length(), 0);
         deleteItem.setTitle(s);
@@ -162,10 +164,34 @@ public class I_ProfileActivity extends AppCompatActivity {
                 finish();
             } else if (item.getItemId() == 2) {
                 handleDeleteAccount();
+            } else if (item.getItemId() == 4) {
+                showThemeSelectionDialog();
             }
             return true;
         });
         popup.show();
+    }
+
+    private void showThemeSelectionDialog() {
+        String[] themes = {"Light Mode", "Dark Mode", "System Default"};
+        int currentTheme = ThemeHelper.getSavedTheme(this);
+        int checkedItem = 2; // Default to System
+        if (currentTheme == ThemeHelper.THEME_LIGHT) checkedItem = 0;
+        else if (currentTheme == ThemeHelper.THEME_DARK) checkedItem = 1;
+
+        new AlertDialog.Builder(this)
+                .setTitle("Choose Theme")
+                .setSingleChoiceItems(themes, checkedItem, (dialog, which) -> {
+                    int selectedTheme = ThemeHelper.THEME_SYSTEM;
+                    if (which == 0) selectedTheme = ThemeHelper.THEME_LIGHT;
+                    else if (which == 1) selectedTheme = ThemeHelper.THEME_DARK;
+
+                    ThemeHelper.saveTheme(this, selectedTheme);
+                    ThemeHelper.applyTheme(selectedTheme);
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     @Override

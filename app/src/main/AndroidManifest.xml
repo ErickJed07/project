@@ -66,6 +66,8 @@
         <activity android:name=".I_ProfileSocialActivity" android:exported="true" />
         <activity android:name=".C_SignInProfilePhoto" />
         <activity android:name=".I_ProfileActivity"/>
+        <activity android:name=".WardrobeActivity" android:exported="true" />
+        <activity android:name=".AiActivity" android:exported="true" />
 
         <!-- 📌 Main Launcher -->
         <activity

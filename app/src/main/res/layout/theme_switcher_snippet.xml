@@ -1,0 +1,27 @@
+<!-- Self-contained Theme Switcher Snippet (Paste this into your layout) -->
+<RadioGroup
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/theme_radio_group"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <RadioButton
+        android:id="@+id/radio_light"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Light Mode" />
+
+    <RadioButton
+        android:id="@+id/radio_dark"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Dark Mode" />
+
+    <RadioButton
+        android:id="@+id/radio_system"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="System Default" />
+</RadioGroup>

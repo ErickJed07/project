@@ -45,7 +45,7 @@ public class C_SignInProfilePhoto extends AppCompatActivity {
 
         initCloudinary();
 
-        imgPreview = findViewById(R.id.img_profile_preview);
+        imgPreview = findViewById(R.id.iv_profile_preview);
         btnChoose = findViewById(R.id.btn_choose_photo);
         btnSave = findViewById(R.id.btn_save_photo);
         btnSkip = findViewById(R.id.btn_skip);
@@ -127,27 +127,31 @@ public class C_SignInProfilePhoto extends AppCompatActivity {
         if (user != null) {
             DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference("Users");
 
-            // Create the full user map here
             Map<String, Object> userMap = new HashMap<>();
-            userMap.put("email", email);
-            userMap.put("username", username);
+            userMap.put("email", email != null ? email : user.getEmail()); // Fallback to Firebase Auth email
+            userMap.put("username", username != null ? username : "NewUser");
             userMap.put("profilePhoto", photoUrl);
+            userMap.put("uid", user.getUid()); // Good practice to store UID inside the object too
             userMap.put("Fans", 0);
             userMap.put("Models", 0);
-            userMap.put("FansList", new HashMap<>());
-            userMap.put("ModelsList", new HashMap<>());
             userMap.put("posts", 0);
 
-            // Save to DB
+            // Note: Firebase will NOT save empty HashMaps.
+            // These fields will only appear once data is added to them.
+
             databaseRef.child(user.getUid()).setValue(userMap)
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             Toast.makeText(C_SignInProfilePhoto.this, "Profile Saved!", Toast.LENGTH_SHORT).show();
                             navigateToLogin();
                         } else {
-                            Toast.makeText(C_SignInProfilePhoto.this, "Database Error: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                            // This will trigger if Rules are wrong or Connection is lost
+                            Toast.makeText(C_SignInProfilePhoto.this, "Error: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                         }
                     });
+        } else {
+            Toast.makeText(this, "Session expired. Please sign in again.", Toast.LENGTH_SHORT).show();
+            navigateToLogin();
         }
     }
 

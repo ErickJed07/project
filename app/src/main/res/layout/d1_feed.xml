@@ -117,7 +117,7 @@
         android:elevation="4dp"
         android:orientation="horizontal"
         android:padding="4dp"
-        android:weightSum="5"
+        android:weightSum="7"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -147,12 +147,38 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Wardrobe -->
+        <LinearLayout
+            android:id="@+id/wardrobe_menu"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:onClick="onButtonClicked"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/hanger" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wardrobe"
+                android:textColor="#040000"
+                android:textSize="12sp" />
+        </LinearLayout>
+
         <!-- Calendar -->
         <LinearLayout
             android:id="@+id/calendar_menu"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:background="#FF0000"
             android:clickable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
@@ -172,12 +198,13 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Add -->
+        <!-- Camera -->
         <LinearLayout
             android:id="@+id/camera_menu"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:background="#FF0000"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
@@ -194,6 +221,31 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Camera"
+                android:textColor="#040000"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- AI -->
+        <LinearLayout
+            android:id="@+id/ai_menu"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:onClick="onButtonClicked"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/magic" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI"
                 android:textColor="#040000"
                 android:textSize="12sp" />
         </LinearLayout>

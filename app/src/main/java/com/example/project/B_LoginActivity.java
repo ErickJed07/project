@@ -37,15 +37,15 @@ public class B_LoginActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
 
         // Connect the boxes where you type email and password
-        emailInput = findViewById(R.id.email_info);
-        passwordInput = findViewById(R.id.pass_info);
+        emailInput = findViewById(R.id.et_email_input);
+        passwordInput = findViewById(R.id.et_password_input);
 
         // Connect the labels for email and password
-        emailLabel = findViewById(R.id.email);
-        passwordLabel = findViewById(R.id.pass);
+        emailLabel = findViewById(R.id.tv_email_label);
+        passwordLabel = findViewById(R.id.tv_password_label);
 
         // Connect the login button
-        Button loginButton = findViewById(R.id.loginbutton);
+        Button loginButton = findViewById(R.id.btn_login);
 
         // What happens when someone clicks Login
         loginButton.setOnClickListener(v -> {

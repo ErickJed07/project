@@ -36,13 +36,16 @@ public class A_HomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Apply saved theme before onCreate
+        ThemeHelper.applyTheme(ThemeHelper.getSavedTheme(this));
+
         super.onCreate(savedInstanceState);
         // This tells the app to show the design called "home"
         setContentView(R.layout.a_home);
 
         // Connect the buttons in code to the buttons on the screen
-        loginButton = findViewById(R.id.loginbutton);
-        signInButton = findViewById(R.id.signinbutton);
+        loginButton = findViewById(R.id.btn_login);
+        signInButton = findViewById(R.id.btn_sign_in);
 
         // When someone clicks the Login button
         loginButton.setOnClickListener(new View.OnClickListener() {
@@ -64,7 +67,7 @@ public class A_HomeActivity extends AppCompatActivity {
             }
         });
 
-        Button adminButton = findViewById(R.id.admin);
+        Button adminButton = findViewById(R.id.btn_admin_bypass);
 
         // 3. Set the click listener
         adminButton.setOnClickListener(v -> {

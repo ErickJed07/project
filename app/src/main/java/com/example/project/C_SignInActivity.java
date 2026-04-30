@@ -30,17 +30,17 @@ public class C_SignInActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        emailInput = findViewById(R.id.email_info);
-        usernameInput = findViewById(R.id.create_user_info);
-        passwordInput = findViewById(R.id.create_pass_info);
-        confirmPasswordInput = findViewById(R.id.confirm_pass_info);
+        emailInput = findViewById(R.id.et_email_input);
+        usernameInput = findViewById(R.id.et_username_input);
+        passwordInput = findViewById(R.id.et_password_input);
+        confirmPasswordInput = findViewById(R.id.et_confirm_password_input);
 
-        emailLabel = findViewById(R.id.email);
-        usernameLabel = findViewById(R.id.create_user);
-        passwordLabel = findViewById(R.id.create_pass);
-        confirmPasswordLabel = findViewById(R.id.confirm_pass);
+        emailLabel = findViewById(R.id.tv_email_label);
+        usernameLabel = findViewById(R.id.tv_username_label);
+        passwordLabel = findViewById(R.id.tv_password_label);
+        confirmPasswordLabel = findViewById(R.id.tv_confirm_password_label);
 
-        Button signinButton = findViewById(R.id.signinbutton);
+        Button signinButton = findViewById(R.id.btn_sign_in);
 
         signinButton.setOnClickListener(v -> {
             String email = emailInput.getText().toString().trim();
@@ -90,29 +90,6 @@ public class C_SignInActivity extends AppCompatActivity {
         });
     }
 
-    private void saveBasicUserToFirebase(String email, String username) {
-        String uid = mAuth.getCurrentUser().getUid();
-        DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference("Users");
-
-        Map<String, Object> userMap = new HashMap<>();
-        userMap.put("email", email);
-        userMap.put("username", username);
-        userMap.put("profilePhoto", "default"); // Placeholder until next screen
-        userMap.put("Fans", 0);
-        userMap.put("Models", 0);
-        userMap.put("posts", 0);
-
-        databaseRef.child(uid).setValue(userMap)
-                .addOnCompleteListener(dbTask -> {
-                    if (dbTask.isSuccessful()) {
-                        Toast.makeText(this, "Account created!", Toast.LENGTH_SHORT).show();
-                        // --- GO TO PROFILE SETUP SCREEN ---
-                        Intent intent = new Intent(C_SignInActivity.this, C_SignInProfilePhoto.class);
-                        startActivity(intent);
-                        finish();
-                    }
-                });
-    }
 
     private void resetColors() {
         emailLabel.setTextColor(Color.BLACK);
