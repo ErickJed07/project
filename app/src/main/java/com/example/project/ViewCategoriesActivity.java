@@ -11,7 +11,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -43,7 +42,7 @@ public class ViewCategoriesActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_view_categories);
+        setContentView(R.layout.wardrobe_categories);
 
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference("Users");
@@ -57,6 +56,10 @@ public class ViewCategoriesActivity extends AppCompatActivity {
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
         
         findViewById(R.id.iv_add_category).setOnClickListener(v -> showAddCategoryDialog());
+
+        findViewById(R.id.camera_menu).setOnClickListener(v -> {
+            startActivity(new Intent(this, AddItemActivity.class));
+        });
 
         EditText etSearch = findViewById(R.id.et_search);
         etSearch.addTextChangedListener(new TextWatcher() {

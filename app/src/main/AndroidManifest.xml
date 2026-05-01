@@ -69,6 +69,7 @@
         <activity android:name=".WardrobeActivity" android:exported="true" />
         <activity android:name=".AiActivity" android:exported="true" />
         <activity android:name=".ViewCategoriesActivity" android:exported="true" />
+        <activity android:name=".AddItemActivity" android:exported="true" />
 
         <!-- 📌 Main Launcher -->
         <activity

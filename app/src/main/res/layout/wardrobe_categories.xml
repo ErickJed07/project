@@ -179,7 +179,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/camera"
+                    android:src="@drawable/ic_check_badge"
                     app:tint="@color/white" />
             </com.google.android.material.card.MaterialCardView>
         </FrameLayout>
