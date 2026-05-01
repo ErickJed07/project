@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="wardrobe_bg">#F8F9FE</color>
+    <color name="wardrobe_text_primary">#1A1C1E</color>
+    <color name="wardrobe_text_secondary">#74777F</color>
+    <color name="wardrobe_accent_teal">#E0F7F1</color>
+    <color name="wardrobe_teal_icon">#4DB6AC</color>
+
+    <!-- Quick Stats Card Colors -->
+    <color name="stat_blue_bg">#E3F2FD</color>
+    <color name="stat_green_bg">#E8F5E9</color>
+    <color name="stat_purple_bg">#F3E5F5</color>
+
+    <!-- Category Card Colors -->
+    <color name="cat_blue_bg">#EBF5FF</color>
+    <color name="cat_pink_bg">#FFF0F5</color>
+    <color name="cat_teal_bg">#F0FFFF</color>
+
+    <!-- AI Styling Gradient -->
+    <color name="ai_gradient_start">#6200EE</color>
+    <color name="ai_gradient_end">#03DAC5</color>
+
+    <!-- Navigation -->
+    <color name="nav_active_teal">#00BFA5</color>
+    <color name="nav_inactive">#90A4AE</color>
+</resources>
