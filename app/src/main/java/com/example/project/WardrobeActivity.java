@@ -22,10 +22,6 @@ public class WardrobeActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        findViewById(R.id.fab_add).setOnClickListener(v -> {
-            Intent intent = new Intent(WardrobeActivity.this, G1_ClosetActivity.class);
-            startActivity(intent);
-        });
     }
 
     public void onButtonClicked(View view) {

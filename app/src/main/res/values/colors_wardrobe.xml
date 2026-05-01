@@ -15,6 +15,9 @@
     <color name="cat_blue_bg">#EBF5FF</color>
     <color name="cat_pink_bg">#FFF0F5</color>
     <color name="cat_teal_bg">#F0FFFF</color>
+    <color name="cat_yellow_bg">#FFF9E1</color>
+    <color name="cat_purple_bg">#F5F3FF</color>
+    <color name="cat_green_bg">#F0FFF4</color>
 
     <!-- AI Styling Gradient -->
     <color name="ai_gradient_start">#6200EE</color>

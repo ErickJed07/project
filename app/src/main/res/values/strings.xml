@@ -4,4 +4,14 @@
     <string name="bottoms">Bottoms</string>
     <string name="dresses">Dresses</string>
     <string name="generate_outfit">Generate Outfit</string>
+    <string name="no_outfits_scheduled">No Outfits Scheduled</string>
+    <string name="plan_your_looks">Plan your looks for the week ahead</string>
+    <string name="schedule_now">Schedule Now</string>
+    <string name="stat_total_items_val">124</string>
+    <string name="stat_last_washed_val">Yesterday</string>
+    <string name="stat_cleaned_desc">2 items cleaned</string>
+    <string name="stat_unused_val">12</string>
+    <string name="cat_tops_val">24</string>
+    <string name="cat_bottoms_val">18</string>
+    <string name="cat_acc_val">12</string>
 </resources>
