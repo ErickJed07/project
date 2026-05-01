@@ -11,6 +11,21 @@ public class WardrobeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wardrobe);
+
+        findViewById(R.id.tv_view_categories).setOnClickListener(v -> {
+            Intent intent = new Intent(WardrobeActivity.this, ViewCategoriesActivity.class);
+            startActivity(intent);
+        });
+
+        findViewById(R.id.tv_view_calendar).setOnClickListener(v -> {
+            Intent intent = new Intent(WardrobeActivity.this, E_CalendarActivity.class);
+            startActivity(intent);
+        });
+
+        findViewById(R.id.fab_add).setOnClickListener(v -> {
+            Intent intent = new Intent(WardrobeActivity.this, G1_ClosetActivity.class);
+            startActivity(intent);
+        });
     }
 
     public void onButtonClicked(View view) {

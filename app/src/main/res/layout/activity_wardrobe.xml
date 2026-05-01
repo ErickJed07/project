@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/wardrobe_bg">
+    android:background="@color/wardrobe_bg"
+    android:fitsSystemWindows="true">
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/nsv_content"
@@ -243,6 +244,17 @@
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/hsv_stats" />
+
+            <TextView
+                android:id="@+id/tv_view_categories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="View Categories"
+                android:textColor="#6200EE"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="@id/tv_categories_label"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/tv_categories_label" />
 
             <HorizontalScrollView
                 android:id="@+id/hsv_categories"
@@ -565,10 +577,12 @@
 
         <!-- Wardrobe -->
         <LinearLayout
+            android:id="@+id/wardrobe_menu"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
+            android:onClick="onButtonClicked"
             android:orientation="vertical">
             <ImageView
                 android:layout_width="24dp"
@@ -585,10 +599,12 @@
 
         <!-- AI -->
         <LinearLayout
+            android:id="@+id/ai_menu"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
+            android:onClick="onButtonClicked"
             android:orientation="vertical">
             <ImageView
                 android:layout_width="24dp"
@@ -605,10 +621,12 @@
 
         <!-- Camera -->
         <LinearLayout
+            android:id="@+id/camera_menu"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
+            android:onClick="onButtonClicked"
             android:orientation="vertical">
             <ImageView
                 android:layout_width="24dp"
@@ -625,10 +643,12 @@
 
         <!-- Calendar -->
         <LinearLayout
+            android:id="@+id/calendar_menu"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
+            android:onClick="onButtonClicked"
             android:orientation="vertical">
             <ImageView
                 android:layout_width="24dp"
