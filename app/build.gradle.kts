@@ -111,6 +111,7 @@ dependencies {
     implementation("com.squareup.picasso:picasso:2.8")
 
     implementation("com.cloudinary:cloudinary-android:2.3.1")
+    implementation("com.github.yalantis:ucrop:2.2.8")
 
     // UI extras
     implementation(libs.dotsindicator)

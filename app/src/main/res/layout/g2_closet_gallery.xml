@@ -5,7 +5,7 @@
     android:id="@+id/closet_inside"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
+    android:background="#FFFFFF"
     android:fitsSystemWindows="true">
 
     <!-- Top Bar -->
@@ -13,8 +13,6 @@
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:background="@color/white"
-        android:elevation="4dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
@@ -23,6 +21,7 @@
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Go Back"
             android:padding="12dp"
             android:src="@drawable/arrow"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -34,8 +33,8 @@
             android:id="@+id/categoryTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/archivo_black"
-            android:text="Category"
+            android:fontFamily="@font/inter_extrabold"
+            android:text="Tops"
             android:textColor="@color/black"
             android:textSize="20sp"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -49,13 +48,71 @@
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Sort and Filter"
             android:padding="12dp"
-            android:src="@android:drawable/ic_menu_sort_by_size"
+            android:src="@drawable/ic_filter_list"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:tint="@color/black" />
 
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Filter Bar -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/filterBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="16dp"
+        app:layout_constraintTop_toBottomOf="@id/topBar">
+
+        <TextView
+            android:id="@+id/itemsFoundText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="24 Items found"
+            android:textColor="#74777F"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/btnLatest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_pill"
+                android:backgroundTint="#F0F0F0"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="LATEST"
+                android:textColor="#74777F"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btnFrequent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_pill"
+                android:backgroundTint="#F0F0F0"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="FREQUENT"
+                android:textColor="#74777F"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Gallery Container -->
@@ -64,86 +121,159 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:padding="4dp"
-        app:layout_constraintBottom_toTopOf="@id/bottomBar"
-        app:layout_constraintTop_toBottomOf="@id/topBar" />
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavContainer"
+        app:layout_constraintTop_toBottomOf="@id/filterBar" />
 
-    <!-- Bottom Navigation Bar -->
-    <LinearLayout
-        android:id="@+id/bottomBar"
+    <!-- Bottom Navigation -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/bottomNavContainer"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:background="@color/white"
-        android:elevation="8dp"
-        android:orientation="horizontal"
-        android:weightSum="5"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <LinearLayout
-            android:id="@+id/home_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center"
-            android:onClick="onButtonClicked"
-            android:orientation="vertical">
-            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/home" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Home" android:textSize="10sp" />
-        </LinearLayout>
+        <View
+            android:id="@+id/navDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F0F0F0"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <LinearLayout
-            android:id="@+id/calendar_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center"
-            android:onClick="onButtonClicked"
-            android:orientation="vertical">
-            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/calendar_1" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Calendar" android:textSize="10sp" />
+            android:id="@+id/bottomBar"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:background="@color/white"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:weightSum="5"
+            app:layout_constraintTop_toBottomOf="@id/navDivider">
+
+            <LinearLayout
+                android:id="@+id/closet_menu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:onClick="onButtonClicked"
+                android:orientation="vertical">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/hanger"
+                    app:tint="@color/pure_color" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Wardrobe"
+                    android:textColor="@color/pure_color"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/ai_menu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:onClick="onButtonClicked"
+                android:orientation="vertical">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/magic"
+                    app:tint="#74777F" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="AI Style"
+                    android:textColor="#74777F"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Placeholder for FAB center -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <LinearLayout
+                android:id="@+id/calendar_menu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:onClick="onButtonClicked"
+                android:orientation="vertical">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/calendar_1"
+                    app:tint="#74777F" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Calendar"
+                    android:textColor="#74777F"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/profile_menu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:onClick="onButtonClicked"
+                android:orientation="vertical">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/profile"
+                    app:tint="#74777F" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Profile"
+                    android:textColor="#74777F"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
         </LinearLayout>
 
-        <LinearLayout
+        <!-- Floating Camera Button -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/camera_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="Camera"
             android:onClick="onButtonClicked"
-            android:orientation="vertical">
-            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/camera" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Camera" android:textSize="10sp" />
-        </LinearLayout>
+            android:src="@drawable/camera"
+            app:backgroundTint="@color/pure_color"
+            app:elevation="8dp"
+            app:fabSize="normal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/white" />
 
-        <LinearLayout
-            android:id="@+id/closet_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center"
-            android:onClick="onButtonClicked"
-            android:orientation="vertical">
-            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/closet_2" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Closet" android:textSize="10sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/profile_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center"
-            android:onClick="onButtonClicked"
-            android:orientation="vertical">
-            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/profile" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Profile" android:textSize="10sp" />
-        </LinearLayout>
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Delete Floating Action Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -155,7 +285,7 @@
         android:src="@drawable/delete"
         android:visibility="gone"
         app:backgroundTint="@color/orange_complement"
-        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:tint="@color/white" />
 

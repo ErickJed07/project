@@ -30,6 +30,16 @@ public class WardrobeCategoryAdapter extends RecyclerView.Adapter<WardrobeCatego
         this.categoryListFull = new ArrayList<>(categoryList);
     }
 
+    public interface OnCategoryLongClickListener {
+        void onCategoryLongClick(ViewCategoriesActivity.CategoryModel category);
+    }
+
+    private OnCategoryLongClickListener longClickListener;
+
+    public void setOnCategoryLongClickListener(OnCategoryLongClickListener listener) {
+        this.longClickListener = listener;
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -53,6 +63,17 @@ public class WardrobeCategoryAdapter extends RecyclerView.Adapter<WardrobeCatego
             intent.putExtra("CATEGORY_NAME", category.name);
             intent.putExtra("CATEGORY_ID", category.id);
             context.startActivity(intent);
+        });
+
+        holder.itemView.setOnLongClickListener(v -> {
+            if ("all_clothes".equals(category.id)) {
+                return true; // Consume long click for All Clothes to prevent deletion
+            }
+            if (longClickListener != null) {
+                longClickListener.onCategoryLongClick(category);
+                return true;
+            }
+            return false;
         });
     }
 
@@ -104,6 +125,7 @@ public class WardrobeCategoryAdapter extends RecyclerView.Adapter<WardrobeCatego
 
     private int getCategoryIcon(String categoryName) {
         switch (categoryName) {
+            case "All Clothes": return R.drawable.hanger;
             case "PreOutfit": return R.drawable.preoutfit;
             case "Hat": return R.drawable.hat;
             case "Accessories": return R.drawable.accesories;

@@ -38,7 +38,7 @@
         android:layout_marginEnd="20dp"
         android:text="New Clothing"
         android:textColor="#1A1C1E"
-        android:textSize="20sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@id/cv_close"
         app:layout_constraintEnd_toEndOf="parent"
@@ -62,114 +62,209 @@
             android:paddingHorizontal="20dp">
 
             <!-- Item Photo Section -->
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ITEM PHOTO"
-                android:textColor="#1A1C1E"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="163dp"
-                android:layout_marginTop="12dp"
-                android:baselineAligned="false"
                 android:orientation="horizontal">
-
-                <LinearLayout
-                    android:id="@+id/ll_take_photo"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginEnd="10dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_dashed_border"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:contentDescription="Take Photo Icon"
-                        android:src="@drawable/camera"
-                        app:tint="#74777F" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Take Photo"
-                        android:textColor="#74777F"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/ll_from_gallery"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_dashed_border"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:orientation="vertical">
-
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:contentDescription="From Gallery Icon"
-                        android:src="@drawable/gallery"
-                        app:tint="#74777F" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="From Gallery"
-                        android:textColor="#74777F"
-                        android:textSize="14sp" />
-                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ITEM PHOTO"
+                    android:textColor="#1A1C1E"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tv_photo_asterisk"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" *"
+                    android:textColor="#FF0000"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Item Name -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="ITEM NAME"
-                android:textColor="#1A1C1E"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/et_item_name"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input_field"
-                android:hint="e.g. Classic Oversized Hoodie"
-                android:importantForAutofill="no"
-                android:inputType="textCapWords"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:textColor="#1A1C1E"
-                android:textColorHint="#74777F"
-                android:textSize="15sp" />
+                android:layout_height="156dp"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:id="@+id/ll_photo_options"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/ll_take_photo"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="#F3F4F9"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#D1D5DB"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <ImageView
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:contentDescription="Take Photo Icon"
+                                android:src="@drawable/camera"
+                                app:tint="#6C28D9" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="Take Photo"
+                                android:textColor="#1A1C1E"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/ll_from_gallery"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="#F3F4F9"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#D1D5DB"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <ImageView
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:contentDescription="From Gallery Icon"
+                                android:src="@drawable/gallery"
+                                app:tint="#6C28D9" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="From Gallery"
+                                android:textColor="#1A1C1E"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cv_photo_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="#F3F4F9"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#D1D5DB"
+                    app:strokeWidth="1dp">
+
+                    <ImageView
+                        android:id="@+id/iv_photo_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:scaleType="centerCrop" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="12dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cv_crop_photo"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:layout_marginEnd="8dp"
+                            app:cardBackgroundColor="#80000000"
+                            app:cardCornerRadius="10dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="Crop photo"
+                                android:src="@drawable/crop"
+                                app:tint="@color/white" />
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cv_remove_photo"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            app:cardBackgroundColor="#80000000"
+                            app:cardCornerRadius="10dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="Remove photo"
+                                android:src="@drawable/xbutton"
+                                app:tint="@color/white" />
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
 
             <!-- Category -->
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="CATEGORY"
-                android:textColor="#1A1C1E"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CATEGORY"
+                    android:textColor="#1A1C1E"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tv_category_asterisk"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" *"
+                    android:textColor="#FF0000"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <RelativeLayout
+                android:id="@+id/rl_category_dropdown"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="8dp"
@@ -185,7 +280,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:text="Select category"
-                    android:textColor="#1A1C1E"
+                    android:textColor="#74777F"
                     android:textSize="15sp" />
 
                 <ImageView
@@ -212,13 +307,27 @@
                     android:layout_weight="1"
                     android:orientation="vertical">
 
-                    <TextView
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="SIZE"
-                        android:textColor="#1A1C1E"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SIZE"
+                            android:textColor="#1A1C1E"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:id="@+id/tv_size_asterisk"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" *"
+                            android:textColor="#FF0000"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
+                    </LinearLayout>
 
                     <RelativeLayout
                         android:id="@+id/rl_size_dropdown"
@@ -262,15 +371,30 @@
                     android:layout_weight="1"
                     android:orientation="vertical">
 
-                    <TextView
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="COLOR"
-                        android:textColor="#1A1C1E"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="COLOR"
+                            android:textColor="#1A1C1E"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:id="@+id/tv_color_asterisk"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" *"
+                            android:textColor="#FF0000"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
+                    </LinearLayout>
 
                     <RelativeLayout
+                        android:id="@+id/rl_color_selection"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
                         android:layout_marginTop="8dp"
@@ -281,22 +405,27 @@
                         android:paddingEnd="12dp">
 
                         <TextView
+                            android:id="@+id/tv_selected_color"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_centerVertical="true"
+                            android:layout_toStartOf="@+id/ll_selected_colors_container"
+                            android:layout_alignParentStart="true"
+                            android:layout_marginEnd="8dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
                             android:text="Select color"
                             android:textColor="#74777F"
                             android:textSize="15sp" />
 
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="24dp"
+                        <LinearLayout
+                            android:id="@+id/ll_selected_colors_container"
+                            android:layout_width="wrap_content"
                             android:layout_height="24dp"
                             android:layout_alignParentEnd="true"
                             android:layout_centerVertical="true"
-                            app:cardBackgroundColor="#6C28D9"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="0dp" />
+                            android:orientation="horizontal"
+                            android:gravity="end" />
                     </RelativeLayout>
                 </LinearLayout>
             </LinearLayout>
@@ -326,30 +455,55 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                app:chipSpacingHorizontal="8dp">
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="8dp">
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Spring" />
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Summer" />
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Fall" />
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Winter" />
             </com.google.android.material.chip.ChipGroup>
 
@@ -368,57 +522,84 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                app:chipSpacingHorizontal="8dp">
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="8dp">
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Casual" />
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Formal" />
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Work" />
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Party" />
 
                 <com.google.android.material.chip.Chip
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="32dp"
+                    android:textColor="@color/chip_text_color"
+                    app:chipBackgroundColor="@color/chip_background_color"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp"
+                    app:ensureMinTouchTargetSize="false"
                     android:text="Sport" />
 
-                <com.google.android.material.card.MaterialCardView
+                <com.google.android.material.chip.Chip
                     android:id="@+id/chip_add_occasion"
-                    android:layout_width="56dp"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="48dp"
                     android:layout_height="32dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    app:cardBackgroundColor="#F3F4F9"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="0dp">
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="Add Occasion"
-                        android:src="@drawable/plus"
-                        app:tint="#6C28D9" />
-                </com.google.android.material.card.MaterialCardView>
+                    app:chipBackgroundColor="#F3F4F9"
+                    app:chipCornerRadius="16dp"
+                    app:chipIcon="@drawable/plus"
+                    app:chipIconSize="18dp"
+                    app:chipIconTint="#6C28D9"
+                    app:chipMinHeight="32dp"
+                    app:chipStrokeWidth="0dp"
+                    app:ensureMinTouchTargetSize="false"
+                    app:iconEndPadding="0dp"
+                    app:iconStartPadding="12dp" />
             </com.google.android.material.chip.ChipGroup>
         </LinearLayout>
     </ScrollView>
@@ -426,7 +607,7 @@
     <Button
         android:id="@+id/btn_save"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="56dp"
         android:layout_marginHorizontal="20dp"
         android:layout_marginBottom="20dp"
         android:backgroundTint="#6C28D9"

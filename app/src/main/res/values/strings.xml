@@ -14,4 +14,24 @@
     <string name="cat_tops_val">24</string>
     <string name="cat_bottoms_val">18</string>
     <string name="cat_acc_val">12</string>
+    <string name="items_found_format">%d Items found</string>
+    <string name="latest">LATEST</string>
+    <string name="frequent">FREQUENT</string>
+    <string name="more">More</string>
+    <string name="favorite">Favorite</string>
+    <string name="classic_hoodie">Classic Hoodie</string>
+    <string name="used">Used</string>
+    <string name="size">SIZE</string>
+    <string name="size_l">L</string>
+    <string name="color">COLOR</string>
+    <string name="tags">TAGS</string>
+    <string name="streetwear">Streetwear</string>
+    <string name="minimalist">Minimalist</string>
+    <string name="essential">Essential</string>
+    <string name="winter">Winter</string>
+    <string name="calendar">Calendar</string>
+    <string name="last_worn">LAST WORN</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="color_purple">Purple</string>
 </resources>

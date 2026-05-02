@@ -37,6 +37,9 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
     // CHANGED: Map to link URL -> Firebase Key (needed for deletion)
     private final Map<String, String> urlToKeyMap = new HashMap<>();
 
+    // NEW: Map to link URL -> Category ID (needed for deletion in All Clothes)
+    private final Map<String, String> urlToCategoryMap = new HashMap<>();
+
     // CHANGED: Selection set now stores URLs
     private final Set<String> selectedUrls = new HashSet<>();
 
@@ -99,10 +102,16 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         // NEW: Users -> uid -> categories -> [id]
         // ---------------------------------------------------------
         if (categoryId != null) {
-            categoryRef = FirebaseDatabase.getInstance().getReference("Users")
-                    .child(uid)
-                    .child("categories") // Looks inside the specific user's categories
-                    .child(categoryId);  // Looks inside the specific category (e.g., "Tops")
+            if ("all_clothes".equals(categoryId)) {
+                categoryRef = FirebaseDatabase.getInstance().getReference("Users")
+                        .child(uid)
+                        .child("categories");
+            } else {
+                categoryRef = FirebaseDatabase.getInstance().getReference("Users")
+                        .child(uid)
+                        .child("categories") // Looks inside the specific user's categories
+                        .child(categoryId);  // Looks inside the specific category (e.g., "Tops")
+            }
         } else {
             Toast.makeText(this, "Error: Category ID missing", Toast.LENGTH_SHORT).show();
             finish();
@@ -115,7 +124,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         galleryRecyclerView = findViewById(R.id.galleryRecyclerView);
 
         androidx.recyclerview.widget.GridLayoutManager layoutManager =
-                new androidx.recyclerview.widget.GridLayoutManager(this, 3); // 3 columns
+                new androidx.recyclerview.widget.GridLayoutManager(this, 2); // Changed from 3 to 2 columns
         galleryRecyclerView.setLayoutManager(layoutManager);
 
         // 3. Initialize Adapter
@@ -130,12 +139,23 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
         galleryRecyclerView.setAdapter(adapter);
         // 4. Load Images from Firebase
-        loadImagesFromFirebase();
+        if ("all_clothes".equals(categoryId)) {
+            loadAllImagesFromFirebase();
+        } else {
+            loadImagesFromFirebase();
+        }
 
         // 5. Delete Logic
         deleteFab.setOnClickListener(v -> {
             deleteSelectedImages();
         });
+    }
+
+    private void updateItemsFoundCount() {
+        TextView itemsFoundText = findViewById(R.id.itemsFoundText);
+        if (itemsFoundText != null) {
+            itemsFoundText.setText(getString(R.string.items_found_format, imageUrlList.size()));
+        }
     }
 
     private void loadImagesFromFirebase() {
@@ -144,6 +164,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 imageUrlList.clear();
                 urlToKeyMap.clear();
+                urlToCategoryMap.clear();
 
                 for (DataSnapshot photoSnap : snapshot.getChildren()) {
                     String key = photoSnap.getKey();
@@ -158,12 +179,53 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                     if (url != null && !url.isEmpty()) {
                         imageUrlList.add(url);
                         urlToKeyMap.put(url, key);
+                        urlToCategoryMap.put(url, categoryId);
                     }
                 }
 
                 // --- NEW: Apply Sort immediately after loading ---
                 sortImages();
+                updateItemsFoundCount();
                 // Note: sortImages calls notifyDataSetChanged, so we don't need to call it twice
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+            }
+        });
+    }
+
+    private void loadAllImagesFromFirebase() {
+        categoryRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                imageUrlList.clear();
+                urlToKeyMap.clear();
+                urlToCategoryMap.clear();
+
+                for (DataSnapshot categorySnap : snapshot.getChildren()) {
+                    String catId = categorySnap.getKey();
+                    if (categorySnap.hasChild("photos")) {
+                        for (DataSnapshot photoSnap : categorySnap.child("photos").getChildren()) {
+                            String key = photoSnap.getKey();
+                            String url = null;
+
+                            if (photoSnap.hasChild("imageUrl")) {
+                                url = photoSnap.child("imageUrl").getValue(String.class);
+                            } else if (photoSnap.hasChild("url")) {
+                                url = photoSnap.child("url").getValue(String.class);
+                            }
+
+                            if (url != null && !url.isEmpty()) {
+                                imageUrlList.add(url);
+                                urlToKeyMap.put(url, key);
+                                urlToCategoryMap.put(url, catId);
+                            }
+                        }
+                    }
+                }
+                sortImages();
+                updateItemsFoundCount();
             }
 
             @Override
@@ -182,6 +244,8 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             // Pass list of URLs to the viewer
             Intent intent = new Intent(this, G4_Closet_Category_PhotoViewerActivity.class);
             intent.putStringArrayListExtra("IMAGES", (ArrayList<String>) imageUrlList);
+            intent.putExtra("CATEGORY_ID", categoryId);
+            intent.putExtra("UID", uid);
 
             // Find index of clicked URL
             int index = imageUrlList.indexOf(url);
@@ -244,10 +308,16 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
         for (String url : urlsToDelete) {
             String key = urlToKeyMap.get(url);
+            String catId = urlToCategoryMap.get(url);
 
             // 1. DELETE FROM FIREBASE
-            if (key != null) {
-                categoryRef.child("photos").child(key).removeValue();
+            if (key != null && catId != null) {
+                FirebaseDatabase.getInstance().getReference("Users")
+                        .child(uid)
+                        .child("categories")
+                        .child(catId)
+                        .child("photos")
+                        .child(key).removeValue();
             }
 
             // 2. DELETE FROM CLOUDINARY (Run in background thread)

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bottom_sheet_background"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:background="#E0E0E0" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="Select Color"
+        android:textColor="#1A1C1E"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tl_color_tabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:tabIndicatorColor="#6C28D9"
+        app:tabSelectedTextColor="#6C28D9"
+        app:tabTextColor="#74777F" />
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/vp_color_pager"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/btn_apply_colors"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#6C28D9"
+        android:text="Apply"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:cornerRadius="28dp" />
+
+</LinearLayout>

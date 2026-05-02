@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -51,6 +52,9 @@ public class ViewCategoriesActivity extends AppCompatActivity {
         rvCategories.setLayoutManager(new GridLayoutManager(this, 2));
 
         adapter = new WardrobeCategoryAdapter(this, categoryList);
+        adapter.setOnCategoryLongClickListener(category -> {
+            showDeleteConfirmation(category);
+        });
         rvCategories.setAdapter(adapter);
 
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
@@ -86,6 +90,7 @@ public class ViewCategoriesActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 categoryList.clear();
+                int totalItems = 0;
                 for (DataSnapshot child : snapshot.getChildren()) {
                     String id = child.getKey();
                     String name = child.child("name").getValue(String.class);
@@ -96,10 +101,15 @@ public class ViewCategoriesActivity extends AppCompatActivity {
                     long itemCount = 0;
                     if (child.hasChild("photos")) {
                         itemCount = child.child("photos").getChildrenCount();
+                        totalItems += itemCount;
                     }
                     
                     categoryList.add(new CategoryModel(id, name, icon, (int) itemCount));
                 }
+                
+                // Inject "All Clothes" at the top
+                categoryList.add(0, new CategoryModel("all_clothes", "All Clothes", "All Clothes", totalItems));
+
                 adapter.updateList(new ArrayList<>(categoryList));
             }
 
@@ -185,74 +195,49 @@ public class ViewCategoriesActivity extends AppCompatActivity {
         });
     }
 
-    private static class IconItem {
-        String name;
-        int resId;
+    private void showDeleteConfirmation(CategoryModel category) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_delete, null);
+        builder.setView(dialogView);
 
-        IconItem(String name, int resId) {
-            this.name = name;
-            this.resId = resId;
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
+
+        TextView tvTitle = dialogView.findViewById(R.id.tv_dialog_title);
+        TextView tvMessage = dialogView.findViewById(R.id.tv_dialog_message);
+        View btnDelete = dialogView.findViewById(R.id.btn_delete);
+        View btnCancel = dialogView.findViewById(R.id.btn_cancel);
+
+        tvTitle.setText("Delete Category?");
+        tvMessage.setText("Are you sure you want to delete '" + category.name + "' and all its items? This action cannot be undone.");
+
+        btnDelete.setOnClickListener(v -> {
+            deleteCategory(category);
+            dialog.dismiss();
+        });
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
-    private interface OnIconSelectedListener {
-        void onIconSelected(String iconName);
-    }
-
-    private class IconSelectionAdapter extends RecyclerView.Adapter<IconSelectionAdapter.ViewHolder> {
-        private List<IconItem> icons;
-        private int selectedPosition = 0;
-        private OnIconSelectedListener listener;
-
-        IconSelectionAdapter(List<IconItem> icons, OnIconSelectedListener listener) {
-            this.icons = icons;
-            this.listener = listener;
+    private void deleteCategory(CategoryModel category) {
+        if (mAuth.getCurrentUser() == null) return;
+        if ("all_clothes".equals(category.id)) {
+            Toast.makeText(this, "Cannot delete 'All Clothes' category", Toast.LENGTH_SHORT).show();
+            return;
         }
-
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_icon_selection, parent, false);
-            return new ViewHolder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            IconItem item = icons.get(position);
-            holder.ivIcon.setImageResource(item.resId);
-
-            if (selectedPosition == position) {
-                holder.card.setStrokeWidth(4);
-                holder.card.setCardBackgroundColor(getResources().getColor(R.color.wardrobe_accent_teal));
-            } else {
-                holder.card.setStrokeWidth(0);
-                holder.card.setCardBackgroundColor(Color.WHITE);
-            }
-
-            holder.itemView.setOnClickListener(v -> {
-                int previous = selectedPosition;
-                selectedPosition = holder.getAdapterPosition();
-                notifyItemChanged(previous);
-                notifyItemChanged(selectedPosition);
-                listener.onIconSelected(item.name);
-            });
-        }
-
-        @Override
-        public int getItemCount() {
-            return icons.size();
-        }
-
-        class ViewHolder extends RecyclerView.ViewHolder {
-            ImageView ivIcon;
-            MaterialCardView card;
-
-            ViewHolder(View view) {
-                super(view);
-                ivIcon = view.findViewById(R.id.iv_icon);
-                card = view.findViewById(R.id.cv_icon_container);
-            }
-        }
+        String uid = mAuth.getCurrentUser().getUid();
+        
+        dbRef.child(uid).child("categories").child(category.id).removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Category deleted", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to delete category", Toast.LENGTH_SHORT).show();
+                });
     }
 
     // Simple model class

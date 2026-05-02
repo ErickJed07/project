@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
 import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -76,6 +77,22 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
 
         holder.itemView.setAnimation(AnimationUtils.loadAnimation(context, R.anim.fade_scale));
 
+        // Mock data for new UI elements
+        if (holder.sizeLabel != null) {
+            String[] sizes = {"S", "M", "L", "XL"};
+            holder.sizeLabel.setText(sizes[position % sizes.length]);
+        }
+        if (holder.favoriteIcon != null) {
+            // Randomly set some as favorites for demonstration
+            if (position % 3 == 0) {
+                holder.favoriteIcon.setImageResource(R.drawable.heart); // Filled? Assuming heart is filled or we can use another
+                holder.favoriteIcon.setColorFilter(android.graphics.Color.RED);
+            } else {
+                holder.favoriteIcon.setImageResource(R.drawable.heart);
+                holder.favoriteIcon.setColorFilter(android.graphics.Color.GRAY);
+            }
+        }
+
         boolean selected = selectionChecker.isSelected(url);
         boolean isMultiSelect = multiSelectChecker.isMultiSelectMode();
 
@@ -103,11 +120,15 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
     static class PhotoHolder extends RecyclerView.ViewHolder {
         ImageView imageView;
         CheckBox checkBox;
+        TextView sizeLabel;
+        ImageView favoriteIcon;
 
         public PhotoHolder(@NonNull View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.photoImageView);
             checkBox = itemView.findViewById(R.id.photoCheckBox);
+            sizeLabel = itemView.findViewById(R.id.sizeLabel);
+            favoriteIcon = itemView.findViewById(R.id.favoriteIcon);
         }
     }
 }

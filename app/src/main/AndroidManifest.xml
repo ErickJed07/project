@@ -71,6 +71,11 @@
         <activity android:name=".ViewCategoriesActivity" android:exported="true" />
         <activity android:name=".AddItemActivity" android:exported="true" />
 
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+
         <!-- 📌 Main Launcher -->
         <activity
             android:name=".A_HomeActivity"
