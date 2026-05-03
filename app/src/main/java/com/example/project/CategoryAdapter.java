@@ -23,10 +23,12 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
     }
 
     public static class CategoryItem {
+        String id;
         String name;
         int iconRes;
 
-        public CategoryItem(String name, int iconRes) {
+        public CategoryItem(String id, String name, int iconRes) {
+            this.id = id;
             this.name = name;
             this.iconRes = iconRes;
         }
@@ -37,7 +39,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
         this.listener = listener;
         if (currentCategory != null && !currentCategory.isEmpty()) {
             for (int i = 0; i < categories.size(); i++) {
-                if (categories.get(i).name.equals(currentCategory)) {
+                if (categories.get(i).id.equals(currentCategory) || categories.get(i).name.equals(currentCategory)) {
                     selectedPosition = i;
                     break;
                 }
@@ -48,7 +50,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
     public void setSelectedCategory(String currentCategory) {
         if (currentCategory != null && !currentCategory.isEmpty()) {
             for (int i = 0; i < categories.size(); i++) {
-                if (categories.get(i).name.equals(currentCategory)) {
+                if (categories.get(i).id.equals(currentCategory) || categories.get(i).name.equals(currentCategory)) {
                     selectedPosition = i;
                     break;
                 }

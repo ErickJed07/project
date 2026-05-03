@@ -24,6 +24,8 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
     private final OnImageLongClickListener longClickListener;
     private final UrlSelectionChecker selectionChecker;
     private final MultiSelectChecker multiSelectChecker;
+    private final OnFavoriteClickListener favoriteClickListener;
+    private final FavoriteChecker favoriteChecker;
 
     public interface OnImageClickListener {
         void onClick(String url);
@@ -41,13 +43,23 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
         boolean isMultiSelectMode();
     }
 
+    public interface OnFavoriteClickListener {
+        void onFavoriteClick(String url, boolean isFavorite);
+    }
+
+    public interface FavoriteChecker {
+        boolean isFavorite(String url);
+    }
+
     public G3_Closet_CategoryAdapter(
             Context context,
             List<String> imageUrls,
             OnImageClickListener clickListener,
             OnImageLongClickListener longClickListener,
             UrlSelectionChecker selectionChecker,
-            MultiSelectChecker multiSelectChecker
+            MultiSelectChecker multiSelectChecker,
+            OnFavoriteClickListener favoriteClickListener,
+            FavoriteChecker favoriteChecker
     ) {
         this.context = context;
         this.imageUrls = imageUrls;
@@ -55,6 +67,8 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
         this.longClickListener = longClickListener;
         this.selectionChecker = selectionChecker;
         this.multiSelectChecker = multiSelectChecker;
+        this.favoriteClickListener = favoriteClickListener;
+        this.favoriteChecker = favoriteChecker;
     }
 
     @NonNull
@@ -83,14 +97,15 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
             holder.sizeLabel.setText(sizes[position % sizes.length]);
         }
         if (holder.favoriteIcon != null) {
-            // Randomly set some as favorites for demonstration
-            if (position % 3 == 0) {
-                holder.favoriteIcon.setImageResource(R.drawable.heart); // Filled? Assuming heart is filled or we can use another
+            boolean isFavorite = favoriteChecker.isFavorite(url);
+            if (isFavorite) {
+                holder.favoriteIcon.setImageResource(R.drawable.heart2);
                 holder.favoriteIcon.setColorFilter(android.graphics.Color.RED);
             } else {
                 holder.favoriteIcon.setImageResource(R.drawable.heart);
                 holder.favoriteIcon.setColorFilter(android.graphics.Color.GRAY);
             }
+            holder.favoriteIcon.setOnClickListener(v -> favoriteClickListener.onFavoriteClick(url, !isFavorite));
         }
 
         boolean selected = selectionChecker.isSelected(url);

@@ -52,6 +52,7 @@
         <activity android:name=".I_PostUploadActivity" android:exported="true" />
         <activity android:name=".G2_Closet_CategoryActivity" android:exported="true" />
         <activity android:name=".F1_CameraActivity" android:exported="true" />
+        <activity android:name=".SquareCameraActivity" android:exported="false" />
         <activity android:name=".B_LoginActivity" android:exported="true" />
         <activity android:name=".D_FeedActivity" android:exported="true" />
         <activity android:name=".C_SignInActivity" android:exported="true" />
@@ -74,7 +75,7 @@
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+            android:theme="@style/Theme.UCrop.Project"/>
 
         <!-- 📌 Main Launcher -->
         <activity

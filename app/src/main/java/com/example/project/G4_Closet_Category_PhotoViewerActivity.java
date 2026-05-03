@@ -114,6 +114,11 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         ImageButton btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finishWithAnimation());
 
+        ImageButton btnFavorite = findViewById(R.id.btnFavorite);
+        if (btnFavorite != null) {
+            btnFavorite.setOnClickListener(v -> toggleFavorite());
+        }
+
         ImageButton btnMore = findViewById(R.id.btnMore);
         if (btnMore != null) {
             btnMore.setOnClickListener(this::showMoreMenu);
@@ -344,18 +349,7 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         }
 
         // Color Selection
-        if (tvColorName.getParent() instanceof View) {
-            ((View) tvColorName.getParent()).setOnClickListener(v -> {
-                ColorSelectionBottomSheet colorSheet = ColorSelectionBottomSheet.newInstance((selectedColors, isMultiple) -> {
-                    if (!selectedColors.isEmpty()) {
-                        ColorOption color = selectedColors.get(0);
-                        tvColorName.setText(color.getName());
-                        viewColorCircle.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor(color.getHexCode())));
-                    }
-                });
-                colorSheet.show(getSupportFragmentManager(), "ColorSelection");
-            });
-        }
+        
 
         TabLayout tabLayout = editView.findViewById(R.id.tabLayoutTags);
         TextView tvTagTypeLabel = editView.findViewById(R.id.tvTagTypeLabel);
@@ -518,6 +512,16 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         View viewColor = findViewById(R.id.viewColor);
         TextView tvColorValue = findViewById(R.id.tvColorValue);
         ChipGroup chipGroupTags = findViewById(R.id.chipGroupTags);
+        ImageButton btnFavorite = findViewById(R.id.btnFavorite);
+
+        // Favorite Status
+        if (btnFavorite != null) {
+            Boolean isFav = photoSnap.child("favorite").getValue(Boolean.class);
+            boolean favorite = isFav != null && isFav;
+            btnFavorite.setImageResource(favorite ? R.drawable.heart2 : R.drawable.heart);
+            btnFavorite.setColorFilter(favorite ? android.graphics.Color.RED : android.graphics.Color.WHITE);
+            btnFavorite.setTag(favorite); // Store status for easy toggling
+        }
 
         // Category
         String category = photoSnap.child("category").getValue(String.class);
@@ -600,6 +604,64 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         tagView.setTextColor(Color.BLACK);
         tagView.setTypeface(null, android.graphics.Typeface.BOLD);
         group.addView(tagView);
+    }
+
+    private void toggleFavorite() {
+        int position = viewPager.getCurrentItem();
+        if (position < 0 || position >= imageUrls.size() || uid == null) return;
+
+        String currentUrl = imageUrls.get(position);
+        ImageButton btnFavorite = findViewById(R.id.btnFavorite);
+        boolean currentFavorite = btnFavorite.getTag() != null && (boolean) btnFavorite.getTag();
+        boolean newFavorite = !currentFavorite;
+
+        DatabaseReference ref;
+        if ("all_clothes".equals(categoryId)) {
+            ref = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories");
+        } else if (categoryId != null) {
+            ref = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories").child(categoryId).child("photos");
+        } else {
+            return;
+        }
+
+        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if ("all_clothes".equals(categoryId)) {
+                    for (DataSnapshot catSnap : snapshot.getChildren()) {
+                        if (catSnap.hasChild("photos")) {
+                            for (DataSnapshot photoSnap : catSnap.child("photos").getChildren()) {
+                                if (isMatch(photoSnap, currentUrl)) {
+                                    photoSnap.child("favorite").getRef().setValue(newFavorite);
+                                    updateFavoriteUI(newFavorite);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    for (DataSnapshot photoSnap : snapshot.getChildren()) {
+                        if (isMatch(photoSnap, currentUrl)) {
+                            photoSnap.child("favorite").getRef().setValue(newFavorite);
+                            updateFavoriteUI(newFavorite);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
+    private void updateFavoriteUI(boolean favorite) {
+        ImageButton btnFavorite = findViewById(R.id.btnFavorite);
+        if (btnFavorite != null) {
+            btnFavorite.setImageResource(favorite ? R.drawable.heart2 : R.drawable.heart);
+            btnFavorite.setColorFilter(favorite ? android.graphics.Color.RED : android.graphics.Color.WHITE);
+            btnFavorite.setTag(favorite);
+        }
     }
 
     private int getColorHexFromName(String name) {

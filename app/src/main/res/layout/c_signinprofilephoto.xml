@@ -45,8 +45,7 @@
         android:layout_marginBottom="10dp"
         android:backgroundTint="@color/orange_complement"
         android:text="Save"
-        android:textColor="#FFFFFF"
-        android:visibility="gone" />
+        android:textColor="#FFFFFF" />
 
     <Button
         android:id="@+id/btn_skip"

@@ -74,10 +74,12 @@ public class AddItemActivity extends AppCompatActivity {
     private LinearLayout llPhotoOptions;
     private MaterialCardView cvPhotoPreview;
     private MaterialCardView cvCropPhoto;
+    private MaterialCardView cvZoomPhoto;
     private ImageView ivPhotoPreview;
     private MaterialCardView cvRemovePhoto;
     private Uri currentPhotoUri;
     private List<ColorOption> selectedColorOptions = new ArrayList<>();
+    private String selectedCategoryId = "";
 
     private final ActivityResultLauncher<String> cameraPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -88,10 +90,13 @@ public class AddItemActivity extends AppCompatActivity {
                 }
             });
 
-    private final ActivityResultLauncher<Uri> takePhotoLauncher =
-            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
-                if (success) {
-                    handleImageSelection(currentPhotoUri);
+    private final ActivityResultLauncher<Intent> squareCameraLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        handleImageSelection(uri);
+                    }
                 }
             });
 
@@ -125,6 +130,7 @@ public class AddItemActivity extends AppCompatActivity {
         llPhotoOptions = findViewById(R.id.ll_photo_options);
         cvPhotoPreview = findViewById(R.id.cv_photo_preview);
         cvCropPhoto = findViewById(R.id.cv_crop_photo);
+        cvZoomPhoto = findViewById(R.id.cv_zoom_photo);
         ivPhotoPreview = findViewById(R.id.iv_photo_preview);
         cvRemovePhoto = findViewById(R.id.cv_remove_photo);
 
@@ -159,8 +165,14 @@ public class AddItemActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.rl_category_dropdown).setOnClickListener(v -> {
-            CategorySelectionBottomSheet bottomSheet = CategorySelectionBottomSheet.newInstance(tvCategory.getText().toString(), category -> {
-                tvCategory.setText(category);
+            CategorySelectionBottomSheet bottomSheet = CategorySelectionBottomSheet.newInstance(selectedCategoryId, categoryId -> {
+                selectedCategoryId = categoryId;
+                CategoryManager.CategoryItem item = CategoryManager.getCategoryById(categoryId);
+                if (item != null) {
+                    tvCategory.setText(item.name);
+                } else {
+                    tvCategory.setText(categoryId);
+                }
                 tvCategory.setTextColor(Color.parseColor("#1A1C1E"));
                 findViewById(R.id.tv_category_asterisk).setVisibility(View.GONE);
                 findViewById(R.id.rl_category_dropdown).setBackgroundResource(R.drawable.bg_input_field);
@@ -178,7 +190,7 @@ public class AddItemActivity extends AppCompatActivity {
             }
         });
 
-        setupColorSelection();
+        // setupColorSelection();
         
         findViewById(R.id.ll_take_photo).setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -206,22 +218,217 @@ public class AddItemActivity extends AppCompatActivity {
             }
         });
 
-        ivPhotoPreview.setOnClickListener(v -> {
+        cvZoomPhoto.setOnClickListener(v -> {
             if (currentPhotoUri != null) {
                 showImagePopup(currentPhotoUri);
             }
         });
+
+        // Eyedropper takes priority over full preview on the photo itself
+        // Moved to showColorPickerPopup as requested
+        // setupEyedropper();
+
+        findViewById(R.id.rl_color_selection).setOnClickListener(v -> {
+            if (currentPhotoUri != null) {
+                showColorPickerPopup(currentPhotoUri);
+            } else {
+                Toast.makeText(this, "Please select a photo first", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Handle category from intent
+        String categoryIdFromIntent = getIntent().getStringExtra("CATEGORY_ID");
+        if (categoryIdFromIntent != null && !categoryIdFromIntent.isEmpty()) {
+            selectedCategoryId = categoryIdFromIntent;
+            CategoryManager.CategoryItem item = CategoryManager.getCategoryById(categoryIdFromIntent);
+            if (item != null) {
+                tvCategory.setText(item.name);
+            } else {
+                tvCategory.setText(categoryIdFromIntent);
+            }
+            tvCategory.setTextColor(Color.parseColor("#1A1C1E"));
+            findViewById(R.id.tv_category_asterisk).setVisibility(View.GONE);
+            findViewById(R.id.rl_category_dropdown).setBackgroundResource(R.drawable.bg_input_field);
+        }
+    }
+
+    private void showColorPickerPopup(Uri uri) {
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.setContentView(R.layout.dialog_color_picker_popup);
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        ImageView ivPicker = dialog.findViewById(R.id.iv_color_picker_photo);
+        View btnClose = dialog.findViewById(R.id.cv_close_picker);
+
+        Glide.with(this)
+                .load(uri)
+                .into(ivPicker);
+
+        ivPicker.setOnTouchListener((v, event) -> {
+            Drawable drawable = ivPicker.getDrawable();
+            if (!(drawable instanceof BitmapDrawable)) return false;
+
+            Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+            float[] imageCoords = getBitmapCoordsForFitCenter(event.getX(), event.getY(), ivPicker, bitmap);
+            int x = (int) imageCoords[0];
+            int y = (int) imageCoords[1];
+
+            if (x >= 0 && x < bitmap.getWidth() && y >= 0 && y < bitmap.getHeight()) {
+                int pixel = bitmap.getPixel(x, y);
+                ColorNameHelper.ColorEntry closest = ColorNameHelper.getClosestColor(pixel);
+
+                if (closest != null) {
+                    if (event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_MOVE) {
+                        v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                    } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                        v.performClick();
+                        handleEyedropperColor(closest, dialog);
+                    }
+                }
+            }
+            return true;
+        });
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    private float[] getBitmapCoordsForFitCenter(float touchX, float touchY, ImageView imageView, Bitmap bitmap) {
+        float[] coords = new float[2];
+
+        int viewWidth = imageView.getWidth();
+        int viewHeight = imageView.getHeight();
+        int bitmapWidth = bitmap.getWidth();
+        int bitmapHeight = bitmap.getHeight();
+
+        float scale;
+        float dx = 0, dy = 0;
+
+        if (viewWidth * bitmapHeight > viewHeight * bitmapWidth) {
+            // View is wider than bitmap (aspect-ratio-wise)
+            scale = (float) viewHeight / (float) bitmapHeight;
+            dx = (viewWidth - bitmapWidth * scale) / 2f;
+        } else {
+            // View is taller than bitmap (aspect-ratio-wise)
+            scale = (float) viewWidth / (float) bitmapWidth;
+            dy = (viewHeight - bitmapHeight * scale) / 2f;
+        }
+
+        coords[0] = (touchX - dx) / scale;
+        coords[1] = (touchY - dy) / scale;
+
+        return coords;
     }
 
 
-    private void openCamera() {
-        try {
-            File photoFile = createImageFile();
-            currentPhotoUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photoFile);
-            takePhotoLauncher.launch(currentPhotoUri);
-        } catch (IOException e) {
-            Toast.makeText(this, "Error creating image file", Toast.LENGTH_SHORT).show();
+    private void handleEyedropperColor(ColorNameHelper.ColorEntry colorEntry, android.app.Dialog pickerDialog) {
+        if (selectedColorOptions.isEmpty()) {
+            // No colors selected, just add it
+            selectedColorOptions.add(new ColorOption(colorEntry.name, colorEntry.hex));
+            updateColorDisplay();
+            pickerDialog.dismiss();
+        } else {
+            // Colors already exist, show dialog to add or change
+            showColorAddOrChangeDialog(colorEntry, pickerDialog);
         }
+    }
+
+    private void showColorAddOrChangeDialog(ColorNameHelper.ColorEntry colorEntry, android.app.Dialog pickerDialog) {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_color_choice, null);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        TextView tvTitle = dialogView.findViewById(R.id.tv_dialog_title);
+        TextView tvMessage = dialogView.findViewById(R.id.tv_dialog_message);
+        LinearLayout llExistingColors = dialogView.findViewById(R.id.ll_existing_colors);
+        TextView tvReplaceInstruction = dialogView.findViewById(R.id.tv_replace_instruction);
+        MaterialCardView cvPreview = dialogView.findViewById(R.id.cv_color_preview);
+        ImageView ivIcon = dialogView.findViewById(R.id.iv_dialog_icon);
+        
+        setCardAndIconColor(cvPreview, ivIcon, colorEntry.hex);
+
+        View btnReplace = dialogView.findViewById(R.id.btn_replace);
+        View btnAdd = dialogView.findViewById(R.id.btn_add);
+        View btnCancel = dialogView.findViewById(R.id.btn_cancel);
+
+        tvTitle.setText("Pick " + colorEntry.name);
+
+        if (selectedColorOptions.isEmpty()) {
+            tvMessage.setText("Do you want to add this color?");
+        } else {
+            tvMessage.setText("Do you want to add this color or manage existing ones?");
+            llExistingColors.setVisibility(View.VISIBLE);
+            tvReplaceInstruction.setVisibility(View.VISIBLE);
+            
+            for (int i = 0; i < selectedColorOptions.size(); i++) {
+                final int index = i;
+                ColorOption existingColor = selectedColorOptions.get(i);
+                View colorView = getLayoutInflater().inflate(R.layout.item_color_preview_selectable, llExistingColors, false);
+                View colorFill = colorView.findViewById(R.id.v_color_fill);
+                ImageView removeIcon = colorView.findViewById(R.id.iv_remove_icon);
+                
+                colorFill.setBackgroundColor(Color.parseColor(existingColor.getHexCode()));
+                
+                if (ColorUtils.calculateLuminance(Color.parseColor(existingColor.getHexCode())) > 0.5) {
+                    removeIcon.setImageTintList(ColorStateList.valueOf(Color.parseColor("#6C28D9")));
+                }
+
+                colorView.setOnClickListener(v1 -> {
+                    selectedColorOptions.remove(index);
+                    updateColorDisplay();
+                    // Refresh the dialog list
+                    llExistingColors.removeView(colorView);
+                    if (selectedColorOptions.isEmpty()) {
+                        llExistingColors.setVisibility(View.GONE);
+                        tvReplaceInstruction.setVisibility(View.GONE);
+                        btnReplace.setVisibility(View.GONE);
+                        tvMessage.setText("Do you want to add this color?");
+                    }
+                });
+                
+                llExistingColors.addView(colorView);
+            }
+        }
+
+        btnReplace.setOnClickListener(v -> {
+            // Replace everything with the new color
+            selectedColorOptions.clear();
+            selectedColorOptions.add(new ColorOption(colorEntry.name, colorEntry.hex));
+            updateColorDisplay();
+            pickerDialog.dismiss();
+            dialog.dismiss();
+        });
+
+        btnAdd.setOnClickListener(v -> {
+            boolean exists = selectedColorOptions.stream()
+                    .anyMatch(co -> co.getName().equalsIgnoreCase(colorEntry.name));
+            if (!exists) {
+                selectedColorOptions.add(new ColorOption(colorEntry.name, colorEntry.hex));
+                updateColorDisplay();
+            }
+            pickerDialog.dismiss();
+            dialog.dismiss();
+        });
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+
+
+    private void openCamera() {
+        Intent intent = new Intent(this, SquareCameraActivity.class);
+        squareCameraLauncher.launch(intent);
     }
 
     private void startCrop(Uri uri) {
@@ -234,21 +441,31 @@ public class AddItemActivity extends AppCompatActivity {
         UCrop.Options options = new UCrop.Options();
         options.setCompressionFormat(Bitmap.CompressFormat.JPEG);
         options.setCompressionQuality(90);
+        
+        // UI Customization for better UX
         options.setToolbarColor(ContextCompat.getColor(this, R.color.white));
-        options.setStatusBarColor(ContextCompat.getColor(this, R.color.white));
+        options.setToolbarWidgetColor(Color.parseColor("#1A1C1E"));
+        options.setToolbarTitle("Edit Photo");
         options.setActiveControlsWidgetColor(Color.parseColor("#6C28D9"));
 
+        // Status bar and fitsSystemWindows are handled via Theme.UCrop.Project in themes.xml
+        options.setStatusBarColor(ContextCompat.getColor(this, R.color.white));
+        
+        // Better functionality
+        options.setFreeStyleCropEnabled(false); // Lock to square
+        options.setHideBottomControls(false);  // Show controls for rotation/scale
+        options.setCircleDimmedLayer(false);   // Keep it rectangular for clothes
+        options.setShowCropFrame(true);
+        options.setShowCropGrid(true);
+        
+        // Animation
+        options.setImageToCropBoundsAnimDuration(666);
+
         Intent intent = UCrop.of(uri, destUri)
+                .withAspectRatio(1, 1) // Force square
                 .withOptions(options)
                 .getIntent(this);
         cropLauncher.launch(intent);
-    }
-
-    private File createImageFile() throws IOException {
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        return File.createTempFile(imageFileName, ".jpg", storageDir);
     }
 
     private void handleImageSelection(Uri uri) {
@@ -308,11 +525,13 @@ public class AddItemActivity extends AppCompatActivity {
         }
         
         // Color check
-        TextView tvColorLabel = findViewById(R.id.tv_selected_color);
-        if (tvColorLabel.getText().toString().equals("Select color")) {
+        if (selectedColorOptions.isEmpty()) {
             findViewById(R.id.tv_color_asterisk).setVisibility(View.VISIBLE);
             findViewById(R.id.rl_color_selection).setBackgroundResource(R.drawable.bg_input_field_error);
             isValid = false;
+        } else {
+            findViewById(R.id.tv_color_asterisk).setVisibility(View.GONE);
+            findViewById(R.id.rl_color_selection).setBackgroundResource(R.drawable.bg_input_field);
         }
         
         return isValid;
@@ -489,17 +708,6 @@ public class AddItemActivity extends AppCompatActivity {
         }
     }
 
-    private void setupColorSelection() {
-        View rlColorSelection = findViewById(R.id.rl_color_selection);
-
-        rlColorSelection.setOnClickListener(v -> {
-            ColorSelectionBottomSheet bottomSheet = ColorSelectionBottomSheet.newInstance((selectedColors, isMultiple) -> {
-                selectedColorOptions = selectedColors;
-                updateColorDisplay();
-            });
-            bottomSheet.show(getSupportFragmentManager(), "ColorSelection");
-        });
-    }
 
     private void showImagePopup(Uri uri) {
         android.app.Dialog dialog = new android.app.Dialog(this);
@@ -512,34 +720,39 @@ public class AddItemActivity extends AppCompatActivity {
             dialog.getWindow().setGravity(Gravity.CENTER);
         }
 
-        ImageView ivPopup = dialog.findViewById(R.id.iv_popup_image);
-        View btnClose = dialog.findViewById(R.id.btn_close_popup);
+        ImageView ivPopup = dialog.findViewById(R.id.iv_preview_full);
 
         Glide.with(this).load(uri).into(ivPopup);
-        btnClose.setOnClickListener(v -> dialog.dismiss());
         ivPopup.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
     }
 
     private void updateColorDisplay() {
-        TextView tvColor = findViewById(R.id.tv_selected_color);
+        TextView tvColorLabel = findViewById(R.id.tv_selected_color);
         LinearLayout llColorsContainer = findViewById(R.id.ll_selected_colors_container);
+        MaterialCardView cvWand = findViewById(R.id.cv_color_wand);
+        ImageView ivWand = findViewById(R.id.iv_color_wand);
+        
         llColorsContainer.removeAllViews();
 
         if (selectedColorOptions.isEmpty()) {
-            tvColor.setText("Select color");
-            tvColor.setTextColor(Color.parseColor("#74777F"));
+            tvColorLabel.setText("Tap photo for color");
+            tvColorLabel.setTextColor(Color.parseColor("#74777F"));
+            cvWand.setCardBackgroundColor(ColorStateList.valueOf(Color.parseColor("#F3F4F9")));
+            ivWand.setImageTintList(ColorStateList.valueOf(Color.parseColor("#6C28D9")));
         } else {
-            tvColor.setTextColor(Color.parseColor("#1A1C1E"));
+            tvColorLabel.setTextColor(Color.parseColor("#1A1C1E"));
             findViewById(R.id.tv_color_asterisk).setVisibility(View.GONE);
             findViewById(R.id.rl_color_selection).setBackgroundResource(R.drawable.bg_input_field);
+
+            setCardAndIconColor(cvWand, ivWand, selectedColorOptions.get(0).getHexCode());
 
             String colorNames = selectedColorOptions.stream()
                     .map(ColorOption::getName)
                     .collect(Collectors.joining(", "));
             
-            tvColor.setText(colorNames);
+            tvColorLabel.setText(colorNames);
 
             // Add previews with overlap
             for (int i = 0; i < Math.min(selectedColorOptions.size(), 4); i++) {
@@ -550,6 +763,17 @@ public class AddItemActivity extends AppCompatActivity {
     }
 
 
+
+    private void setCardAndIconColor(MaterialCardView card, ImageView icon, String hexColor) {
+        int color = Color.parseColor(hexColor);
+        card.setCardBackgroundColor(ColorStateList.valueOf(color));
+        
+        if (ColorUtils.calculateLuminance(color) > 0.5) {
+            icon.setImageTintList(ColorStateList.valueOf(Color.parseColor("#6C28D9")));
+        } else {
+            icon.setImageTintList(ColorStateList.valueOf(Color.WHITE));
+        }
+    }
 
     private void addColorPreview(LinearLayout container, String hexColor, int marginStartDp) {
         View view = getLayoutInflater().inflate(R.layout.item_color_preview_small, container, false);
@@ -626,17 +850,17 @@ public class AddItemActivity extends AppCompatActivity {
         }
 
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        String sanitizedCategory = category.replaceAll("[.#$\\[\\]]", "");
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users")
                 .child(uid)
                 .child("categories")
-                .child(sanitizedCategory)
+                .child(selectedCategoryId)
                 .child("photos")
                 .push();
 
         Map<String, Object> data = new HashMap<>();
         data.put("imageUrl", imageUrl);
-        data.put("category", category);
+        data.put("category", category); // Store the display name
+        data.put("categoryId", selectedCategoryId); // Store the ID too
         data.put("size", size);
         data.put("colors", colors);
         data.put("season", seasons);

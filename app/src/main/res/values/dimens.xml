@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Standard Spacings -->
+    <dimen name="spacing_tiny">4dp</dimen>
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_medium">16dp</dimen>
+    <dimen name="spacing_large">24dp</dimen>
+    <dimen name="spacing_xlarge">32dp</dimen>
+    <dimen name="spacing_xxlarge">48dp</dimen>
+
+    <!-- Corner Radii -->
+    <dimen name="card_corner_radius_medium">16dp</dimen>
+    <dimen name="card_corner_radius_large">28dp</dimen>
+    <dimen name="bottom_sheet_corner_radius">32dp</dimen>
+
+    <!-- Component Sizes -->
+    <dimen name="back_button_size">40dp</dimen>
+    <dimen name="back_icon_size">20dp</dimen>
+    <dimen name="avatar_size">48dp</dimen>
+    <dimen name="avatar_size_main">51dp</dimen>
+    <dimen name="bottom_sheet_grabber_width">32dp</dimen>
+    <dimen name="bottom_sheet_grabber_height">4dp</dimen>
+    <dimen name="generate_button_height">56dp</dimen>
+
+    <!-- Text Sizes -->
+    <dimen name="text_size_small">12sp</dimen>
+    <dimen name="text_size_medium">14sp</dimen>
+    <dimen name="text_size_large">16sp</dimen>
+</resources>

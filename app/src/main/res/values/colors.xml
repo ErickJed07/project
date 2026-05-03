@@ -19,6 +19,13 @@
     <color name="text_label">#8E8E93</color>
     <color name="overlay_button_bg">#40FFFFFF</color>
 
+    <!-- AI Screen Design Colors (Purple & White) -->
+    <color name="ai_accent">#9F73FF</color>
+    <color name="ai_chip_unselected_bg">#F1F5F9</color>
+    <color name="ai_chip_unselected_text">#64748B</color>
+    <color name="ai_label_purple">#9F73FF</color>
+    <color name="ai_divider">#E2E8F0</color>
+
 
 
 

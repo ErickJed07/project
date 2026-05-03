@@ -29,7 +29,8 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_gravity="center"
-                android:src="@drawable/shirt" />
+                android:src="@drawable/hanger"
+                app:tint="@color/black" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView

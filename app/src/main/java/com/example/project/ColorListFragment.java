@@ -67,9 +67,17 @@ public class ColorListFragment extends Fragment {
             }
             adapter.notifyDataSetChanged();
             
-            // Notify activity if needed, or just let the Apply button handle it
+            if (getParentFragment() instanceof ColorSelectionBottomSheet) {
+                ((ColorSelectionBottomSheet) getParentFragment()).toggleColorSelection(color);
+            }
+            
+            // Also notify activity if it implements the listener directly
             if (getActivity() instanceof ColorSelectionBottomSheet.ColorSelectionListener) {
-                // We can update the selection list in the bottom sheet
+                List<ColorOption> selected = new ArrayList<>();
+                for (ColorOption co : colors) {
+                    if (co.isSelected()) selected.add(co);
+                }
+                ((ColorSelectionBottomSheet.ColorSelectionListener) getActivity()).onColorsSelected(selected, isMultipleMode);
             }
         });
         recyclerView.setAdapter(adapter);

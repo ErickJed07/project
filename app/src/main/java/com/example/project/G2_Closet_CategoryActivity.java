@@ -54,6 +54,8 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
     // NEW: Track sort order (Default: true = Latest/Newest first)
     private boolean isLatestFirst = true;
+    private boolean isFavoriteFilterActive = false;
+    private final Map<String, Boolean> urlToFavoriteMap = new HashMap<>();
 
 
     @SuppressLint("MissingInflatedId")
@@ -79,6 +81,19 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             // Triggers the same logic as the hardware back button (goes to Feed)
             getOnBackPressedDispatcher().onBackPressed();
         });
+        // -----------------------------------------
+
+        // --- NEW CODE: Favorite Filter Button ---
+        View favoriteFilterBtn = findViewById(R.id.btnLatest); // btnLatest is labeled "FAVORITE" in layout
+        if (favoriteFilterBtn != null) {
+            favoriteFilterBtn.setOnClickListener(v -> {
+                isFavoriteFilterActive = !isFavoriteFilterActive;
+                favoriteFilterBtn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        isFavoriteFilterActive ? android.graphics.Color.parseColor("#FFE0E0") : android.graphics.Color.parseColor("#F0F0F0")
+                ));
+                sortImages();
+            });
+        }
         // -----------------------------------------
 
         // 1. Get Data from Intent
@@ -134,7 +149,9 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                 this::onImageClicked,
                 this::onImageLongClicked,
                 this::isUrlSelected,
-                this::isMultiSelectMode
+                this::isMultiSelectMode,
+                this::onFavoriteClicked,
+                this::isUrlFavorite
         );
 
         galleryRecyclerView.setAdapter(adapter);
@@ -165,6 +182,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                 imageUrlList.clear();
                 urlToKeyMap.clear();
                 urlToCategoryMap.clear();
+                urlToFavoriteMap.clear();
 
                 for (DataSnapshot photoSnap : snapshot.getChildren()) {
                     String key = photoSnap.getKey();
@@ -180,6 +198,9 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                         imageUrlList.add(url);
                         urlToKeyMap.put(url, key);
                         urlToCategoryMap.put(url, categoryId);
+
+                        Boolean isFav = photoSnap.child("favorite").getValue(Boolean.class);
+                        urlToFavoriteMap.put(url, isFav != null && isFav);
                     }
                 }
 
@@ -202,6 +223,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                 imageUrlList.clear();
                 urlToKeyMap.clear();
                 urlToCategoryMap.clear();
+                urlToFavoriteMap.clear();
 
                 for (DataSnapshot categorySnap : snapshot.getChildren()) {
                     String catId = categorySnap.getKey();
@@ -220,6 +242,9 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                                 imageUrlList.add(url);
                                 urlToKeyMap.put(url, key);
                                 urlToCategoryMap.put(url, catId);
+
+                                Boolean isFav = photoSnap.child("favorite").getValue(Boolean.class);
+                                urlToFavoriteMap.put(url, isFav != null && isFav);
                             }
                         }
                     }
@@ -292,6 +317,30 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
     private boolean isMultiSelectMode() {
         return isMultiSelectMode;
+    }
+
+    private boolean isUrlFavorite(String url) {
+        Boolean isFav = urlToFavoriteMap.get(url);
+        return isFav != null && isFav;
+    }
+
+    private void onFavoriteClicked(String url, boolean isFavorite) {
+        String key = urlToKeyMap.get(url);
+        String catId = urlToCategoryMap.get(url);
+
+        if (key != null && catId != null && uid != null) {
+            FirebaseDatabase.getInstance().getReference("Users")
+                    .child(uid)
+                    .child("categories")
+                    .child(catId)
+                    .child("photos")
+                    .child(key)
+                    .child("favorite").setValue(isFavorite)
+                    .addOnSuccessListener(aVoid -> {
+                        urlToFavoriteMap.put(url, isFavorite);
+                        sortImages();
+                    });
+        }
     }
 
     // ---------------------------------------------------------
@@ -375,6 +424,14 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         if (imageUrlList.isEmpty()) return;
 
         java.util.Collections.sort(imageUrlList, (url1, url2) -> {
+            if (isFavoriteFilterActive) {
+                boolean fav1 = isUrlFavorite(url1);
+                boolean fav2 = isUrlFavorite(url2);
+                if (fav1 != fav2) {
+                    return fav1 ? -1 : 1;
+                }
+            }
+
             String key1 = urlToKeyMap.get(url1);
             String key2 = urlToKeyMap.get(url2);
 
@@ -390,8 +447,9 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
         adapter.notifyDataSetChanged();
 
-        String message = isLatestFirst ? "Sorted by Latest" : "Sorted by Oldest";
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        String sortMsg = isLatestFirst ? "Latest" : "Oldest";
+        String filterMsg = isFavoriteFilterActive ? " (Favorites First)" : "";
+        Toast.makeText(this, "Sorted by " + sortMsg + filterMsg, Toast.LENGTH_SHORT).show();
     }
 
 

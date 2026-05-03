@@ -53,10 +53,17 @@ public class WardrobeCategoryAdapter extends RecyclerView.Adapter<WardrobeCatego
         holder.tvName.setText(category.name);
         holder.tvCount.setText(category.itemCount + (category.itemCount == 1 ? " Item" : " Items"));
         
-        // Set icon and background based on stored icon or name
-        String iconKey = (category.icon != null && !category.icon.isEmpty()) ? category.icon : category.name;
-        holder.ivIcon.setImageResource(getCategoryIcon(iconKey));
-        holder.cardView.setCardBackgroundColor(context.getColor(getCategoryColor(iconKey)));
+        // Set icon and background
+        holder.ivIcon.setImageResource(category.iconRes);
+        
+        int colorRes = R.color.cat_blue_bg; // Default
+        CategoryManager.CategoryItem fixed = CategoryManager.getCategoryById(category.id);
+        if (fixed != null) {
+            colorRes = fixed.colorRes;
+        } else if ("all_clothes".equals(category.id)) {
+            colorRes = R.color.wardrobe_accent_teal;
+        }
+        holder.cardView.setCardBackgroundColor(context.getColor(colorRes));
 
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, G2_Closet_CategoryActivity.class);
@@ -66,14 +73,8 @@ public class WardrobeCategoryAdapter extends RecyclerView.Adapter<WardrobeCatego
         });
 
         holder.itemView.setOnLongClickListener(v -> {
-            if ("all_clothes".equals(category.id)) {
-                return true; // Consume long click for All Clothes to prevent deletion
-            }
-            if (longClickListener != null) {
-                longClickListener.onCategoryLongClick(category);
-                return true;
-            }
-            return false;
+            // Categories are now fixed, so deletion is disabled
+            return true;
         });
     }
 
@@ -123,33 +124,6 @@ public class WardrobeCategoryAdapter extends RecyclerView.Adapter<WardrobeCatego
         }
     };
 
-    private int getCategoryIcon(String categoryName) {
-        switch (categoryName) {
-            case "All Clothes": return R.drawable.hanger;
-            case "PreOutfit": return R.drawable.preoutfit;
-            case "Hat": return R.drawable.hat;
-            case "Accessories": return R.drawable.accesories;
-            case "Outer": return R.drawable.outer;
-            case "Top": return R.drawable.top;
-            case "Bag": return R.drawable.bag;
-            case "Bottom": return R.drawable.botttom;
-            case "Shoes": return R.drawable.shoes;
-            case "Dress": return R.drawable.dresss;
-            default: return R.drawable.shirt;
-        }
-    }
-
-    private int getCategoryColor(String categoryName) {
-        switch (categoryName) {
-            case "Top": return R.color.cat_blue_bg;
-            case "Bottom": return R.color.cat_pink_bg;
-            case "Outer": return R.color.cat_green_bg;
-            case "Accessories": return R.color.cat_purple_bg;
-            case "Shoes": return R.color.cat_yellow_bg;
-            case "Dress": return R.color.cat_teal_bg;
-            default: return R.color.cat_blue_bg;
-        }
-    }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView ivIcon;

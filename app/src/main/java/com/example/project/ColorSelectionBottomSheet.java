@@ -13,6 +13,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ColorSelectionBottomSheet extends BottomSheetDialogFragment {
@@ -22,10 +23,8 @@ public class ColorSelectionBottomSheet extends BottomSheetDialogFragment {
     }
 
     private ColorSelectionListener listener;
-    private ArrayList<ColorOption> singleModeColors;
-    private ArrayList<ColorOption> multipleModeColors;
-    private ViewPager2 viewPager;
-    private TabLayout tabLayout;
+    private boolean isMultipleMode = true;
+    private final List<ColorOption> selectedColors = new ArrayList<>();
 
     public static ColorSelectionBottomSheet newInstance(ColorSelectionListener listener) {
         ColorSelectionBottomSheet fragment = new ColorSelectionBottomSheet();
@@ -43,66 +42,80 @@ public class ColorSelectionBottomSheet extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        initColors();
+        TabLayout tabLayout = view.findViewById(R.id.tab_layout);
+        ViewPager2 viewPager = view.findViewById(R.id.view_pager);
+        View btnApply = view.findViewById(R.id.btn_apply);
 
-        viewPager = view.findViewById(R.id.vp_color_pager);
-        tabLayout = view.findViewById(R.id.tl_color_tabs);
-        View btnApply = view.findViewById(R.id.btn_apply_colors);
-
+        List<String> categories = Arrays.asList("Basic", "Neutral", "Warm", "Cool");
+        
         viewPager.setAdapter(new FragmentStateAdapter(this) {
             @NonNull
             @Override
             public Fragment createFragment(int position) {
-                if (position == 0) {
-                    return ColorListFragment.newInstance(false, singleModeColors);
-                } else {
-                    return ColorListFragment.newInstance(true, multipleModeColors);
-                }
+                return ColorListFragment.newInstance(isMultipleMode, getColorsForCategory(categories.get(position)));
             }
 
             @Override
             public int getItemCount() {
-                return 2;
+                return categories.size();
             }
         });
 
-        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            tab.setText(position == 0 ? "Single" : "Multiple");
-        }).attach();
+        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(categories.get(position))).attach();
 
         btnApply.setOnClickListener(v -> {
             if (listener != null) {
-                int currentTab = viewPager.getCurrentItem();
-                List<ColorOption> selected = new ArrayList<>();
-                if (currentTab == 0) {
-                    for (ColorOption co : singleModeColors) {
-                        if (co.isSelected()) selected.add(co);
-                    }
-                } else {
-                    for (ColorOption co : multipleModeColors) {
-                        if (co.isSelected()) selected.add(co);
-                    }
-                }
-                listener.onColorsSelected(selected, currentTab == 1);
+                listener.onColorsSelected(selectedColors, isMultipleMode);
             }
             dismiss();
         });
     }
 
-    private void initColors() {
-        String[][] colorData = {
-            {"Black", "#000000"}, {"White", "#FFFFFF"}, {"Red", "#FF0000"},
-            {"Green", "#008000"}, {"Yellow", "#FFFF00"}, {"Blue", "#0000FF"},
-            {"Brown", "#A52A2A"}, {"Purple", "#800080"}, {"Pink", "#FFC0CB"},
-            {"Orange", "#FFA500"}, {"Grey", "#808080"}
-        };
-
-        singleModeColors = new ArrayList<>();
-        multipleModeColors = new ArrayList<>();
-
-        for (String[] data : colorData) {
-            singleModeColors.add(new ColorOption(data[0], data[1]));
-            multipleModeColors.add(new ColorOption(data[0], data[1]));
+    public void toggleColorSelection(ColorOption color) {
+        if (!isMultipleMode) {
+            selectedColors.clear();
+            selectedColors.add(color);
+        } else {
+            if (color.isSelected()) {
+                if (!selectedColors.contains(color)) {
+                    selectedColors.add(color);
+                }
+            } else {
+                selectedColors.remove(color);
+            }
         }
+    }
+
+    private ArrayList<ColorOption> getColorsForCategory(String category) {
+        ArrayList<ColorOption> colors = new ArrayList<>();
+        switch (category) {
+            case "Basic":
+                colors.add(new ColorOption("Black", "#000000"));
+                colors.add(new ColorOption("White", "#FFFFFF"));
+                colors.add(new ColorOption("Red", "#FF0000"));
+                colors.add(new ColorOption("Blue", "#0000FF"));
+                colors.add(new ColorOption("Green", "#00FF00"));
+                colors.add(new ColorOption("Yellow", "#FFFF00"));
+                break;
+            case "Neutral":
+                colors.add(new ColorOption("Grey", "#808080"));
+                colors.add(new ColorOption("Beige", "#F5F5DC"));
+                colors.add(new ColorOption("Brown", "#A52A2A"));
+                colors.add(new ColorOption("Navy", "#000080"));
+                break;
+            case "Warm":
+                colors.add(new ColorOption("Orange", "#FFA500"));
+                colors.add(new ColorOption("Pink", "#FFC0CB"));
+                colors.add(new ColorOption("Purple", "#800080"));
+                colors.add(new ColorOption("Magenta", "#FF00FF"));
+                break;
+            case "Cool":
+                colors.add(new ColorOption("Cyan", "#00FFFF"));
+                colors.add(new ColorOption("Teal", "#008080"));
+                colors.add(new ColorOption("Lavender", "#E6E6FA"));
+                colors.add(new ColorOption("Mint", "#98FF98"));
+                break;
+        }
+        return colors;
     }
 }

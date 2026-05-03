@@ -87,6 +87,20 @@
             app:layout_constraintTop_toTopOf="parent">
 
             <TextView
+                android:id="@+id/btnFrequent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_pill"
+                android:backgroundTint="#F0F0F0"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="USED"
+                android:textColor="#74777F"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
                 android:id="@+id/btnLatest"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -94,21 +108,7 @@
                 android:backgroundTint="#F0F0F0"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp"
-                android:text="LATEST"
-                android:textColor="#74777F"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/btnFrequent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_pill"
-                android:backgroundTint="#F0F0F0"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
-                android:text="FREQUENT"
+                android:text="FAVORITE"
                 android:textColor="#74777F"
                 android:textSize="12sp"
                 android:textStyle="bold" />

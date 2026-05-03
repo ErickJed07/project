@@ -24,7 +24,7 @@
             android:id="@+id/iv_category_icon"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:src="@drawable/shirt"
+            android:src="@drawable/hanger"
             app:tint="#1A1C1E" />
 
         <TextView

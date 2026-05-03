@@ -34,4 +34,23 @@
     <string name="delete">Delete</string>
     <string name="edit">Edit</string>
     <string name="color_purple">Purple</string>
+
+    <!-- AI Screen -->
+    <string name="back_button">Back</string>
+    <string name="add_avatar">Add Avatar</string>
+    <string name="no_images_found">No images found in this category</string>
+    <string name="add_clothes">Add Clothes</string>
+    <string name="generate_outfit_btn">Generate Outfit</string>
+
+    <!-- AI Screen Labels -->
+    <string name="label_style">STYLE</string>
+    <string name="label_sort_by">SORT BY</string>
+    <string name="filter">Filter</string>
+
+    <!-- Filter Bottom Sheet -->
+    <string name="filter_title">Filters</string>
+    <string name="label_season">SEASON</string>
+    <string name="label_occasions">OCCASIONS</string>
+    <string name="btn_apply_filters">Apply Filters</string>
+    <string name="btn_reset">Reset</string>
 </resources>

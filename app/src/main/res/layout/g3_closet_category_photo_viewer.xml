@@ -187,13 +187,13 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:background="@drawable/bg_circle_white"
-                            android:backgroundTint="@color/purple_primary"
-                            tools:layout_marginEnd="8dp" />
+                            android:backgroundTint="@color/purple_primary" />
 
                         <TextView
                             android:id="@+id/tvColorValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="5dp"
                             android:text="@string/color_purple"
                             android:textColor="@color/black"
                             android:textSize="20sp"

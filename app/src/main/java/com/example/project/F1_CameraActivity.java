@@ -49,19 +49,15 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
-import com.google.firebase.database.ValueEventListener;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -183,39 +179,10 @@ public class F1_CameraActivity extends AppCompatActivity {
     }
 
     private void fetchCategoriesFromFirebase() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) return;
-
-        String uid = currentUser.getUid();
-        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
-                .child(uid)
-                .child("categories");
-
-        dbRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    List<String> firebaseCategories = new ArrayList<>();
-                    for (DataSnapshot data : snapshot.getChildren()) {
-                        String name = data.child("name").getValue(String.class);
-                        if (name == null) name = data.getKey();
-                        if (name != null && !name.trim().isEmpty()) {
-                            firebaseCategories.add(name);
-                        }
-                    }
-                    if (!firebaseCategories.isEmpty()) {
-                        clothingTypesList.clear();
-                        clothingTypesList.addAll(firebaseCategories);
-                        Collections.sort(clothingTypesList);
-                    }
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("F1_Camera", "Db Error", error.toException());
-            }
-        });
+        clothingTypesList.clear();
+        for (CategoryManager.CategoryItem item : CategoryManager.getCategories()) {
+            clothingTypesList.add(item.name);
+        }
     }
 
     private void initCloudinary() {
@@ -425,71 +392,19 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     private List<String> getSubTags(String category) {
         switch (category) {
-            case "All": return Arrays.asList("all", "any", "everything");
-            case "Hat": return Arrays.asList("cap", "beanie", "bucket hat", "beret", "snapback", "visor");
-            case "Accessories": return Arrays.asList("belt", "scarf", "glasses", "sunglasses", "watch", "bracelet", "earrings");
-            case "Outer": return Arrays.asList("jacket", "coat", "hoodie", "blazer", "cardigan", "sweater", "windbreaker");
-            case "Top": return Arrays.asList("shirt", "tshirt", "longsleeve", "blouse", "hoodie", "tanktop", "crop top");
-            case "Bag": return Arrays.asList("handbag", "crossbody", "backpack", "tote", "purse");
-            case "Bottom": return Arrays.asList("pants", "jeans", "shorts", "skirt", "trousers", "cargo", "leggings");
-            case "Shoes": return Arrays.asList("sneakers", "boots", "heels", "sandals", "slippers", "loafers");
-            case "Dress": return Arrays.asList("dress", "gown", "casual dress", "long dress", "mini dress");
+            case "Intimates": return Arrays.asList("Bra", "Underwear", "Base layer");
+            case "Tops": return Arrays.asList("T-shirt", "Blouse", "Sweater", "Shirt", "Tank top");
+            case "Bottoms": return Arrays.asList("Pants", "Skirt", "Shorts", "Jeans", "Leggings");
+            case "One-piece": return Arrays.asList("Dress", "Jumpsuit");
+            case "Outerwear": return Arrays.asList("Jacket", "Coat", "Blazer", "Hoodie");
+            case "Swimwear": return Arrays.asList("Bikini", "Trunks");
+            case "Footwear": return Arrays.asList("Shoes", "Boots", "Sandals", "Sneakers", "Heels");
+            case "Headwear": return Arrays.asList("Hat", "Headband", "Cap", "Beanie");
             default: return new ArrayList<>();
         }
     }
 
     // -------------------------- 5. MULTI-STEP POPUP DIALOGS --------------------------
-
-    // STEP 1: Main Category
-    private void showNewCategoryInputDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(60, 60, 60, 60);
-        layout.setBackgroundResource(R.drawable.round_image_clip);
-
-        TextView title = new TextView(this);
-        title.setText("New Category Name");
-        title.setTextSize(20f);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        title.setTextColor(Color.BLACK);
-        title.setGravity(Gravity.CENTER);
-        layout.addView(title);
-
-        EditText input = new EditText(this);
-        input.setHint("e.g. Scarf, Hat");
-        layout.addView(input);
-
-        Space space = new Space(this);
-        space.setMinimumHeight(40);
-        layout.addView(space);
-
-        Button btnCreate = new Button(this);
-        btnCreate.setText("Create & Continue");
-        btnCreate.setBackgroundColor(Color.BLACK);
-        btnCreate.setTextColor(Color.WHITE);
-        layout.addView(btnCreate);
-
-        builder.setView(layout);
-        AlertDialog dialog = builder.create();
-
-        btnCreate.setOnClickListener(v -> {
-            String newCategoryName = input.getText().toString().trim();
-            if (!newCategoryName.isEmpty()) {
-                String formattedName = newCategoryName.substring(0, 1).toUpperCase() + newCategoryName.substring(1);
-                dialog.dismiss();
-                addNewCategoryToFirebase(formattedName);
-                showSubCategorySelectionDialog(formattedName);
-            } else {
-                input.setError("Please enter a name");
-            }
-        });
-
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
-        }
-        dialog.show();
-    }
 
     private void showCategorySelectionDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -516,18 +431,12 @@ public class F1_CameraActivity extends AppCompatActivity {
         builder.setView(mainLayout);
         AlertDialog dialog = builder.create();
 
-        for (String type : clothingTypesList) {
-            if (type.equals("PreOutfit")) continue;
-            addChip(chipGroup, type, v -> {
+        for (CategoryManager.CategoryItem item : CategoryManager.getCategories()) {
+            addChip(chipGroup, item.name, v -> {
                 dialog.dismiss();
-                showSubCategorySelectionDialog(type);
+                showSubCategorySelectionDialog(item.id, item.name);
             });
         }
-
-        addChip(chipGroup, "Other", v -> {
-            dialog.dismiss();
-            showNewCategoryInputDialog();
-        });
 
         scrollView.addView(chipGroup);
         mainLayout.addView(scrollView);
@@ -538,32 +447,8 @@ public class F1_CameraActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void addNewCategoryToFirebase(String categoryName) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) return;
-
-        String uid = user.getUid();
-        String sanitizedName = categoryName.replaceAll("[.#$\\[\\]]", "");
-        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference("Users")
-                .child(uid)
-                .child("categories");
-
-        if (!clothingTypesList.contains(categoryName)) {
-            clothingTypesList.add(categoryName);
-
-            String safeId = sanitizedName;
-            Map<String, Object> categoryData = new HashMap<>();
-            categoryData.put("id", safeId);
-            categoryData.put("name", categoryName);
-
-            dbRef.child(categoryName).setValue(categoryData)
-                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Category Added!", Toast.LENGTH_SHORT).show())
-                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to add category", Toast.LENGTH_SHORT).show());
-        }
-    }
-
     // STEP 2: Sub-Category
-    private void showSubCategorySelectionDialog(String mainCategory) {
+    private void showSubCategorySelectionDialog(String categoryId, String mainCategory) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
@@ -592,53 +477,27 @@ public class F1_CameraActivity extends AppCompatActivity {
             chipGroup.setSingleSelection(true);
 
             for (String subTag : subTags) {
-                String displayTag = subTag.substring(0, 1).toUpperCase() + subTag.substring(1);
-                addChip(chipGroup, displayTag, v -> {
+                addChip(chipGroup, subTag, v -> {
                     dialog.dismiss();
                     List<String> selection = new ArrayList<>();
-                    selection.add(displayTag);
-                    showColorSelectionDialog(mainCategory, selection);
+                    selection.add(subTag);
+                    showColorSelectionDialog(categoryId, mainCategory, selection);
                 });
             }
-
-            addChip(chipGroup, "Other ", v -> {
-                dialog.dismiss();
-                List<String> selection = new ArrayList<>();
-                selection.add("Other");
-                showColorSelectionDialog(mainCategory, selection);
-            });
 
             scrollView.addView(chipGroup);
             mainLayout.addView(scrollView);
 
         } else {
-            EditText editText = new EditText(this);
-            editText.setHint("what do you want to add");
-            editText.setBackgroundResource(android.R.drawable.edit_text);
-            editText.setPadding(30, 30, 30, 30);
-            mainLayout.addView(editText);
+            TextView noSub = new TextView(this);
+            noSub.setText("Skip to color selection.");
+            noSub.setPadding(0, 20, 0, 20);
+            mainLayout.addView(noSub);
 
-            Space space = new Space(this);
-            space.setMinimumHeight(40);
-            mainLayout.addView(space);
-
-            Button btnNext = new Button(this);
-            btnNext.setText("Next >");
-            btnNext.setBackgroundColor(Color.BLACK);
-            btnNext.setTextColor(Color.WHITE);
-
-            btnNext.setOnClickListener(v -> {
-                String typedText = editText.getText().toString().trim();
-                if (!typedText.isEmpty()) {
-                    dialog.dismiss();
-                    List<String> selection = new ArrayList<>();
-                    selection.add(typedText);
-                    showColorSelectionDialog(mainCategory, selection);
-                } else {
-                    editText.setError("Please describe the item");
-                }
+            addChip(mainLayout, "Continue", v -> {
+                dialog.dismiss();
+                showColorSelectionDialog(categoryId, mainCategory, new ArrayList<>());
             });
-            mainLayout.addView(btnNext);
         }
 
         Button btnBack = new Button(this);
@@ -658,7 +517,7 @@ public class F1_CameraActivity extends AppCompatActivity {
     }
 
     // STEP 3: Color Selection
-    private void showColorSelectionDialog(String category, List<String> subTags) {
+    private void showColorSelectionDialog(String categoryId, String mainCategory, List<String> subTags) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
@@ -727,11 +586,6 @@ public class F1_CameraActivity extends AppCompatActivity {
             chipGroup.addView(chip);
         }
 
-        addChip(chipGroup, "Others", v -> {
-            dialog.dismiss();
-            showSubCategorySelectionDialog("");
-        });
-
         scrollView.addView(chipGroup);
         mainLayout.addView(scrollView);
 
@@ -742,7 +596,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         btnFinish.setOnClickListener(v -> {
             if (!selectedColors.isEmpty()) {
                 dialog.dismiss();
-                uploadToCloudinary(processedBitmap, category, subTags, selectedColors);
+                uploadToCloudinary(processedBitmap, categoryId, mainCategory, subTags, selectedColors);
             } else {
                 Toast.makeText(this, "Select at least one color", Toast.LENGTH_SHORT).show();
             }
@@ -757,7 +611,7 @@ public class F1_CameraActivity extends AppCompatActivity {
 
     // -------------------------- 6. UPLOAD & SAVE LOGIC --------------------------
 
-    private void uploadToCloudinary(Bitmap bitmap, String category, List<String> subTags, List<String> colors) {
+    private void uploadToCloudinary(Bitmap bitmap, String categoryId, String categoryName, List<String> subTags, List<String> colors) {
         progressBar.setVisibility(View.VISIBLE);
         statusTextView.setText("Uploading...");
 
@@ -777,7 +631,7 @@ public class F1_CameraActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(String requestId, Map resultData) {
                         String imageUrl = (String) resultData.get("secure_url");
-                        saveToFirebase(imageUrl, category, subTags, colors);
+                        saveToFirebase(imageUrl, categoryId, categoryName, subTags, colors);
                     }
 
                     @Override
@@ -793,7 +647,7 @@ public class F1_CameraActivity extends AppCompatActivity {
                 .dispatch();
     }
 
-    private void saveToFirebase(String imageUrl, String category, List<String> subTags, List<String> colors) {
+    private void saveToFirebase(String imageUrl, String categoryId, String categoryName, List<String> subTags, List<String> colors) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
@@ -804,7 +658,7 @@ public class F1_CameraActivity extends AppCompatActivity {
         DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference("Users")
                 .child(uid)
                 .child("categories")
-                .child(category)
+                .child(categoryId)
                 .child("photos");
 
         String itemId = databaseRef.push().getKey();
@@ -812,7 +666,8 @@ public class F1_CameraActivity extends AppCompatActivity {
         if (itemId != null) {
             Map<String, Object> itemData = new HashMap<>();
             itemData.put("imageUrl", imageUrl);
-            itemData.put("category", category);
+            itemData.put("category", categoryName);
+            itemData.put("categoryId", categoryId);
             itemData.put("subTags", subTags);
             itemData.put("colors", colors);
             itemData.put("timestamp", ServerValue.TIMESTAMP);
@@ -839,6 +694,13 @@ public class F1_CameraActivity extends AppCompatActivity {
         chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#E0E0E0")));
         chip.setOnClickListener(listener);
         group.addView(chip);
+    }
+
+    private void addChip(LinearLayout layout, String text, View.OnClickListener listener) {
+        Button btn = new Button(this);
+        btn.setText(text);
+        btn.setOnClickListener(listener);
+        layout.addView(btn);
     }
 
     private void navigateToCloset() {
