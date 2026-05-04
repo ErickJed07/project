@@ -50,28 +50,23 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/tv_woman"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageView
+                android:id="@+id/iv_woman"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:background="@drawable/bg_pill"
                 android:backgroundTint="@color/ai_accent"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="4dp"
-                android:text="Woman"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:padding="6dp"
+                android:src="@drawable/ic_female"
+                app:tint="@color/white" />
 
-            <TextView
-                android:id="@+id/tv_man"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="4dp"
-                android:text="Man"
-                android:textColor="@color/ai_chip_unselected_text"
-                android:textSize="12sp" />
+            <ImageView
+                android:id="@+id/iv_man"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="6dp"
+                android:src="@drawable/ic_male"
+                app:tint="@color/ai_chip_unselected_text" />
 
         </LinearLayout>
 

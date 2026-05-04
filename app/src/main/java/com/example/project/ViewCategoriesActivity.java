@@ -41,7 +41,7 @@ public class ViewCategoriesActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
     private boolean isWomanSelected = true;
-    private TextView tvWoman, tvMan;
+    private ImageView ivWoman, ivMan;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,8 +51,8 @@ public class ViewCategoriesActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference("Users");
 
-        tvWoman = findViewById(R.id.tv_woman);
-        tvMan = findViewById(R.id.tv_man);
+        ivWoman = findViewById(R.id.iv_woman);
+        ivMan = findViewById(R.id.iv_man);
 
         rvCategories = findViewById(R.id.rv_categories);
         rvCategories.setLayoutManager(new GridLayoutManager(this, 2));
@@ -66,7 +66,7 @@ public class ViewCategoriesActivity extends AppCompatActivity {
             startActivity(new Intent(this, AddItemActivity.class));
         });
 
-        tvWoman.setOnClickListener(v -> {
+        ivWoman.setOnClickListener(v -> {
             if (!isWomanSelected) {
                 isWomanSelected = true;
                 updateToggleUI();
@@ -74,7 +74,7 @@ public class ViewCategoriesActivity extends AppCompatActivity {
             }
         });
 
-        tvMan.setOnClickListener(v -> {
+        ivMan.setOnClickListener(v -> {
             if (isWomanSelected) {
                 isWomanSelected = false;
                 updateToggleUI();
@@ -101,23 +101,19 @@ public class ViewCategoriesActivity extends AppCompatActivity {
 
     private void updateToggleUI() {
         if (isWomanSelected) {
-            tvWoman.setBackgroundResource(R.drawable.bg_pill);
-            tvWoman.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ai_accent)));
-            tvWoman.setTextColor(Color.WHITE);
-            tvWoman.setTypeface(null, android.graphics.Typeface.BOLD);
+            ivWoman.setBackgroundResource(R.drawable.bg_pill);
+            ivWoman.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ai_accent)));
+            ivWoman.setImageTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
 
-            tvMan.setBackground(null);
-            tvMan.setTextColor(ContextCompat.getColor(this, R.color.ai_chip_unselected_text));
-            tvMan.setTypeface(null, android.graphics.Typeface.NORMAL);
+            ivMan.setBackground(null);
+            ivMan.setImageTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ai_chip_unselected_text)));
         } else {
-            tvMan.setBackgroundResource(R.drawable.bg_pill);
-            tvMan.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ai_accent)));
-            tvMan.setTextColor(Color.WHITE);
-            tvMan.setTypeface(null, android.graphics.Typeface.BOLD);
+            ivMan.setBackgroundResource(R.drawable.bg_pill);
+            ivMan.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ai_accent)));
+            ivMan.setImageTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
 
-            tvWoman.setBackground(null);
-            tvWoman.setTextColor(ContextCompat.getColor(this, R.color.ai_chip_unselected_text));
-            tvWoman.setTypeface(null, android.graphics.Typeface.NORMAL);
+            ivWoman.setBackground(null);
+            ivWoman.setImageTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this, R.color.ai_chip_unselected_text)));
         }
     }
 
