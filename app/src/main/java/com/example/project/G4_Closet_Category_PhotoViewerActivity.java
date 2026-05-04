@@ -44,6 +44,7 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
 
     private String categoryId;
     private String uid;
+    private String originalCategoryForItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -332,8 +333,6 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         editSheet.setContentView(editView);
 
         TextView tvSize = editView.findViewById(R.id.tvSize);
-        TextView tvColorName = editView.findViewById(R.id.tvColorName);
-        View viewColorCircle = editView.findViewById(R.id.viewColorCircle);
         
         // Populate with current data
         int currentPos = viewPager.getCurrentItem();
@@ -353,6 +352,7 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
 
         TabLayout tabLayout = editView.findViewById(R.id.tabLayoutTags);
         TextView tvTagTypeLabel = editView.findViewById(R.id.tvTagTypeLabel);
+        ChipGroup cgCategories = editView.findViewById(R.id.cgCategories);
         ChipGroup cgOccasions = editView.findViewById(R.id.cgOccasions);
         ChipGroup cgSeasons = editView.findViewById(R.id.cgSeasons);
 
@@ -360,13 +360,18 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
+                cgCategories.setVisibility(View.GONE);
+                cgOccasions.setVisibility(View.GONE);
+                cgSeasons.setVisibility(View.GONE);
+
                 if (tab.getPosition() == 0) {
+                    tvTagTypeLabel.setText("Categories");
+                    cgCategories.setVisibility(View.VISIBLE);
+                } else if (tab.getPosition() == 1) {
                     tvTagTypeLabel.setText("Occasions");
                     cgOccasions.setVisibility(View.VISIBLE);
-                    cgSeasons.setVisibility(View.GONE);
                 } else {
                     tvTagTypeLabel.setText("Seasons");
-                    cgOccasions.setVisibility(View.GONE);
                     cgSeasons.setVisibility(View.VISIBLE);
                 }
             }
@@ -376,9 +381,26 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
 
         // Add Tag
         editView.findViewById(R.id.btnAddTag).setOnClickListener(v -> {
-            boolean isOccasion = tabLayout.getSelectedTabPosition() == 0;
-            showAddTagDialog(isOccasion ? cgOccasions : cgSeasons, isOccasion ? "Occasion" : "Season");
+            int pos = tabLayout.getSelectedTabPosition();
+            if (pos == 0) {
+                showAddTagDialog(cgCategories, "Category");
+            } else if (pos == 1) {
+                showAddTagDialog(cgOccasions, "Occasion");
+            } else {
+                showAddTagDialog(cgSeasons, "Season");
+            }
         });
+
+        // Initialize Categories from CategoryManager
+        List<CategoryManager.CategoryItem> categoryItems = CategoryManager.getCategories();
+        for (CategoryManager.CategoryItem item : categoryItems) {
+            addTagChip(cgCategories, item.name);
+            Chip lastChip = (Chip) cgCategories.getChildAt(cgCategories.getChildCount() - 1);
+            lastChip.setTag(item.id);
+            if (item.id.equalsIgnoreCase(originalCategoryForItem)) {
+                lastChip.setChecked(true);
+            }
+        }
 
         // Initialize with some mock tags
         addTagChip(cgOccasions, "Streetwear");
@@ -387,17 +409,17 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         addTagChip(cgSeasons, "Spring");
 
         editView.findViewById(R.id.btnSheetSave).setOnClickListener(v -> {
-            /*
-            String newName = etName.getText().toString().trim();
-            if (newName.isEmpty()) {
-                etName.setError("Name required");
-                return;
+            int checkedId = cgCategories.getCheckedChipId();
+            if (checkedId != View.NO_ID) {
+                Chip selectedChip = editView.findViewById(checkedId);
+                String newCatId = (String) selectedChip.getTag();
+                if (newCatId != null && !newCatId.equals(originalCategoryForItem)) {
+                    transferItem(currentPos, newCatId);
+                }
             }
-            */
-            // In a real app, update Firebase here
+
             Toast.makeText(this, "Item updated", Toast.LENGTH_SHORT).show();
             editSheet.dismiss();
-            updateItemDetails(currentPos); // Refresh UI
         });
 
         editSheet.show();
@@ -436,12 +458,76 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void transferItem(int position, String newCategoryId) {
+        if (uid == null || originalCategoryForItem == null || newCategoryId == null || newCategoryId.equals(originalCategoryForItem)) {
+            return;
+        }
+
+        String urlToMove = imageUrls.get(position);
+        DatabaseReference oldRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid)
+                .child("categories")
+                .child(originalCategoryForItem)
+                .child("photos");
+
+        DatabaseReference newRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid)
+                .child("categories")
+                .child(newCategoryId)
+                .child("photos");
+
+        oldRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    if (isMatch(child, urlToMove)) {
+                        Object itemData = child.getValue();
+                        newRef.push().setValue(itemData).addOnSuccessListener(aVoid -> {
+                            child.getRef().removeValue();
+                            Toast.makeText(G4_Closet_Category_PhotoViewerActivity.this,
+                                    "Moved to " + newCategoryId, Toast.LENGTH_SHORT).show();
+
+                            // If we are in a specific category view (not all_clothes),
+                            // we should remove it from the list
+                            if (!"all_clothes".equals(categoryId)) {
+                                imageUrls.remove(position);
+                                adapter.notifyDataSetChanged();
+                                if (imageUrls.isEmpty()) {
+                                    finishWithAnimation();
+                                } else {
+                                    int newPos = Math.min(position, imageUrls.size() - 1);
+                                    viewPager.setCurrentItem(newPos, false);
+                                }
+                            } else {
+                                // If all_clothes, just refresh the UI for the current item
+                                updateItemDetails(position);
+                            }
+                        });
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Transfer cancelled: " + error.getMessage());
+            }
+        });
+    }
+
     private void addTagChip(ChipGroup chipGroup, String text) {
         Chip chip = new Chip(this);
         chip.setText(text);
-        chip.setCloseIconVisible(true);
+
+        if (chipGroup.getId() == R.id.cgCategories) {
+            chip.setCheckable(true);
+            chip.setCloseIconVisible(false);
+        } else {
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v -> chipGroup.removeView(chip));
+        }
+
         chip.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(Color.parseColor("#F5F5F7")));
-        chip.setOnCloseIconClickListener(v -> chipGroup.removeView(chip));
         chipGroup.addView(chip);
     }
 
@@ -528,6 +614,7 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         if (category == null && !"all_clothes".equals(categoryId)) {
             category = categoryId; // Fallback to categoryId from intent
         }
+        originalCategoryForItem = category;
         if (tvCategoryName != null) {
             tvCategoryName.setText(category != null ? category : "Unknown");
         }
