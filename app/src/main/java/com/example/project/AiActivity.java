@@ -27,12 +27,19 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.shape.CornerFamily;
+import com.google.android.material.shape.RelativeCornerSize;
+import com.google.android.material.shape.ShapeAppearanceModel;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -52,11 +59,20 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.pose.Pose;
+import com.google.mlkit.vision.pose.PoseDetection;
+import com.google.mlkit.vision.pose.PoseDetector;
+import com.google.mlkit.vision.pose.PoseLandmark;
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions;
 
 public class AiActivity extends AppCompatActivity {
 
     private ViewGroup llAvatars;
     private View avatarMain, btnAddAvatar;
+    private ImageView ivMainModel;
     private boolean isExpanded = false;
     private Uri currentPhotoUri;
 
@@ -81,9 +97,12 @@ public class AiActivity extends AppCompatActivity {
     private boolean isWomanSelected = true;
 
     private BottomSheetBehavior<View> bottomSheetBehavior;
+    private int bottomInset = 0;
 
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
+
+    private PoseDetector poseDetector;
 
     private final ActivityResultLauncher<String> cameraPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -107,13 +126,36 @@ public class AiActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference("Users");
 
+        PoseDetectorOptions options = new PoseDetectorOptions.Builder()
+                .setDetectorMode(PoseDetectorOptions.SINGLE_IMAGE_MODE)
+                .build();
+        poseDetector = PoseDetection.getClient(options);
+
         llAvatars = findViewById(R.id.ll_avatars);
         avatarMain = findViewById(R.id.avatar_main);
         btnAddAvatar = findViewById(R.id.btn_add_avatar);
+        ivMainModel = findViewById(R.id.iv_main_model);
         llEmptyState = findViewById(R.id.ll_empty_state);
         llPreviewContainer = findViewById(R.id.ll_preview_container);
         btnTogglePreview = findViewById(R.id.btn_toggle_preview);
         ivPreviewToggleIcon = findViewById(R.id.iv_preview_toggle_icon);
+
+        findViewById(R.id.btn_back_ai).setOnClickListener(v -> finish());
+
+        View mainContent = findViewById(R.id.cl_main_content);
+        ViewCompat.setOnApplyWindowInsetsListener(mainContent, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, systemBars.top, 0, 0);
+            bottomInset = systemBars.bottom;
+
+            if (bottomSheetBehavior != null) {
+                int currentHeight = (int) (bottomSheetBehavior.getPeekHeight() +
+                        (findViewById(R.id.bottom_sheet_card).getHeight() - bottomSheetBehavior.getPeekHeight()) * bottomSheetBehavior.calculateSlideOffset());
+                updateMainModelHeight(currentHeight);
+            }
+
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         avatarMain.setOnClickListener(v -> toggleAvatars());
         btnAddAvatar.setOnClickListener(v -> showAddAvatarOptions());
@@ -170,6 +212,7 @@ public class AiActivity extends AppCompatActivity {
 
             // Dynamically adjust preview container bottom margin to sit above bottom sheet
             updatePreviewContainerMargin(bottomSheetBehavior.getPeekHeight());
+            updateMainModelHeight(bottomSheetBehavior.getPeekHeight());
         });
 
         bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
@@ -217,8 +260,19 @@ public class AiActivity extends AppCompatActivity {
                 int currentHeight = (int) (bottomSheetBehavior.getPeekHeight() +
                     (bottomSheet.getHeight() - bottomSheetBehavior.getPeekHeight()) * slideOffset);
                 updatePreviewContainerMargin(currentHeight);
+                updateMainModelHeight(currentHeight);
             }
         });
+    }
+
+    private void updateMainModelHeight(int bottomSheetHeight) {
+        View mainContent = findViewById(R.id.cl_main_content);
+        if (mainContent != null && mainContent.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) mainContent.getLayoutParams();
+            // Subtract the bottomInset to compensate for fitsSystemWindows padding
+            params.bottomMargin = Math.max(0, bottomSheetHeight - bottomInset);
+            mainContent.setLayoutParams(params);
+        }
     }
 
     private void updatePreviewContainerMargin(int margin) {
@@ -596,7 +650,14 @@ public class AiActivity extends AppCompatActivity {
     private void toggleAvatars() {
         TransitionManager.beginDelayedTransition(llAvatars, new AutoTransition());
         isExpanded = !isExpanded;
-        btnAddAvatar.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+        
+        // Toggle btnAddAvatar and any other children except the main avatar
+        for (int i = 0; i < llAvatars.getChildCount(); i++) {
+            View child = llAvatars.getChildAt(i);
+            if (child.getId() != R.id.avatar_main) {
+                child.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+            }
+        }
     }
 
     private void showAddAvatarOptions() {
@@ -645,7 +706,84 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void handleImageSelection(Uri uri) {
-        Toast.makeText(this, "New model image received!", Toast.LENGTH_SHORT).show();
+        if (uri != null) {
+            Toast.makeText(this, "Scanning for full body...", Toast.LENGTH_SHORT).show();
+            validateFullBody(uri, isFullBody -> {
+                if (isFullBody) {
+                    // Add to the list of selectable avatars
+                    addAvatarToList(uri);
+                    Toast.makeText(this, "New model image added!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Error: Please select a full body image (showing from head to toe).", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    }
+
+    private void validateFullBody(Uri uri, Consumer<Boolean> callback) {
+        try {
+            InputImage image = InputImage.fromFilePath(this, uri);
+            poseDetector.process(image)
+                    .addOnSuccessListener(pose -> {
+                        boolean isFullBody = checkPoseForFullBody(pose);
+                        callback.accept(isFullBody);
+                    })
+                    .addOnFailureListener(e -> {
+                        callback.accept(false);
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+            callback.accept(false);
+        }
+    }
+
+    private boolean checkPoseForFullBody(Pose pose) {
+        // Required landmarks for a full body
+        int[] requiredLandmarks = {
+                PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER,
+                PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP,
+                PoseLandmark.LEFT_KNEE, PoseLandmark.RIGHT_KNEE,
+                PoseLandmark.LEFT_ANKLE, PoseLandmark.RIGHT_ANKLE
+        };
+
+        for (int landmarkType : requiredLandmarks) {
+            PoseLandmark landmark = pose.getPoseLandmark(landmarkType);
+            // Check if the landmark is present and has reasonable likelihood (in frame)
+            if (landmark == null || landmark.getInFrameLikelihood() < 0.5f) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void addAvatarToList(Uri uri) {
+        ShapeableImageView newAvatar = new ShapeableImageView(this);
+        int size = (int) (40 * getResources().getDisplayMetrics().density);
+        int margin = (int) (8 * getResources().getDisplayMetrics().density);
+        int padding = (int) (2 * getResources().getDisplayMetrics().density);
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+        params.setMarginStart(margin);
+        newAvatar.setLayoutParams(params);
+
+        newAvatar.setPadding(padding, padding, padding, padding);
+        newAvatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        newAvatar.setStrokeColor(ColorStateList.valueOf(Color.WHITE));
+        newAvatar.setStrokeWidth(2 * getResources().getDisplayMetrics().density);
+        newAvatar.setShapeAppearanceModel(ShapeAppearanceModel.builder()
+                .setAllCornerSizes(new RelativeCornerSize(0.5f))
+                .build());
+
+        Glide.with(this).load(uri).into(newAvatar);
+
+        newAvatar.setOnClickListener(v -> Glide.with(this).load(uri).into(ivMainModel));
+
+        // Insert at index 1 (between Plus button and Main avatar)
+        // Order: [Plus Button] [Added Avatars...] [Main Avatar]
+        llAvatars.addView(newAvatar, 1);
+
+        // Ensure it follows current expansion state
+        newAvatar.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
     }
 
     private void setupSwipeNavigation() {

@@ -5,13 +5,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
-    android:fitsSystemWindows="true">
+    android:background="#DAC9E2">
 
     <!-- Main Content Area inside ConstraintLayout -->
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/cl_main_content"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_marginBottom="-100dp"
+        android:fitsSystemWindows="false">
 
         <!-- Main Model Image -->
         <ImageView
@@ -39,50 +41,54 @@
             app:layout_constraintBottom_toBottomOf="@+id/iv_main_model"
             app:layout_constraintEnd_toEndOf="@+id/iv_main_model"
             app:layout_constraintStart_toStartOf="@+id/iv_main_model"
-            app:layout_constraintTop_toTopOf="@+id/iv_main_model" />
+            app:layout_constraintTop_toTopOf="@+id/iv_main_model"
+            app:layout_constraintVertical_bias="0.61" />
 
         <!-- Back Button -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/btn_back"
+            android:id="@+id/btn_back_ai"
             android:layout_width="@dimen/back_button_size"
             android:layout_height="@dimen/back_button_size"
-            android:layout_marginStart="@dimen/spacing_large"
-            android:layout_marginTop="@dimen/spacing_large"
+            android:layout_marginStart="@dimen/spacing_medium"
+            android:layout_marginTop="@dimen/spacing_medium"
             android:clickable="true"
             android:focusable="true"
-            app:cardBackgroundColor="@color/overlay_button_bg"
-            app:cardCornerRadius="20dp"
+            app:cardBackgroundColor="#26FFFFFF"
+            app:cardCornerRadius="50dp"
             app:cardElevation="0dp"
-            app:strokeWidth="0dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
+            app:strokeColor="#40FFFFFF"
+            app:strokeWidth="1dp">
 
             <ImageView
                 android:layout_width="@dimen/back_icon_size"
                 android:layout_height="@dimen/back_icon_size"
                 android:layout_gravity="center"
-                android:src="@drawable/arrowleft"
                 android:contentDescription="@string/back_button"
+                android:src="@drawable/arrowleft"
                 app:tint="@color/white" />
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Avatar Section -->
         <LinearLayout
             android:id="@+id/ll_avatars"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:gravity="center_vertical"
+            android:layout_marginEnd="@dimen/spacing_medium"
+            android:gravity="end|center_vertical"
             android:orientation="horizontal"
-            app:layout_constraintBottom_toBottomOf="@+id/btn_back"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintBottom_toBottomOf="@+id/btn_back_ai"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/btn_back">
+            app:layout_constraintStart_toEndOf="@id/btn_back_ai"
+            app:layout_constraintTop_toTopOf="@+id/btn_back_ai">
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btn_add_avatar"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_marginEnd="@dimen/spacing_small"
+                android:layout_marginStart="@dimen/spacing_small"
                 android:background="@drawable/dashed_circle_border"
                 android:clickable="true"
                 android:focusable="true"
@@ -104,6 +110,7 @@
                 android:id="@+id/avatar_main"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:layout_marginStart="@dimen/spacing_small"
                 android:contentDescription="@string/add_avatar"
                 android:padding="2dp"
                 android:scaleType="centerCrop"
@@ -120,8 +127,8 @@
             android:id="@+id/ll_preview_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="4dp"
+            android:layout_marginEnd="@dimen/spacing_small"
+            android:layout_marginBottom="108dp"
             android:gravity="center_horizontal"
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -169,10 +176,9 @@
         app:behavior_hideable="false"
         app:behavior_peekHeight="100dp"
         app:cardBackgroundColor="@color/white"
-        app:cardCornerRadius="@dimen/bottom_sheet_corner_radius"
-        app:cardElevation="16dp"
+        app:cardElevation="0dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
-        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Large">
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Project.BottomSheet">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/bottom_sheet_content"
@@ -185,14 +191,14 @@
                 android:id="@+id/bottom_sheet_grabber"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="0dp"
                 android:padding="4dp"
-                android:src="@drawable/ic_chevron_up"
                 android:rotation="180"
-                app:tint="#64748B"
-                app:layout_constraintTop_toTopOf="parent"
+                android:src="@drawable/ic_chevron_up"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="#64748B" />
 
             <!-- Wardrobe Title and Filter -->
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -200,6 +206,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="@dimen/spacing_large"
+                android:paddingBottom="@dimen/spacing_small"
                 app:layout_constraintTop_toBottomOf="@id/bottom_sheet_grabber">
 
                 <TextView
@@ -209,7 +216,7 @@
                     android:letterSpacing="-0.02"
                     android:text="Pick Clothes"
                     android:textColor="#1E293B"
-                    android:textSize="30sp"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -259,7 +266,6 @@
                 android:id="@+id/rv_categories"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_small"
                 android:clipToPadding="false"
                 android:orientation="horizontal"
                 android:paddingHorizontal="@dimen/spacing_large"
@@ -275,6 +281,7 @@
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:layout_marginTop="@dimen/spacing_small"
+                android:layout_marginBottom="@dimen/spacing_small"
                 app:layout_constraintBottom_toTopOf="@+id/btn_generate_expanded"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -319,12 +326,12 @@
                 android:layout_height="54dp"
                 android:layout_marginHorizontal="@dimen/spacing_large"
                 android:layout_marginBottom="24dp"
+                android:alpha="0"
                 android:text="@string/generate_outfit_btn"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:alpha="0"
                 android:visibility="gone"
                 app:backgroundTint="@color/black"
                 app:cornerRadius="27dp"
@@ -334,8 +341,8 @@
                 app:iconPadding="@dimen/spacing_small"
                 app:iconTint="@color/white"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>

@@ -46,17 +46,7 @@
                 app:layout_constraintStart_toEndOf="@id/cv_header_icon"
                 app:layout_constraintTop_toTopOf="@id/cv_header_icon" />
 
-            <ImageView
-                android:id="@+id/iv_search"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="16dp"
-                android:src="@drawable/search"
-                app:layout_constraintBottom_toBottomOf="@id/tv_title"
-                app:layout_constraintEnd_toStartOf="@id/iv_notification"
-                app:layout_constraintTop_toTopOf="@id/tv_title" />
-
-            <ImageView
+        <ImageView
                 android:id="@+id/iv_notification"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
@@ -123,6 +113,7 @@
                                 android:textSize="13sp" />
 
                             <TextView
+                                android:id="@+id/tv_total_items_val"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/stat_total_items_val"
@@ -248,186 +239,16 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@id/tv_categories_label" />
 
-            <HorizontalScrollView
-                android:id="@+id/hsv_categories"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_categories"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:clipToPadding="false"
-                android:scrollbars="none"
-                app:layout_constraintTop_toBottomOf="@id/tv_categories_label">
-
-                <LinearLayout
-                    android:id="@+id/ll_categories"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingBottom="4dp">
-
-                    <!-- Cat 1 -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="110dp"
-                        android:layout_height="110dp"
-                        android:layout_marginEnd="12dp"
-                        app:cardBackgroundColor="@color/cat_blue_bg"
-                        app:cardCornerRadius="24dp"
-                        app:cardElevation="0dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <ImageView
-                                android:layout_width="32dp"
-                                android:layout_height="32dp"
-                                android:src="@drawable/hanger" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="Tops"
-                                android:textColor="@color/wardrobe_text_primary"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/cat_tops_val"
-                                android:textColor="@color/wardrobe_text_secondary"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="110dp"
-                        android:layout_height="110dp"
-                        android:layout_marginEnd="12dp"
-                        app:cardBackgroundColor="@color/cat_pink_bg"
-                        app:cardCornerRadius="24dp"
-                        app:cardElevation="0dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <ImageView
-                                android:layout_width="32dp"
-                                android:layout_height="32dp"
-                                android:src="@drawable/hanger" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="Bottoms"
-                                android:textColor="@color/wardrobe_text_primary"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/cat_bottoms_val"
-                                android:textColor="@color/wardrobe_text_secondary"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Cat 3 -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="110dp"
-                        android:layout_height="110dp"
-                        app:cardBackgroundColor="@color/cat_teal_bg"
-                        app:cardCornerRadius="24dp"
-                        android:layout_marginEnd="12dp"
-                        app:cardElevation="0dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <ImageView
-                                android:layout_width="32dp"
-                                android:layout_height="32dp"
-                                android:src="@drawable/hanger" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="Accessories"
-                                android:textColor="@color/wardrobe_text_primary"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/cat_acc_val"
-                                android:textColor="@color/wardrobe_text_secondary"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-                    <!-- Cat 3 -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="110dp"
-                        android:layout_height="110dp"
-                        app:cardBackgroundColor="@color/cat_teal_bg"
-                        app:cardCornerRadius="24dp"
-                        android:layout_marginEnd="12dp"
-                        app:cardElevation="0dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <ImageView
-                                android:layout_width="32dp"
-                                android:layout_height="32dp"
-                                android:src="@drawable/hanger" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="Accessories"
-                                android:textColor="@color/wardrobe_text_primary"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/cat_acc_val"
-                                android:textColor="@color/wardrobe_text_secondary"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-
-                </LinearLayout>
-            </HorizontalScrollView>
+                android:orientation="horizontal"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                app:layout_constraintTop_toBottomOf="@id/tv_categories_label"
+                tools:listitem="@layout/item_category_horizontal" />
 
             <!-- Scheduled Outfits -->
             <TextView
@@ -440,7 +261,7 @@
                 android:textSize="18sp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/hsv_categories" />
+                app:layout_constraintTop_toBottomOf="@id/rv_categories" />
 
             <TextView
                 android:id="@+id/tv_view_calendar"

@@ -5,60 +5,62 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000"
-    tools:context=".SquareCameraActivity">
+    tools:context=".SquareCameraActivity"
+    android:fitsSystemWindows="true">
 
     <!-- Camera Preview Area (Square) -->
     <androidx.camera.view.PreviewView
-        android:id="@+id/previewView"
+        android:id="@+id/view_finder"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/bottom_overlay"
+        app:layout_constraintBottom_toTopOf="@+id/view_bottom_overlay"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/top_overlay" />
+        app:layout_constraintTop_toBottomOf="@+id/view_top_overlay" />
 
     <!-- Captured Image Preview (Hidden initially) -->
     <ImageView
-        android:id="@+id/iv_captured_preview"
+        android:id="@+id/iv_captured_image"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:scaleType="centerCrop"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/bottom_overlay"
+        android:elevation="10dp"
+        app:layout_constraintBottom_toTopOf="@+id/view_bottom_overlay"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/top_overlay" />
+        app:layout_constraintTop_toBottomOf="@+id/view_top_overlay" />
 
     <!-- Top Overlay (Black) -->
     <View
-        android:id="@+id/top_overlay"
+        android:id="@+id/view_top_overlay"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:background="#000000"
-        app:layout_constraintBottom_toTopOf="@id/previewView"
+        app:layout_constraintBottom_toTopOf="@id/view_finder"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="spread" />
 
     <!-- Bottom Overlay (Black) -->
     <View
-        android:id="@+id/bottom_overlay"
+        android:id="@+id/view_bottom_overlay"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:background="#000000"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/previewView" />
+        app:layout_constraintTop_toBottomOf="@id/view_finder" />
 
     <!-- Grid Overlay -->
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/cl_grid_overlay"
+        android:id="@+id/layout_grid_overlay"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/previewView"
-        app:layout_constraintEnd_toEndOf="@id/previewView"
-        app:layout_constraintStart_toStartOf="@id/previewView"
-        app:layout_constraintTop_toTopOf="@id/previewView">
+        app:layout_constraintBottom_toBottomOf="@id/view_finder"
+        app:layout_constraintEnd_toEndOf="@id/view_finder"
+        app:layout_constraintStart_toStartOf="@id/view_finder"
+        app:layout_constraintTop_toTopOf="@id/view_finder">
 
         <!-- Grid Lines -->
         <View
@@ -191,6 +193,7 @@
 
     <!-- Header Controls -->
     <LinearLayout
+        android:id="@+id/layout_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -200,7 +203,7 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
-            android:id="@+id/iv_close"
+            android:id="@+id/btn_close"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:contentDescription="Close"
@@ -213,6 +216,7 @@
             android:layout_weight="1" />
 
         <LinearLayout
+            android:id="@+id/layout_timer_indicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -238,35 +242,38 @@
             android:layout_weight="1" />
 
         <ImageView
+            android:id="@+id/btn_flash_toggle"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:src="@drawable/tag"
-            app:tint="#FF4B2B" />
+            android:contentDescription="Flash Toggle"
+            android:src="@drawable/flash_off"
+            app:tint="#673AB7" />
     </LinearLayout>
 
     <!-- Shutter Button Container -->
     <FrameLayout
-        android:id="@+id/fl_shutter_container"
+        android:id="@+id/layout_shutter_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/previewView">
+        app:layout_constraintTop_toBottomOf="@id/view_finder">
 
         <FrameLayout
-            android:id="@+id/btn_capture"
+            android:id="@+id/btn_shutter"
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:layout_gravity="center"
             android:background="@drawable/photo_border"
             android:padding="4dp">
             <View
+                android:id="@+id/view_shutter_inner"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="#FFFFFF" />
         </FrameLayout>
 
         <LinearLayout
-            android:id="@+id/ll_confirm_options"
+            android:id="@+id/layout_confirm_options"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"

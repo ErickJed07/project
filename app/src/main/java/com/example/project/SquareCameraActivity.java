@@ -40,31 +40,36 @@ public class SquareCameraActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private PreviewView previewView;
-    private ImageView ivCapturedPreview;
-    private View btnCapture;
-    private View llConfirmOptions;
-    private View clGridOverlay;
+    private ImageView ivCapturedImage;
+    private View btnShutter;
+    private View layoutConfirmOptions;
+    private View layoutGridOverlay;
+    private ImageView btnFlashToggle;
     private ImageCapture imageCapture;
     private Bitmap capturedBitmap;
+    private int flashMode = ImageCapture.FLASH_MODE_OFF;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_square_camera);
 
-        previewView = findViewById(R.id.previewView);
-        ivCapturedPreview = findViewById(R.id.iv_captured_preview);
-        btnCapture = findViewById(R.id.btn_capture);
-        llConfirmOptions = findViewById(R.id.ll_confirm_options);
-        clGridOverlay = findViewById(R.id.cl_grid_overlay);
+        previewView = findViewById(R.id.view_finder);
+        ivCapturedImage = findViewById(R.id.iv_captured_image);
+        btnShutter = findViewById(R.id.btn_shutter);
+        layoutConfirmOptions = findViewById(R.id.layout_confirm_options);
+        layoutGridOverlay = findViewById(R.id.layout_grid_overlay);
+        btnFlashToggle = findViewById(R.id.btn_flash_toggle);
 
-        findViewById(R.id.iv_close).setOnClickListener(v -> finish());
+        findViewById(R.id.btn_close).setOnClickListener(v -> finish());
 
-        btnCapture.setOnClickListener(v -> takePhoto());
+        btnShutter.setOnClickListener(v -> takePhoto());
 
         findViewById(R.id.btn_retake).setOnClickListener(v -> resetCamera());
 
         findViewById(R.id.btn_use_photo).setOnClickListener(v -> returnResult());
+
+        btnFlashToggle.setOnClickListener(v -> toggleFlash());
 
         if (allPermissionsGranted()) {
             startCamera();
@@ -101,7 +106,8 @@ public class SquareCameraActivity extends AppCompatActivity {
                 preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
                 imageCapture = new ImageCapture.Builder()
-                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .setFlashMode(flashMode)
                         .build();
 
                 CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
@@ -126,6 +132,22 @@ public class SquareCameraActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
+    private void toggleFlash() {
+        if (flashMode == ImageCapture.FLASH_MODE_OFF) {
+            flashMode = ImageCapture.FLASH_MODE_ON;
+            btnFlashToggle.setImageResource(R.drawable.flash_on);
+            Toast.makeText(this, "Flash ON", Toast.LENGTH_SHORT).show();
+        } else {
+            flashMode = ImageCapture.FLASH_MODE_OFF;
+            btnFlashToggle.setImageResource(R.drawable.flash_off);
+            Toast.makeText(this, "Flash OFF", Toast.LENGTH_SHORT).show();
+        }
+
+        if (imageCapture != null) {
+            imageCapture.setFlashMode(flashMode);
+        }
+    }
+
     private void takePhoto() {
         if (imageCapture == null) return;
 
@@ -136,12 +158,13 @@ public class SquareCameraActivity extends AppCompatActivity {
                 image.close();
 
                 runOnUiThread(() -> {
-                    ivCapturedPreview.setImageBitmap(capturedBitmap);
-                    ivCapturedPreview.setVisibility(View.VISIBLE);
-                    previewView.setVisibility(View.GONE);
-                    clGridOverlay.setVisibility(View.GONE);
-                    btnCapture.setVisibility(View.GONE);
-                    llConfirmOptions.setVisibility(View.VISIBLE);
+                    ivCapturedImage.setImageBitmap(capturedBitmap);
+                    ivCapturedImage.setVisibility(View.VISIBLE);
+                    // Do not hide previewView immediately to avoid flicker, 
+                    // ivCapturedImage will cover it due to elevation.
+                    layoutGridOverlay.setVisibility(View.GONE);
+                    btnShutter.setVisibility(View.GONE);
+                    layoutConfirmOptions.setVisibility(View.VISIBLE);
                 });
             }
 
@@ -156,11 +179,15 @@ public class SquareCameraActivity extends AppCompatActivity {
         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
+        
+        // Use a more robust way to decode the byte array
         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 
         if (bitmap != null) {
             Matrix matrix = new Matrix();
             matrix.postRotate(image.getImageInfo().getRotationDegrees());
+            
+            // Create a mutable copy if necessary and ensure it's in a compatible format
             Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
 
             // Force Square Crop
@@ -177,11 +204,11 @@ public class SquareCameraActivity extends AppCompatActivity {
 
     private void resetCamera() {
         capturedBitmap = null;
-        ivCapturedPreview.setVisibility(View.GONE);
+        ivCapturedImage.setVisibility(View.GONE);
         previewView.setVisibility(View.VISIBLE);
-        clGridOverlay.setVisibility(View.VISIBLE);
-        btnCapture.setVisibility(View.VISIBLE);
-        llConfirmOptions.setVisibility(View.GONE);
+        layoutGridOverlay.setVisibility(View.VISIBLE);
+        btnShutter.setVisibility(View.VISIBLE);
+        layoutConfirmOptions.setVisibility(View.GONE);
     }
 
     private void returnResult() {
@@ -192,7 +219,8 @@ public class SquareCameraActivity extends AppCompatActivity {
             if (!cachePath.exists()) {
                 cachePath.mkdirs();
             }
-            File file = new File(cachePath, "captured_square_item.jpg");
+            String timeStamp = String.valueOf(System.currentTimeMillis());
+            File file = new File(cachePath, "captured_square_" + timeStamp + ".jpg");
             FileOutputStream stream = new FileOutputStream(file);
             capturedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
             stream.close();

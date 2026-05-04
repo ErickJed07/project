@@ -31,6 +31,8 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.widget.LinearLayout;
 import com.yalantis.ucrop.UCrop;
+import com.yalantis.ucrop.UCropActivity;
+import com.yalantis.ucrop.model.AspectRatio;
 import java.util.Objects;
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +58,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.signature.ObjectKey;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
@@ -63,6 +67,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
+import android.graphics.Canvas;
+import java.io.FileOutputStream;
+import android.util.Log;
 
 public class AddItemActivity extends AppCompatActivity {
 
@@ -74,9 +81,9 @@ public class AddItemActivity extends AppCompatActivity {
     private LinearLayout llPhotoOptions;
     private MaterialCardView cvPhotoPreview;
     private MaterialCardView cvCropPhoto;
-    private MaterialCardView cvZoomPhoto;
     private ImageView ivPhotoPreview;
     private MaterialCardView cvRemovePhoto;
+    private View clPreviewContainer;
     private Uri currentPhotoUri;
     private List<ColorOption> selectedColorOptions = new ArrayList<>();
     private String selectedCategoryId = "";
@@ -103,7 +110,7 @@ public class AddItemActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String> pickImageLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
-                    handleImageSelection(uri);
+                    startCrop(uri);
                 }
             });
 
@@ -130,9 +137,9 @@ public class AddItemActivity extends AppCompatActivity {
         llPhotoOptions = findViewById(R.id.ll_photo_options);
         cvPhotoPreview = findViewById(R.id.cv_photo_preview);
         cvCropPhoto = findViewById(R.id.cv_crop_photo);
-        cvZoomPhoto = findViewById(R.id.cv_zoom_photo);
         ivPhotoPreview = findViewById(R.id.iv_photo_preview);
         cvRemovePhoto = findViewById(R.id.cv_remove_photo);
+        clPreviewContainer = findViewById(R.id.cl_preview_container);
 
         // Initialize Cloudinary
         try {
@@ -206,7 +213,7 @@ public class AddItemActivity extends AppCompatActivity {
 
         cvRemovePhoto.setOnClickListener(v -> {
             isPhotoSelected = false;
-            cvPhotoPreview.setVisibility(View.GONE);
+            clPreviewContainer.setVisibility(View.GONE);
             llPhotoOptions.setVisibility(View.VISIBLE);
             ivPhotoPreview.setImageDrawable(null);
             currentPhotoUri = null;
@@ -215,12 +222,6 @@ public class AddItemActivity extends AppCompatActivity {
         cvCropPhoto.setOnClickListener(v -> {
             if (currentPhotoUri != null) {
                 startCrop(currentPhotoUri);
-            }
-        });
-
-        cvZoomPhoto.setOnClickListener(v -> {
-            if (currentPhotoUri != null) {
-                showImagePopup(currentPhotoUri);
             }
         });
 
@@ -432,6 +433,28 @@ public class AddItemActivity extends AppCompatActivity {
     }
 
     private void startCrop(Uri uri) {
+        Uri sourceUri = uri;
+        try {
+            // Load and pad the bitmap to square with black background
+            Bitmap originalBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
+            if (originalBitmap != null) {
+                Bitmap paddedBitmap = padBitmapToSquare(originalBitmap);
+                
+                // Save padded bitmap to a temporary file
+                File cachePath = new File(getCacheDir(), "images");
+                if (!cachePath.exists()) cachePath.mkdirs();
+                File paddedFile = new File(cachePath, "padded_" + System.currentTimeMillis() + ".jpg");
+                FileOutputStream out = new FileOutputStream(paddedFile);
+                paddedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+                out.close();
+                
+                sourceUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", paddedFile);
+            }
+        } catch (IOException e) {
+            Log.e("AddItemActivity", "Error padding bitmap", e);
+            // Fallback to original uri
+        }
+
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         String imageFileName = "Crop_" + timeStamp + ".jpg";
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
@@ -451,21 +474,59 @@ public class AddItemActivity extends AppCompatActivity {
         // Status bar and fitsSystemWindows are handled via Theme.UCrop.Project in themes.xml
         options.setStatusBarColor(ContextCompat.getColor(this, R.color.white));
         
-        // Better functionality
-        options.setFreeStyleCropEnabled(false); // Lock to square
-        options.setHideBottomControls(false);  // Show controls for rotation/scale
-        options.setCircleDimmedLayer(false);   // Keep it rectangular for clothes
+        // --- CROP FLEXIBILITY OPTIMIZATION ---
+        // Allow zooming out of image bounds to pad with background
+        options.setFreeStyleCropEnabled(false); // Lock to square ratio strictly
+        options.setHideBottomControls(false);  // Show controls
+        options.setCircleDimmedLayer(false);   
         options.setShowCropFrame(true);
         options.setShowCropGrid(true);
+        
+        // Lock to 1:1 only and hide other ratio options
+        options.setAspectRatioOptions(0, new AspectRatio("1:1", 1, 1));
+        
+        // This allows moving the image outside the square crop frame
+        // and zooming out beyond the original image size.
+        options.setAllowedGestures(UCropActivity.ALL, UCropActivity.ALL, UCropActivity.ALL);
+        
+        // Ensure the background is black to match the padding we added
+        options.setRootViewBackgroundColor(Color.BLACK);
+        
+        // Visibility optimization
+        options.setDimmedLayerColor(Color.parseColor("#80000000"));
+        options.setCropFrameColor(Color.WHITE);
+        options.setCropGridColor(Color.WHITE);
+        options.setCropFrameStrokeWidth(3);
+        options.setCropGridStrokeWidth(2);
         
         // Animation
         options.setImageToCropBoundsAnimDuration(666);
 
-        Intent intent = UCrop.of(uri, destUri)
+        Intent intent = UCrop.of(sourceUri, destUri)
                 .withAspectRatio(1, 1) // Force square
                 .withOptions(options)
                 .getIntent(this);
         cropLauncher.launch(intent);
+    }
+
+    private Bitmap padBitmapToSquare(Bitmap srcBmp) {
+        int width = srcBmp.getWidth();
+        int height = srcBmp.getHeight();
+        int size = Math.max(width, height);
+
+        Bitmap dstBmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(dstBmp);
+        
+        // Fill background with black
+        canvas.drawColor(Color.BLACK);
+        
+        // Center the image
+        float left = (size - width) / 2f;
+        float top = (size - height) / 2f;
+        
+        canvas.drawBitmap(srcBmp, left, top, null);
+        
+        return dstBmp;
     }
 
     private void handleImageSelection(Uri uri) {
@@ -475,11 +536,14 @@ public class AddItemActivity extends AppCompatActivity {
         resetPhotoError();
 
         llPhotoOptions.setVisibility(View.GONE);
-        cvPhotoPreview.setVisibility(View.VISIBLE);
+        clPreviewContainer.setVisibility(View.VISIBLE);
 
         Glide.with(this)
                 .load(uri)
-                .centerCrop()
+                .fitCenter()
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(true)
+                .signature(new ObjectKey(System.currentTimeMillis()))
                 .into(ivPhotoPreview);
     }
 
@@ -708,25 +772,6 @@ public class AddItemActivity extends AppCompatActivity {
         }
     }
 
-
-    private void showImagePopup(Uri uri) {
-        android.app.Dialog dialog = new android.app.Dialog(this);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.dialog_image_preview);
-
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().setGravity(Gravity.CENTER);
-        }
-
-        ImageView ivPopup = dialog.findViewById(R.id.iv_preview_full);
-
-        Glide.with(this).load(uri).into(ivPopup);
-        ivPopup.setOnClickListener(v -> dialog.dismiss());
-
-        dialog.show();
-    }
 
     private void updateColorDisplay() {
         TextView tvColorLabel = findViewById(R.id.tv_selected_color);

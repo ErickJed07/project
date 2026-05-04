@@ -117,6 +117,7 @@ dependencies {
     implementation(libs.dotsindicator)
     implementation ("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation ("com.google.mlkit:image-labeling:17.0.7")
+    implementation ("com.google.mlkit:pose-detection:17.0.0")
     implementation ("androidx.palette:palette:1.0.0")
 
     // Gemini API
