@@ -30,6 +30,19 @@
             app:layout_constraintVertical_bias="0"
             tools:srcCompat="@tools:sample/backgrounds/scenic" />
 
+        <!-- Loading Indicator -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/pb_loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:indicatorColor="@color/white"
+            app:layout_constraintBottom_toBottomOf="@+id/iv_main_model"
+            app:layout_constraintEnd_toEndOf="@+id/iv_main_model"
+            app:layout_constraintStart_toStartOf="@+id/iv_main_model"
+            app:layout_constraintTop_toTopOf="@+id/iv_main_model" />
+
         <!-- Gradient Overlay -->
         <View
             android:id="@+id/v_overlay"
@@ -43,6 +56,58 @@
             app:layout_constraintStart_toStartOf="@+id/iv_main_model"
             app:layout_constraintTop_toTopOf="@+id/iv_main_model"
             app:layout_constraintVertical_bias="0.61" />
+
+        <!-- No Model Message (Professional) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cv_no_model_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="40dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="#CCFFFFFF"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:strokeColor="#20000000"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_marginBottom="16dp"
+                    android:alpha="0.6"
+                    android:src="@drawable/user_2"
+                    app:tint="@color/black" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ai_no_model_title"
+                    android:textColor="@color/black"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="200dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:text="@string/ai_no_model_desc"
+                    android:textColor="#66000000"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Back Button -->
         <com.google.android.material.card.MaterialCardView
@@ -89,13 +154,13 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_marginStart="@dimen/spacing_small"
-                android:background="@drawable/dashed_circle_border"
                 android:clickable="true"
                 android:focusable="true"
-                android:visibility="gone"
                 app:cardBackgroundColor="#1A000000"
-                app:cardCornerRadius="100dp"
-                app:strokeWidth="0dp">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#40FFFFFF"
+                app:strokeWidth="1dp">
 
                 <ImageView
                     android:layout_width="16dp"

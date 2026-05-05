@@ -53,4 +53,19 @@
     <string name="label_occasions">OCCASIONS</string>
     <string name="btn_apply_filters">Apply Filters</string>
     <string name="btn_reset">Reset</string>
+
+    <!-- AI Screen No Model State -->
+    <string name="ai_no_model_title">Style Your Model</string>
+    <string name="ai_no_model_desc">Select an avatar or upload a photo of yourself to begin your AI styling journey.</string>
+
+    <!-- AI Validation Errors -->
+    <string name="error_puffy_clothes">Model is wearing bulky or puffy clothes. Please use form-fitting attire for accurate measurements.</string>
+    <string name="error_not_full_body">Error: Full body (head to toe) visibility is required.</string>
+    <string name="error_obscured_joints">Body joints are obscured or not fully visible. Please ensure a clear full-body shot.</string>
+    <string name="error_ai_validation_failed">AI Validation failed. Please try again with a clearer photo.</string>
+    <string name="error_low_resolution">Image resolution is too low. Please use a higher quality photo (at least 720p).</string>
+    <string name="error_no_face_detected">No face detected. Please ensure your face is clearly visible.</string>
+    <string name="error_image_blurry">The image appears to be blurry. Please provide a sharper photo.</string>
+    <string name="error_poor_lighting">Poor lighting detected. Please use a well-lit environment.</string>
+    <string name="ai_stylist_result_title">AI Stylist Result</string>
 </resources>

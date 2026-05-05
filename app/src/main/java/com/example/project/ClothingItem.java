@@ -8,6 +8,7 @@ public class ClothingItem {
     private String id;
     private String imageUrl;
     private String categoryId;
+    private String size;
     private String season;
     private List<String> occasions;
     private boolean favorite;
@@ -25,10 +26,11 @@ public class ClothingItem {
         this.occasions = new ArrayList<>();
     }
 
-    public ClothingItem(String id, String imageUrl, String categoryId, String season, List<String> occasions, boolean favorite, long timestamp) {
+    public ClothingItem(String id, String imageUrl, String categoryId, String size, String season, List<String> occasions, boolean favorite, long timestamp) {
         this.id = id;
         this.imageUrl = imageUrl;
         this.categoryId = categoryId;
+        this.size = size;
         this.season = season;
         this.occasions = occasions != null ? occasions : new ArrayList<>();
         this.favorite = favorite;
@@ -43,6 +45,9 @@ public class ClothingItem {
 
     public String getCategoryId() { return categoryId; }
     public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+
+    public String getSize() { return size; }
+    public void setSize(String size) { this.size = size; }
 
     public String getSeason() { return season; }
     public void setSeason(String season) { this.season = season; }

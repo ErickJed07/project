@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -11,6 +13,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.transition.AutoTransition;
 import android.transition.TransitionManager;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -40,6 +43,18 @@ import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.shape.CornerFamily;
 import com.google.android.material.shape.RelativeCornerSize;
 import com.google.android.material.shape.ShapeAppearanceModel;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -47,8 +62,11 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import android.util.Base64;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,14 +77,26 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.face.FaceDetection;
+import com.google.mlkit.vision.face.FaceDetector;
+import com.google.mlkit.vision.face.FaceDetectorOptions;
 import com.google.mlkit.vision.pose.Pose;
 import com.google.mlkit.vision.pose.PoseDetection;
 import com.google.mlkit.vision.pose.PoseDetector;
 import com.google.mlkit.vision.pose.PoseLandmark;
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions;
+import com.cloudinary.android.MediaManager;
+import com.cloudinary.android.callback.ErrorInfo;
+import com.cloudinary.android.callback.UploadCallback;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AiActivity extends AppCompatActivity {
 
@@ -77,8 +107,9 @@ public class AiActivity extends AppCompatActivity {
     private Uri currentPhotoUri;
 
     private RecyclerView rvCategories, rvItems, rvSelectedPreview;
-    private View llEmptyState, llPreviewContainer, btnTogglePreview;
+    private View llEmptyState, llPreviewContainer, btnTogglePreview, cvNoModelMessage;
     private ImageView ivPreviewToggleIcon;
+    private CircularProgressIndicator pbLoading;
     private AiCategoryAdapter categoryAdapter;
     private AiItemAdapter itemAdapter;
     private AiPreviewAdapter previewAdapter;
@@ -88,6 +119,10 @@ public class AiActivity extends AppCompatActivity {
     private List<ClothingItem> originalItemList = new ArrayList<>();
     private Set<ClothingItem> selectedItems = new HashSet<>();
     private List<ClothingItem> previewList = new ArrayList<>();
+
+    private String selectedModelUrl = null;
+    private Uri selectedModelUri = null;
+    private static final String FAL_KEY = "14732117-ce26-436f-ac91-bb9d5d311539:244d86639b02ef3ed0d782990dc1a681";
 
     private String selectedSeason = "All";
     private String selectedOccasion = "All";
@@ -103,6 +138,8 @@ public class AiActivity extends AppCompatActivity {
     private DatabaseReference dbRef;
 
     private PoseDetector poseDetector;
+    private FaceDetector faceDetector;
+    private OkHttpClient httpClient;
 
     private final ActivityResultLauncher<String> cameraPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -126,10 +163,22 @@ public class AiActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference("Users");
 
+        // Initialize HTTP Client with longer timeouts for AI generation
+        httpClient = new OkHttpClient.Builder()
+                .connectTimeout(120, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .writeTimeout(120, TimeUnit.SECONDS)
+                .build();
+
         PoseDetectorOptions options = new PoseDetectorOptions.Builder()
                 .setDetectorMode(PoseDetectorOptions.SINGLE_IMAGE_MODE)
                 .build();
         poseDetector = PoseDetection.getClient(options);
+
+        FaceDetectorOptions faceOptions = new FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                .build();
+        faceDetector = FaceDetection.getClient(faceOptions);
 
         llAvatars = findViewById(R.id.ll_avatars);
         avatarMain = findViewById(R.id.avatar_main);
@@ -139,6 +188,25 @@ public class AiActivity extends AppCompatActivity {
         llPreviewContainer = findViewById(R.id.ll_preview_container);
         btnTogglePreview = findViewById(R.id.btn_toggle_preview);
         ivPreviewToggleIcon = findViewById(R.id.iv_preview_toggle_icon);
+        cvNoModelMessage = findViewById(R.id.cv_no_model_message);
+        pbLoading = findViewById(R.id.pb_loading);
+
+        // Initialize Cloudinary
+        try {
+            Map<String, Object> config = new HashMap<>();
+            config.put("cloud_name", BuildConfig.CLOUDINARY_CLOUD_NAME);
+            config.put("api_key", BuildConfig.CLOUDINARY_API_KEY);
+            config.put("api_secret", BuildConfig.CLOUDINARY_API_SECRET);
+            MediaManager.init(this, config);
+        } catch (IllegalStateException e) {
+            // Already initialized
+        }
+
+        // Initially show the message and hide the default model
+        setNoModelVisible(true);
+        ivMainModel.setImageDrawable(null);
+        btnAddAvatar.setVisibility(View.GONE); // Default state
+        btnAddAvatar.setAlpha(0f);
 
         findViewById(R.id.btn_back_ai).setOnClickListener(v -> finish());
 
@@ -157,14 +225,20 @@ public class AiActivity extends AppCompatActivity {
             return WindowInsetsCompat.CONSUMED;
         });
 
-        avatarMain.setOnClickListener(v -> toggleAvatars());
+        avatarMain.setOnClickListener(v -> {
+            toggleAvatars();
+            // If the user clicks the main avatar, we assume they select it as the model
+            ivMainModel.setImageResource(R.drawable.user_2);
+            setNoModelVisible(false);
+            selectedModelUrl = "https://idm-vton.github.io/inthewild/4/h/0.jpeg"; // Default public model URL
+            selectedModelUri = null;
+        });
         btnAddAvatar.setOnClickListener(v -> showAddAvatarOptions());
 
         findViewById(R.id.btn_filter).setOnClickListener(v -> showFilterBottomSheet());
 
         View.OnClickListener generateListener = v -> {
-            // TODO: Implement generation logic or call existing one if any
-            Toast.makeText(this, "Generating Outfit...", Toast.LENGTH_SHORT).show();
+            performVirtualTryOn();
         };
         findViewById(R.id.btn_generate_collapsed).setOnClickListener(generateListener);
         findViewById(R.id.btn_generate_expanded).setOnClickListener(generateListener);
@@ -173,6 +247,95 @@ public class AiActivity extends AppCompatActivity {
         setupBottomSheet();
         loadCategories();
         updatePreview();
+        loadUserModels();
+    }
+
+    private void loadUserModels() {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+
+        dbRef.child(uid).child("ai_models").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                // Clear existing dynamic avatars (everything between btnAddAvatar and avatarMain)
+                // In our current layout, llAvatars has: [btnAddAvatar] [Dynamically Added...] [avatarMain]
+                // We should keep btnAddAvatar (index 0) and avatarMain (index last)
+                int childCount = llAvatars.getChildCount();
+                for (int i = childCount - 2; i >= 1; i--) {
+                    llAvatars.removeViewAt(i);
+                }
+
+                for (DataSnapshot modelSnapshot : snapshot.getChildren()) {
+                    AiModel model = modelSnapshot.getValue(AiModel.class);
+                    if (model != null && model.url != null) {
+                        addModelToAvatarList(model);
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("AiActivity", "Failed to load models: " + error.getMessage());
+            }
+        });
+    }
+
+    private void addModelToAvatarList(AiModel model) {
+        ShapeableImageView newAvatar = createAvatarView();
+        Glide.with(this).load(model.url).into(newAvatar);
+
+        newAvatar.setOnClickListener(v -> {
+            Glide.with(this).load(model.url).into(ivMainModel);
+            setNoModelVisible(false);
+            selectedModelUrl = model.url;
+            selectedModelUri = null;
+        });
+
+        newAvatar.setOnLongClickListener(v -> {
+            showDeleteModelDialog(model);
+            return true;
+        });
+
+        // Insert at index 1 (between Plus button and Main avatar)
+        llAvatars.addView(newAvatar, 1);
+        newAvatar.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+    }
+
+    private ShapeableImageView createAvatarView() {
+        ShapeableImageView newAvatar = new ShapeableImageView(this);
+        int size = (int) (40 * getResources().getDisplayMetrics().density);
+        int margin = (int) (8 * getResources().getDisplayMetrics().density);
+        int padding = (int) (2 * getResources().getDisplayMetrics().density);
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+        params.setMarginStart(margin);
+        newAvatar.setLayoutParams(params);
+
+        newAvatar.setPadding(padding, padding, padding, padding);
+        newAvatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        newAvatar.setStrokeColor(ColorStateList.valueOf(Color.WHITE));
+        newAvatar.setStrokeWidth(2 * getResources().getDisplayMetrics().density);
+        newAvatar.setShapeAppearanceModel(ShapeAppearanceModel.builder()
+                .setAllCornerSizes(new RelativeCornerSize(0.5f))
+                .build());
+        return newAvatar;
+    }
+
+    private void showDeleteModelDialog(AiModel model) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Model")
+                .setMessage("Are you sure you want to remove this model?")
+                .setPositiveButton("Delete", (dialog, which) -> deleteModel(model))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void deleteModel(AiModel model) {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+        dbRef.child(uid).child("ai_models").child(model.id).removeValue()
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Model removed", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to remove model", Toast.LENGTH_SHORT).show());
     }
 
     private void setupBottomSheet() {
@@ -192,6 +355,9 @@ public class AiActivity extends AppCompatActivity {
             }
         });
 
+        // Ensure llAvatars is visible
+        llAvatars.setVisibility(View.VISIBLE);
+
         // Calculate half screen height
         bottomSheet.post(() -> {
             int screenHeight = getResources().getDisplayMetrics().heightPixels;
@@ -206,9 +372,9 @@ public class AiActivity extends AppCompatActivity {
             int peekHeight = header.getBottom() + (int) getResources().getDimension(R.dimen.spacing_small);
             bottomSheetBehavior.setPeekHeight(peekHeight);
 
-            // Set initial state to expanded
-            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-            grabber.setRotation(180); // Pointing down when expanded
+            // Set initial state to collapsed
+            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            grabber.setRotation(0); // Pointing up when collapsed
 
             // Dynamically adjust preview container bottom margin to sit above bottom sheet
             updatePreviewContainerMargin(bottomSheetBehavior.getPeekHeight());
@@ -647,6 +813,25 @@ public class AiActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void setNoModelVisible(boolean visible) {
+        if (cvNoModelMessage == null) return;
+        
+        if (visible) {
+            cvNoModelMessage.setAlpha(0f);
+            cvNoModelMessage.setVisibility(View.VISIBLE);
+            cvNoModelMessage.animate()
+                    .alpha(1f)
+                    .setDuration(300)
+                    .setListener(null);
+        } else {
+            cvNoModelMessage.animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .withEndAction(() -> cvNoModelMessage.setVisibility(View.GONE))
+                    .start();
+        }
+    }
+
     private void toggleAvatars() {
         TransitionManager.beginDelayedTransition(llAvatars, new AutoTransition());
         isExpanded = !isExpanded;
@@ -656,6 +841,7 @@ public class AiActivity extends AppCompatActivity {
             View child = llAvatars.getChildAt(i);
             if (child.getId() != R.id.avatar_main) {
                 child.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+                child.setAlpha(isExpanded ? 1.0f : 0.0f);
             }
         }
     }
@@ -707,40 +893,147 @@ public class AiActivity extends AppCompatActivity {
 
     private void handleImageSelection(Uri uri) {
         if (uri != null) {
-            Toast.makeText(this, "Scanning for full body...", Toast.LENGTH_SHORT).show();
-            validateFullBody(uri, isFullBody -> {
-                if (isFullBody) {
-                    // Add to the list of selectable avatars
-                    addAvatarToList(uri);
-                    Toast.makeText(this, "New model image added!", Toast.LENGTH_SHORT).show();
+            if (!checkImageResolution(uri)) {
+                Toast.makeText(this, getString(R.string.error_low_resolution), Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            Toast.makeText(this, "Scanning for face...", Toast.LENGTH_SHORT).show();
+            validateFace(uri, faceValid -> {
+                if (faceValid) {
+                    Toast.makeText(this, "Scanning for full body...", Toast.LENGTH_SHORT).show();
+                    validateFullBody(uri, validationResult -> {
+                        if (validationResult == null) {
+                            // Upload to Cloudinary then save to Firebase
+                            uploadModelToCloudinary(uri);
+                        } else {
+                            // SHOW THE SPECIFIC ERROR REASON HERE
+                            Toast.makeText(this, validationResult, Toast.LENGTH_LONG).show();
+                        }
+                    });
                 } else {
-                    Toast.makeText(this, "Error: Please select a full body image (showing from head to toe).", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, getString(R.string.error_no_face_detected), Toast.LENGTH_LONG).show();
                 }
             });
         }
     }
 
-    private void validateFullBody(Uri uri, Consumer<Boolean> callback) {
+    private void uploadModelToCloudinary(Uri uri) {
+        pbLoading.setVisibility(View.VISIBLE);
+        MediaManager.get().upload(uri)
+                .option("folder", "Models")
+                .callback(new UploadCallback() {
+                    @Override public void onStart(String requestId) {}
+                    @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
+                    @Override public void onSuccess(String requestId, Map resultData) {
+                        String url = (String) resultData.get("secure_url");
+                        saveModelToFirebase(url);
+                        runOnUiThread(() -> {
+                            Glide.with(AiActivity.this).load(url).into(ivMainModel);
+                            setNoModelVisible(false);
+                            selectedModelUrl = url;
+                            selectedModelUri = null;
+                        });
+                    }
+                    @Override public void onError(String requestId, ErrorInfo error) {
+                        runOnUiThread(() -> {
+                            pbLoading.setVisibility(View.GONE);
+                            Toast.makeText(AiActivity.this, "Upload failed", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                    @Override public void onReschedule(String requestId, ErrorInfo error) {}
+                }).dispatch();
+    }
+
+    private void saveModelToFirebase(String url) {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+        String id = dbRef.child(uid).child("ai_models").push().getKey();
+        if (id == null) return;
+        AiModel model = new AiModel(id, url);
+
+        dbRef.child(uid).child("ai_models").child(id).setValue(model)
+                .addOnSuccessListener(aVoid -> runOnUiThread(() -> {
+                    pbLoading.setVisibility(View.GONE);
+                    Toast.makeText(this, "Model saved!", Toast.LENGTH_SHORT).show();
+                }))
+                .addOnFailureListener(e -> runOnUiThread(() -> {
+                    pbLoading.setVisibility(View.GONE);
+                    Toast.makeText(this, "Failed to save model", Toast.LENGTH_SHORT).show();
+                }));
+    }
+
+    private boolean checkImageResolution(Uri uri) {
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(inputStream, null, options);
+            if (inputStream != null) inputStream.close();
+
+            int width = options.outWidth;
+            int height = options.outHeight;
+
+            // Minimum 720p (1280x720 or 720x1280)
+            return (width >= 720 && height >= 1280) || (width >= 1280 && height >= 720);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private void validateFace(Uri uri, Consumer<Boolean> callback) {
         try {
             InputImage image = InputImage.fromFilePath(this, uri);
-            poseDetector.process(image)
-                    .addOnSuccessListener(pose -> {
-                        boolean isFullBody = checkPoseForFullBody(pose);
-                        callback.accept(isFullBody);
+            faceDetector.process(image)
+                    .addOnSuccessListener(faces -> {
+                        boolean hasFace = !faces.isEmpty();
+                        if (!hasFace) {
+                            Log.d("AiActivity", "Face detection failed: No faces found");
+                        }
+                        callback.accept(hasFace);
                     })
                     .addOnFailureListener(e -> {
+                        Log.e("AiActivity", "Face detection process error", e);
                         callback.accept(false);
                     });
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.e("AiActivity", "Face detection file error", e);
             callback.accept(false);
         }
     }
 
+    private void validateFullBody(Uri uri, Consumer<String> callback) {
+        try {
+            InputImage image = InputImage.fromFilePath(this, uri);
+            poseDetector.process(image)
+                    .addOnSuccessListener(pose -> {
+                        if (checkPoseForFullBody(pose)) {
+                            // Local pose check passed, accepted immediately (GPT validation removed)
+                            callback.accept(null);
+                        } else {
+                            Log.d("AiActivity", "Pose detection failed: Not full body");
+                            callback.accept(getString(R.string.error_not_full_body));
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("AiActivity", "Pose detection process error", e);
+                        callback.accept(getString(R.string.error_obscured_joints));
+                    });
+        } catch (IOException e) {
+            Log.e("AiActivity", "Pose detection file error", e);
+            callback.accept("Error reading image: " + e.getMessage());
+        }
+    }
+
+
     private boolean checkPoseForFullBody(Pose pose) {
-        // Required landmarks for a full body
+        // Required landmarks for a full body (head to toe)
         int[] requiredLandmarks = {
+                PoseLandmark.NOSE,
                 PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER,
+                PoseLandmark.LEFT_ELBOW, PoseLandmark.RIGHT_ELBOW,
+                PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST,
                 PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP,
                 PoseLandmark.LEFT_KNEE, PoseLandmark.RIGHT_KNEE,
                 PoseLandmark.LEFT_ANKLE, PoseLandmark.RIGHT_ANKLE
@@ -748,8 +1041,8 @@ public class AiActivity extends AppCompatActivity {
 
         for (int landmarkType : requiredLandmarks) {
             PoseLandmark landmark = pose.getPoseLandmark(landmarkType);
-            // Check if the landmark is present and has reasonable likelihood (in frame)
-            if (landmark == null || landmark.getInFrameLikelihood() < 0.5f) {
+            // Stricter check: Landmark must be present and high likelihood
+            if (landmark == null || landmark.getInFrameLikelihood() < 0.7f) {
                 return false;
             }
         }
@@ -757,33 +1050,7 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void addAvatarToList(Uri uri) {
-        ShapeableImageView newAvatar = new ShapeableImageView(this);
-        int size = (int) (40 * getResources().getDisplayMetrics().density);
-        int margin = (int) (8 * getResources().getDisplayMetrics().density);
-        int padding = (int) (2 * getResources().getDisplayMetrics().density);
-
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-        params.setMarginStart(margin);
-        newAvatar.setLayoutParams(params);
-
-        newAvatar.setPadding(padding, padding, padding, padding);
-        newAvatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        newAvatar.setStrokeColor(ColorStateList.valueOf(Color.WHITE));
-        newAvatar.setStrokeWidth(2 * getResources().getDisplayMetrics().density);
-        newAvatar.setShapeAppearanceModel(ShapeAppearanceModel.builder()
-                .setAllCornerSizes(new RelativeCornerSize(0.5f))
-                .build());
-
-        Glide.with(this).load(uri).into(newAvatar);
-
-        newAvatar.setOnClickListener(v -> Glide.with(this).load(uri).into(ivMainModel));
-
-        // Insert at index 1 (between Plus button and Main avatar)
-        // Order: [Plus Button] [Added Avatars...] [Main Avatar]
-        llAvatars.addView(newAvatar, 1);
-
-        // Ensure it follows current expansion state
-        newAvatar.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+        // Method replaced by Cloudinary+Firebase flow
     }
 
     private void setupSwipeNavigation() {
@@ -862,6 +1129,222 @@ public class AiActivity extends AppCompatActivity {
                             .start();
                 })
                 .start();
+    }
+
+    private void performVirtualTryOn() {
+        if (selectedItems.isEmpty()) {
+            Toast.makeText(this, "Please select at least one garment", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (selectedModelUrl == null && selectedModelUri == null) {
+            Toast.makeText(this, "Please select a model image", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        pbLoading.setVisibility(View.VISIBLE);
+        findViewById(R.id.btn_generate_collapsed).setEnabled(false);
+        findViewById(R.id.btn_generate_expanded).setEnabled(false);
+
+        ClothingItem garment = selectedItems.iterator().next();
+        String garmentUrl = garment.getImageUrl();
+        String category = mapCategory(garment.getCategoryId());
+
+        Log.d("AiActivity", "Starting Virtual Try-On...");
+        Log.d("AiActivity", "Garment URL: " + garmentUrl);
+        Log.d("AiActivity", "Garment Category: " + category);
+
+        final String finalCategory = category;
+
+        if (selectedModelUrl != null) {
+            Log.d("AiActivity", "Using Model URL: " + selectedModelUrl);
+            callFalAiApi(selectedModelUrl, garmentUrl, finalCategory);
+        } else {
+            // Upload local URI to Cloudinary first
+            Log.d("AiActivity", "Uploading local model URI to Cloudinary: " + selectedModelUri);
+            MediaManager.get().upload(selectedModelUri)
+                    .option("folder", "Models")
+                    .callback(new UploadCallback() {
+                        @Override
+                        public void onStart(String requestId) {
+                            Log.d("AiActivity", "Cloudinary upload started: " + requestId);
+                        }
+                        @Override
+                        public void onProgress(String requestId, long bytes, long totalBytes) {}
+                        @Override
+                        public void onSuccess(String requestId, Map resultData) {
+                            String modelUrl = (String) resultData.get("secure_url");
+                            Log.d("AiActivity", "Cloudinary upload success! URL: " + modelUrl);
+                            runOnUiThread(() -> callFalAiApi(modelUrl, garmentUrl, finalCategory));
+                        }
+                        @Override
+                        public void onError(String requestId, ErrorInfo error) {
+                            Log.e("AiActivity", "Cloudinary upload failed: " + error.getDescription());
+                            runOnUiThread(() -> {
+                                pbLoading.setVisibility(View.GONE);
+                                findViewById(R.id.btn_generate_collapsed).setEnabled(true);
+                                findViewById(R.id.btn_generate_expanded).setEnabled(true);
+                                Toast.makeText(AiActivity.this, "Upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
+                            });
+                        }
+                        @Override
+                        public void onReschedule(String requestId, ErrorInfo error) {}
+                    }).dispatch();
+        }
+    }
+
+    private String mapCategory(String categoryId) {
+        if (categoryId == null) return "auto";
+        switch (categoryId) {
+            case "Tops":
+            case "Outerwear":
+                return "tops";
+            case "Bottoms":
+                return "bottoms";
+            case "Dresses":
+            case "Swimwear":
+                return "one-pieces";
+            default:
+                return "auto";
+        }
+    }
+
+    private void callFalAiApi(String modelUrl, String garmentUrl, String category) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("model_image", modelUrl);
+            json.put("garment_image", garmentUrl);
+            json.put("category", category);
+        } catch (JSONException e) {
+            Log.e("AiActivity", "Error building JSON request", e);
+        }
+
+        String requestJson = json.toString();
+        Log.d("AiActivity", "Fal.ai Queue Submit JSON: " + requestJson);
+
+        RequestBody body = RequestBody.create(requestJson, MediaType.get("application/json; charset=utf-8"));
+        Request request = new Request.Builder()
+                .url("https://queue.fal.run/fal-ai/fashn/tryon/v1.6")
+                .addHeader("Authorization", "Key " + FAL_KEY)
+                .post(body)
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                handleAiFailure(e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try (Response r = response) {
+                    if (!r.isSuccessful()) {
+                        handleAiFailure("Submit Error: " + r.code());
+                        return;
+                    }
+                    String responseBody = r.body().string();
+                    JSONObject result = new JSONObject(responseBody);
+                    String requestId = result.getString("request_id");
+                    String statusUrl = result.optString("status_url", "https://queue.fal.run/fal-ai/fashn/tryon/v1.6/requests/" + requestId + "/status");
+                    String responseUrl = result.optString("response_url", "https://queue.fal.run/fal-ai/fashn/tryon/v1.6/requests/" + requestId + "/response");
+                    
+                    Log.d("AiActivity", "Job submitted! Request ID: " + requestId);
+                    pollFalAiStatus(statusUrl, responseUrl);
+                } catch (Exception e) {
+                    handleAiFailure("Submit parsing error");
+                }
+            }
+        });
+    }
+
+    private void pollFalAiStatus(String statusUrl, String responseUrl) {
+        Log.d("AiActivity", "Polling status: " + statusUrl);
+        Request request = new Request.Builder()
+                .url(statusUrl)
+                .addHeader("Authorization", "Key " + FAL_KEY)
+                .get()
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                handleAiFailure(e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try (Response r = response) {
+                    if (!r.isSuccessful()) {
+                        handleAiFailure("Status Error: " + r.code());
+                        return;
+                    }
+                    String responseBody = r.body().string();
+                    JSONObject status = new JSONObject(responseBody);
+                    String statusStr = status.getString("status");
+
+                    if ("COMPLETED".equals(statusStr)) {
+                        fetchFalAiResult(responseUrl);
+                    } else if ("IN_QUEUE".equals(statusStr) || "IN_PROGRESS".equals(statusStr)) {
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> pollFalAiStatus(statusUrl, responseUrl), 2000);
+                    } else {
+                        handleAiFailure("Unknown status: " + statusStr);
+                    }
+                } catch (Exception e) {
+                    handleAiFailure("Status parsing error");
+                }
+            }
+        });
+    }
+
+    private void fetchFalAiResult(String responseUrl) {
+        Log.d("AiActivity", "Fetching result: " + responseUrl);
+        Request request = new Request.Builder()
+                .url(responseUrl)
+                .addHeader("Authorization", "Key " + FAL_KEY)
+                .get()
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                handleAiFailure(e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try (Response r = response) {
+                    if (!r.isSuccessful()) {
+                        handleAiFailure("Result Error: " + r.code());
+                        return;
+                    }
+                    String responseBody = r.body().string();
+                    JSONObject result = new JSONObject(responseBody);
+                    JSONArray images = result.getJSONArray("images");
+                    String resultUrl = images.getJSONObject(0).getString("url");
+                    Log.d("AiActivity", "Success! Result Image URL: " + resultUrl);
+
+                    runOnUiThread(() -> {
+                        pbLoading.setVisibility(View.GONE);
+                        findViewById(R.id.btn_generate_collapsed).setEnabled(true);
+                        findViewById(R.id.btn_generate_expanded).setEnabled(true);
+                        Glide.with(AiActivity.this).load(resultUrl).into(ivMainModel);
+                        setNoModelVisible(false);
+                    });
+                } catch (Exception e) {
+                    handleAiFailure("Result parsing error");
+                }
+            }
+        });
+    }
+
+    private void handleAiFailure(String message) {
+        Log.e("AiActivity", "AI Error: " + message);
+        runOnUiThread(() -> {
+            pbLoading.setVisibility(View.GONE);
+            findViewById(R.id.btn_generate_collapsed).setEnabled(true);
+            findViewById(R.id.btn_generate_expanded).setEnabled(true);
+            Toast.makeText(AiActivity.this, "AI failed: " + message, Toast.LENGTH_SHORT).show();
+        });
     }
 
     public void onButtonClicked(View view) {

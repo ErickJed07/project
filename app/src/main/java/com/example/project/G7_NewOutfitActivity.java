@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -26,13 +27,6 @@ import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.GenerativeModelFutures;
-import com.google.ai.client.generativeai.type.Content;
-import com.google.ai.client.generativeai.type.GenerateContentResponse;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -40,7 +34,27 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import android.util.Base64;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.pose.Pose;
+import com.google.mlkit.vision.pose.PoseDetection;
+import com.google.mlkit.vision.pose.PoseDetector;
+import com.google.mlkit.vision.pose.PoseLandmark;
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,8 +70,8 @@ public class G7_NewOutfitActivity extends AppCompatActivity {
     private DatabaseReference dbRef;
     private FirebaseAuth mAuth;
     private List<String> modelUrls = new ArrayList<>();
+    private PoseDetector poseDetector;
     
-    private GenerativeModelFutures modelFutures;
     private BottomSheetDialog bottomSheetDialog;
 
     private final ActivityResultLauncher<Intent> pickImageLauncher = registerForActivityResult(
@@ -80,9 +94,10 @@ public class G7_NewOutfitActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference();
 
-        // Initialize Gemini using Config
-        GenerativeModel gm = new GenerativeModel(G7_ApiConfig.GEMINI_MODEL, G7_ApiConfig.GEMINI_API_KEY);
-        modelFutures = GenerativeModelFutures.from(gm);
+        PoseDetectorOptions options = new PoseDetectorOptions.Builder()
+                .setDetectorMode(PoseDetectorOptions.SINGLE_IMAGE_MODE)
+                .build();
+        poseDetector = PoseDetection.getClient(options);
 
         // Initialize Cloudinary using Config
         try {
@@ -189,46 +204,45 @@ public class G7_NewOutfitActivity extends AppCompatActivity {
     }
 
     private void validateAndUploadModel(Uri imageUri) {
-        Toast.makeText(this, "Validating image with AI...", Toast.LENGTH_SHORT).show();
-        
         try {
-            InputStream inputStream = getContentResolver().openInputStream(imageUri);
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            
-            Content content = new Content.Builder()
-                    .addText("Analyze this image for a fashion app. Respond with ONLY 'VALID' or 'INVALID' based on these rules: " +
-                            "1. Must contain a human. " +
-                            "2. Must be a full body or at least 3/4 body shot. " +
-                            "3. Must be appropriate - no nudity. Swimwear/bikinis are ALLOWED. " +
-                            "If INVALID, add a very short reason after a colon.")
-                    .addImage(bitmap)
-                    .build();
-
-            Executor executor = Executors.newSingleThreadExecutor();
-            ListenableFuture<GenerateContentResponse> response = modelFutures.generateContent(content);
-
-            Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
-                @Override
-                public void onSuccess(GenerateContentResponse result) {
-                    String text = result.getText();
-                    runOnUiThread(() -> {
-                        if (text != null && text.startsWith("VALID")) {
+            InputImage image = InputImage.fromFilePath(this, imageUri);
+            Toast.makeText(this, "Validating body pose...", Toast.LENGTH_SHORT).show();
+            poseDetector.process(image)
+                    .addOnSuccessListener(pose -> {
+                        if (checkPoseForFullBody(pose)) {
                             uploadToCloudinary(imageUri);
                         } else {
-                            Toast.makeText(G7_NewOutfitActivity.this, "Image Rejected: " + text, Toast.LENGTH_LONG).show();
+                            Toast.makeText(this, getString(R.string.error_not_full_body), Toast.LENGTH_LONG).show();
                         }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("G7_NewOutfitActivity", "Pose detection error", e);
+                        Toast.makeText(this, getString(R.string.error_obscured_joints), Toast.LENGTH_LONG).show();
                     });
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    runOnUiThread(() -> Toast.makeText(G7_NewOutfitActivity.this, "AI Validation failed: " + t.getMessage(), Toast.LENGTH_SHORT).show());
-                }
-            }, executor);
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Error processing image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Log.e("G7_NewOutfitActivity", "Error reading image", e);
+            Toast.makeText(this, "Error reading image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private boolean checkPoseForFullBody(Pose pose) {
+        int[] requiredLandmarks = {
+                PoseLandmark.NOSE,
+                PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER,
+                PoseLandmark.LEFT_ELBOW, PoseLandmark.RIGHT_ELBOW,
+                PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST,
+                PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP,
+                PoseLandmark.LEFT_KNEE, PoseLandmark.RIGHT_KNEE,
+                PoseLandmark.LEFT_ANKLE, PoseLandmark.RIGHT_ANKLE
+        };
+
+        for (int landmarkType : requiredLandmarks) {
+            PoseLandmark landmark = pose.getPoseLandmark(landmarkType);
+            if (landmark == null || landmark.getInFrameLikelihood() < 0.7f) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void uploadToCloudinary(Uri imageUri) {

@@ -18,51 +18,6 @@
         android:textSize="20sp"
         android:textStyle="bold" />
 
-    <!-- Category Section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:orientation="vertical">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="CATEGORY"
-            android:textColor="@color/text_label"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <RelativeLayout
-            android:id="@+id/rlCategory"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/bg_attribute_box"
-            android:paddingHorizontal="16dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <TextView
-                android:id="@+id/tvCategory"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:text="Select Category"
-                android:textColor="@color/black"
-                android:textSize="16sp" />
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:src="@drawable/arrowright"
-                android:rotation="90"
-                app:tint="#CCCCCC" />
-        </RelativeLayout>
-    </LinearLayout>
-
     <!-- Size and Color Section -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -168,6 +123,10 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="Categories" />
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="Occasion" />
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
@@ -185,7 +144,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
-            android:text="Occasion"
+            android:text="Categories"
             android:textColor="@color/text_label"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -222,10 +181,21 @@
 
     <!-- Tag Chips Containers -->
     <com.google.android.material.chip.ChipGroup
+        android:id="@+id/cgCategories"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="40dp"
+        app:chipSpacingHorizontal="8dp"
+        app:chipSpacingVertical="8dp"
+        app:singleSelection="true"
+        app:selectionRequired="true" />
+
+    <com.google.android.material.chip.ChipGroup
         android:id="@+id/cgOccasions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="40dp"
+        android:visibility="gone"
         app:chipSpacingHorizontal="8dp"
         app:chipSpacingVertical="8dp" />
 
