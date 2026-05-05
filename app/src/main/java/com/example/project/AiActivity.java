@@ -1148,17 +1148,14 @@ public class AiActivity extends AppCompatActivity {
 
         ClothingItem garment = selectedItems.iterator().next();
         String garmentUrl = garment.getImageUrl();
-        String category = mapCategory(garment.getCategoryId());
+        String categoryId = garment.getCategoryId();
 
         Log.d("AiActivity", "Starting Virtual Try-On...");
         Log.d("AiActivity", "Garment URL: " + garmentUrl);
-        Log.d("AiActivity", "Garment Category: " + category);
-
-        final String finalCategory = category;
+        Log.d("AiActivity", "Category ID: " + categoryId);
 
         if (selectedModelUrl != null) {
-            Log.d("AiActivity", "Using Model URL: " + selectedModelUrl);
-            callFalAiApi(selectedModelUrl, garmentUrl, finalCategory);
+            processWithModelUrl(selectedModelUrl, garmentUrl, categoryId);
         } else {
             // Upload local URI to Cloudinary first
             Log.d("AiActivity", "Uploading local model URI to Cloudinary: " + selectedModelUri);
@@ -1175,7 +1172,7 @@ public class AiActivity extends AppCompatActivity {
                         public void onSuccess(String requestId, Map resultData) {
                             String modelUrl = (String) resultData.get("secure_url");
                             Log.d("AiActivity", "Cloudinary upload success! URL: " + modelUrl);
-                            runOnUiThread(() -> callFalAiApi(modelUrl, garmentUrl, finalCategory));
+                            runOnUiThread(() -> processWithModelUrl(modelUrl, garmentUrl, categoryId));
                         }
                         @Override
                         public void onError(String requestId, ErrorInfo error) {
@@ -1193,6 +1190,54 @@ public class AiActivity extends AppCompatActivity {
         }
     }
 
+    private void processWithModelUrl(String modelUrl, String garmentUrl, String categoryId) {
+        String endpoint;
+        JSONObject json = new JSONObject();
+        try {
+            if (isEditApiCategory(categoryId)) {
+                endpoint = "https://queue.fal.run/fal-ai/nano-banana-pro/edit";
+                json.put("prompt", getEditPrompt(categoryId));
+                JSONArray images = new JSONArray();
+                images.put(modelUrl);
+                images.put(garmentUrl);
+                json.put("image_urls", images);
+            } else {
+                endpoint = "https://queue.fal.run/fal-ai/fashn/tryon/v1.6";
+                json.put("model_image", modelUrl);
+                json.put("garment_image", garmentUrl);
+                json.put("category", mapCategory(categoryId));
+            }
+            submitFalAiJob(endpoint, json);
+        } catch (JSONException e) {
+            Log.e("AiActivity", "Error building JSON request", e);
+        }
+    }
+
+    private boolean isEditApiCategory(String categoryId) {
+        if (categoryId == null) return false;
+        switch (categoryId) {
+            case "Socks & Tights":
+            case "Footwear":
+            case "Headwear":
+            case "Eyewear":
+            case "Handwear":
+            case "Jewelry":
+            case "Watches":
+            case "Bags":
+            case "Neckwear":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private String getEditPrompt(String categoryId) {
+        String item = categoryId.toLowerCase();
+        if (item.equals("socks & tights")) item = "socks";
+        if (item.equals("bags")) item = "bag";
+        return "Add the " + item + " from the second image onto the person in the first image naturally.";
+    }
+
     private String mapCategory(String categoryId) {
         if (categoryId == null) return "auto";
         switch (categoryId) {
@@ -1204,27 +1249,20 @@ public class AiActivity extends AppCompatActivity {
             case "Dresses":
             case "Swimwear":
                 return "one-pieces";
+            case "Belts":
+                return "waistwear";
             default:
                 return "auto";
         }
     }
 
-    private void callFalAiApi(String modelUrl, String garmentUrl, String category) {
-        JSONObject json = new JSONObject();
-        try {
-            json.put("model_image", modelUrl);
-            json.put("garment_image", garmentUrl);
-            json.put("category", category);
-        } catch (JSONException e) {
-            Log.e("AiActivity", "Error building JSON request", e);
-        }
-
+    private void submitFalAiJob(String endpoint, JSONObject json) {
         String requestJson = json.toString();
-        Log.d("AiActivity", "Fal.ai Queue Submit JSON: " + requestJson);
+        Log.d("AiActivity", "Fal.ai Queue Submit JSON to " + endpoint + ": " + requestJson);
 
         RequestBody body = RequestBody.create(requestJson, MediaType.get("application/json; charset=utf-8"));
         Request request = new Request.Builder()
-                .url("https://queue.fal.run/fal-ai/fashn/tryon/v1.6")
+                .url(endpoint)
                 .addHeader("Authorization", "Key " + FAL_KEY)
                 .post(body)
                 .build();
@@ -1238,24 +1276,33 @@ public class AiActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response r = response) {
+                    String responseBody = r.body() != null ? r.body().string() : "";
+                    Log.d("AiActivity", "Fal.ai Submit Response: " + responseBody);
+
                     if (!r.isSuccessful()) {
-                        handleAiFailure("Submit Error: " + r.code());
+                        handleAiFailure("Submit Error: " + r.code() + " " + r.message() + " - " + responseBody);
                         return;
                     }
-                    String responseBody = r.body().string();
+                    
                     JSONObject result = new JSONObject(responseBody);
                     String requestId = result.getString("request_id");
-                    String statusUrl = result.optString("status_url", "https://queue.fal.run/fal-ai/fashn/tryon/v1.6/requests/" + requestId + "/status");
-                    String responseUrl = result.optString("response_url", "https://queue.fal.run/fal-ai/fashn/tryon/v1.6/requests/" + requestId + "/response");
+                    
+                    // Prioritize URLs provided by the API, fallback to manual construction
+                    String statusUrl = result.optString("status_url", endpoint + "/requests/" + requestId + "/status");
+                    String responseUrl = result.optString("response_url", endpoint + "/requests/" + requestId);
                     
                     Log.d("AiActivity", "Job submitted! Request ID: " + requestId);
+                    Log.d("AiActivity", "Using statusUrl: " + statusUrl);
+                    Log.d("AiActivity", "Using responseUrl: " + responseUrl);
+
                     pollFalAiStatus(statusUrl, responseUrl);
                 } catch (Exception e) {
-                    handleAiFailure("Submit parsing error");
+                    handleAiFailure("Submit parsing error: " + e.getMessage());
                 }
             }
         });
     }
+
 
     private void pollFalAiStatus(String statusUrl, String responseUrl) {
         Log.d("AiActivity", "Polling status: " + statusUrl);
@@ -1313,11 +1360,14 @@ public class AiActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response r = response) {
+                    String responseBody = r.body() != null ? r.body().string() : "";
+                    Log.d("AiActivity", "Fal.ai Result Response: " + responseBody);
+
                     if (!r.isSuccessful()) {
-                        handleAiFailure("Result Error: " + r.code());
+                        handleAiFailure("Result Error: " + r.code() + " - " + responseBody);
                         return;
                     }
-                    String responseBody = r.body().string();
+                    
                     JSONObject result = new JSONObject(responseBody);
                     JSONArray images = result.getJSONArray("images");
                     String resultUrl = images.getJSONObject(0).getString("url");
@@ -1331,7 +1381,7 @@ public class AiActivity extends AppCompatActivity {
                         setNoModelVisible(false);
                     });
                 } catch (Exception e) {
-                    handleAiFailure("Result parsing error");
+                    handleAiFailure("Result parsing error: " + e.getMessage());
                 }
             }
         });
