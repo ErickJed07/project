@@ -138,8 +138,9 @@ public class ViewCategoriesActivity extends AppCompatActivity {
                     categoryList.add(new CategoryModel(fixedItem.id, fixedItem.name, fixedItem.iconRes, (int) itemCount));
                 }
                 
-                // Inject "All Clothes" at the top
+                // Inject "Used Clothes" and "All Clothes" at the top
                 categoryList.add(0, new CategoryModel("all_clothes", "All Clothes", R.drawable.hanger, totalItems));
+                categoryList.add(0, new CategoryModel("used_clothes", "Used Clothes", R.drawable.hanger, 0));
 
                 adapter.updateList(new ArrayList<>(categoryList));
             }

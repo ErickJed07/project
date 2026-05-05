@@ -354,6 +354,28 @@
         android:paddingTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- Feed -->
+        <LinearLayout
+            android:id="@+id/home_menu"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:onClick="onButtonClicked"
+            android:orientation="vertical">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/home"
+                app:tint="@color/nav_inactive" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Feed"
+                android:textColor="@color/nav_inactive"
+                android:textSize="10sp" />
+        </LinearLayout>
+
         <!-- Wardrobe -->
         <LinearLayout
             android:id="@+id/wardrobe_menu"
@@ -398,9 +420,9 @@
                 android:textSize="10sp" />
         </LinearLayout>
 
-        <!-- Camera -->
+        <!-- Account -->
         <LinearLayout
-            android:id="@+id/camera_menu"
+            android:id="@+id/profile_menu"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -410,37 +432,16 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/camera"
+                android:src="@drawable/profile"
                 app:tint="@color/nav_inactive" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Camera"
+                android:text="Account"
                 android:textColor="@color/nav_inactive"
                 android:textSize="10sp" />
         </LinearLayout>
 
-        <!-- Calendar -->
-        <LinearLayout
-            android:id="@+id/calendar_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:onClick="onButtonClicked"
-            android:orientation="vertical">
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/calendar_1"
-                app:tint="@color/nav_inactive" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Calendar"
-                android:textColor="@color/nav_inactive"
-                android:textSize="10sp" />
-        </LinearLayout>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
