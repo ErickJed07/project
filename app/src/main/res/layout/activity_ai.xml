@@ -57,54 +57,80 @@
             app:layout_constraintTop_toTopOf="@+id/iv_main_model"
             app:layout_constraintVertical_bias="0.61" />
 
-        <!-- No Model Message (Professional) -->
+        <!-- No Model Message (Professional Upgrade) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cv_no_model_message"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="40dp"
+            android:layout_marginHorizontal="32dp"
             android:visibility="gone"
-            app:cardBackgroundColor="#CCFFFFFF"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="8dp"
+            app:cardBackgroundColor="#F2FFFFFF"
+            app:cardCornerRadius="32dp"
+            app:cardElevation="12dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:strokeColor="#20000000"
+            app:strokeColor="#1A000000"
             app:strokeWidth="1dp">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="vertical"
                 android:padding="32dp">
 
-                <ImageView
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:layout_marginBottom="16dp"
-                    android:alpha="0.6"
-                    android:src="@drawable/user_2"
-                    app:tint="@color/black" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_marginBottom="24dp"
+                    app:cardBackgroundColor="#0D000000"
+                    app:cardCornerRadius="40dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center"
+                        android:alpha="0.8"
+                        android:src="@drawable/user_2"
+                        app:tint="@color/black" />
+                </com.google.android.material.card.MaterialCardView>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:letterSpacing="-0.02"
                     android:text="@string/ai_no_model_title"
-                    android:textColor="@color/black"
-                    android:textSize="20sp"
+                    android:textColor="#1E293B"
+                    android:textSize="22sp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:layout_width="200dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="12dp"
                     android:gravity="center"
+                    android:lineSpacingExtra="4dp"
                     android:text="@string/ai_no_model_desc"
-                    android:textColor="#66000000"
+                    android:textColor="#64748B"
                     android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_choose_model_action"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:paddingHorizontal="24dp"
+                    android:text="Select Avatar"
+                    android:textAllCaps="false"
+                    android:textColor="#1E293B"
+                    android:textStyle="bold"
+                    app:backgroundTint="#F1F5F9"
+                    app:cornerRadius="20dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -135,90 +161,189 @@
                 app:tint="@color/white" />
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Avatar Section -->
-        <LinearLayout
-            android:id="@+id/ll_avatars"
-            android:layout_width="0dp"
+        <!-- Avatar Section (Upgraded) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cv_avatar_container"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:layout_marginEnd="@dimen/spacing_medium"
-            android:gravity="end|center_vertical"
-            android:orientation="horizontal"
-            app:layout_constrainedWidth="true"
+            app:cardBackgroundColor="#1A000000"
+            app:cardCornerRadius="100dp"
+            app:cardElevation="0dp"
             app:layout_constraintBottom_toBottomOf="@+id/btn_back_ai"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/btn_back_ai"
-            app:layout_constraintTop_toTopOf="@+id/btn_back_ai">
+            app:layout_constraintTop_toTopOf="@+id/btn_back_ai"
+            app:strokeColor="#40FFFFFF"
+            app:strokeWidth="1dp">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btn_add_avatar"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="@dimen/spacing_small"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="#1A000000"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeColor="#40FFFFFF"
-                app:strokeWidth="1dp">
+            <LinearLayout
+                android:id="@+id/ll_avatars"
+                android:layout_width="wrap_content"
+                android:layout_height="54dp"
+                android:layout_margin="5dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp">
 
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_gravity="center"
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btn_add_avatar"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:alpha="0"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="#26FFFFFF"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#40FFFFFF"
+                    app:strokeWidth="1dp">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/add_avatar"
+                        android:src="@drawable/plus"
+                        app:tint="@color/white" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Dynamic Avatars will be injected here -->
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/avatar_main"
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
                     android:contentDescription="@string/add_avatar"
-                    android:src="@drawable/plus"
-                    app:tint="@color/white" />
-            </com.google.android.material.card.MaterialCardView>
+                    android:padding="4dp"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/user_2"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                    app:strokeColor="@color/white"
+                    app:strokeWidth="2dp"
+                    tools:srcCompat="@tools:sample/avatars" />
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/avatar_main"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="@dimen/spacing_small"
-                android:contentDescription="@string/add_avatar"
-                android:padding="2dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/user_2"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                app:strokeColor="@color/white"
-                app:strokeWidth="2dp"
-                tools:srcCompat="@tools:sample/avatars" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
-
-        <!-- Right Preview Container -->
+        <!-- Right Preview Container (Upgraded) -->
         <LinearLayout
             android:id="@+id/ll_preview_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/spacing_small"
-            android:layout_marginBottom="108dp"
+            android:layout_marginEnd="@dimen/spacing_medium"
+            android:layout_marginBottom="20dp"
+            android:elevation="20dp"
             android:gravity="center_horizontal"
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <!-- Toggle Handle (Above RV) -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_selected_preview"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:listitem="@layout/item_selected_preview" />
-
+            <!-- Clear All Button -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btn_toggle_preview"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginBottom="@dimen/spacing_small"
+                android:id="@+id/btn_clear_all"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:layout_marginBottom="8dp"
+                android:alpha="0"
                 android:clickable="true"
                 android:focusable="true"
-                app:cardBackgroundColor="@color/overlay_button_bg"
+                android:visibility="gone"
+                app:cardBackgroundColor="#CC000000"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="4dp"
+                app:strokeColor="#40FFFFFF"
+                app:strokeWidth="1dp"
+                tools:alpha="1"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginEnd="4dp"
+                        android:rotation="45"
+                        android:src="@drawable/plus"
+                        app:tint="@color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Clear"
+                        android:textColor="@color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Selected Items Counter -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cv_item_counter"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginBottom="-14dp"
+                android:translationZ="12dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/black"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="6dp"
+                app:strokeColor="@color/white"
+                app:strokeWidth="1.5dp">
+
+                <TextView
+                    android:id="@+id/tv_item_count"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    tools:text="1" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Previews List Wrapper -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cv_preview_wrapper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                app:cardBackgroundColor="#26FFFFFF"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:strokeColor="#40FFFFFF"
+                app:strokeWidth="1dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_selected_preview"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:orientation="vertical"
+                    android:padding="2dp"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:listitem="@layout/item_selected_preview" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Toggle Button -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btn_toggle_preview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="#CC000000"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="8dp"
+                app:strokeColor="#40FFFFFF"
+                app:strokeWidth="1dp">
 
                 <ImageView
                     android:id="@+id/iv_preview_toggle_icon"
@@ -248,15 +373,13 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/bottom_sheet_content"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingTop="@dimen/spacing_small">
+            android:layout_height="match_parent">
 
             <!-- Grabber/Handle -->
             <ImageView
                 android:id="@+id/bottom_sheet_grabber"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:layout_marginTop="-12dp"
                 android:padding="4dp"
                 android:rotation="180"
                 android:src="@drawable/ic_chevron_up"
@@ -266,44 +389,57 @@
                 app:tint="#64748B" />
 
             <!-- Wardrobe Title and Filter -->
+
+            <!-- Category Section -->
+
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/cl_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="-10dp"
                 android:paddingHorizontal="@dimen/spacing_large"
-                android:paddingBottom="@dimen/spacing_small"
+                android:paddingBottom="12dp"
                 app:layout_constraintTop_toBottomOf="@id/bottom_sheet_grabber">
 
                 <TextView
                     android:id="@+id/tv_wardrobe_title"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
                     android:letterSpacing="-0.02"
                     android:text="Pick Clothes"
                     android:textColor="#1E293B"
                     android:textSize="24sp"
                     android:textStyle="bold"
-                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/btn_generate_collapsed"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
+                <TextView
+                    android:id="@+id/tv_ai_disclaimer_header"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="AI results may vary. Check carefully."
+                    android:textColor="#64748B"
+                    android:textSize="11sp"
+                    app:layout_constraintEnd_toStartOf="@+id/btn_generate_collapsed"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tv_wardrobe_title" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_generate_collapsed"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:layout_marginBottom="16dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:insetLeft="0dp"
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
                     app:backgroundTint="@color/black"
-                    app:cornerRadius="22dp"
-                    app:elevation="2dp"
+                    app:cornerRadius="24dp"
+                    app:elevation="4dp"
                     app:icon="@drawable/magic"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
+                    app:iconSize="20dp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -313,7 +449,6 @@
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:layout_marginBottom="8dp"
                     android:alpha="0"
                     android:paddingHorizontal="12dp"
                     android:text="@string/filter"
@@ -330,7 +465,6 @@
                     app:layout_constraintTop_toTopOf="parent" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- Category Section -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_categories"
                 android:layout_width="0dp"
@@ -395,7 +529,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
                 android:layout_marginHorizontal="@dimen/spacing_large"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="8dp"
                 android:alpha="0"
                 android:text="@string/generate_outfit_btn"
                 android:textAllCaps="false"
@@ -410,6 +544,20 @@
                 app:iconGravity="textStart"
                 app:iconPadding="@dimen/spacing_small"
                 app:iconTint="@color/white"
+                app:layout_constraintBottom_toTopOf="@+id/tv_ai_disclaimer"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tv_ai_disclaimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:alpha="0"
+                android:text="AI can make mistakes. Please check the results."
+                android:textColor="#64748B"
+                android:textSize="10sp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />

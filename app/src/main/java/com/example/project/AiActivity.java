@@ -14,6 +14,7 @@ import android.os.Environment;
 import android.transition.AutoTransition;
 import android.transition.TransitionManager;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -107,7 +108,8 @@ public class AiActivity extends AppCompatActivity {
     private Uri currentPhotoUri;
 
     private RecyclerView rvCategories, rvItems, rvSelectedPreview;
-    private View llEmptyState, llPreviewContainer, btnTogglePreview, cvNoModelMessage;
+    private View llEmptyState, llPreviewContainer, btnTogglePreview, cvNoModelMessage, cvPreviewWrapper, btnClearAll;
+    private TextView tvItemCount;
     private ImageView ivPreviewToggleIcon;
     private CircularProgressIndicator pbLoading;
     private AiCategoryAdapter categoryAdapter;
@@ -186,7 +188,10 @@ public class AiActivity extends AppCompatActivity {
         ivMainModel = findViewById(R.id.iv_main_model);
         llEmptyState = findViewById(R.id.ll_empty_state);
         llPreviewContainer = findViewById(R.id.ll_preview_container);
+        cvPreviewWrapper = findViewById(R.id.cv_preview_wrapper);
+        tvItemCount = findViewById(R.id.tv_item_count);
         btnTogglePreview = findViewById(R.id.btn_toggle_preview);
+        btnClearAll = findViewById(R.id.btn_clear_all);
         ivPreviewToggleIcon = findViewById(R.id.iv_preview_toggle_icon);
         cvNoModelMessage = findViewById(R.id.cv_no_model_message);
         pbLoading = findViewById(R.id.pb_loading);
@@ -226,12 +231,17 @@ public class AiActivity extends AppCompatActivity {
         });
 
         avatarMain.setOnClickListener(v -> {
-            toggleAvatars();
             // If the user clicks the main avatar, we assume they select it as the model
             ivMainModel.setImageResource(R.drawable.user_2);
-            setNoModelVisible(false);
             selectedModelUrl = "https://idm-vton.github.io/inthewild/4/h/0.jpeg"; // Default public model URL
             selectedModelUri = null;
+            
+            setNoModelVisible(false);
+            updateBottomSheetLockedState();
+
+            if (!isExpanded) {
+                toggleAvatars();
+            }
         });
         btnAddAvatar.setOnClickListener(v -> showAddAvatarOptions());
 
@@ -242,6 +252,13 @@ public class AiActivity extends AppCompatActivity {
         };
         findViewById(R.id.btn_generate_collapsed).setOnClickListener(generateListener);
         findViewById(R.id.btn_generate_expanded).setOnClickListener(generateListener);
+
+        findViewById(R.id.btn_choose_model_action).setOnClickListener(v -> {
+            if (!isExpanded) {
+                toggleAvatars();
+            }
+            Toast.makeText(this, "Select an avatar above", Toast.LENGTH_SHORT).show();
+        });
 
         setupRecyclerViews();
         setupBottomSheet();
@@ -265,10 +282,26 @@ public class AiActivity extends AppCompatActivity {
                     llAvatars.removeViewAt(i);
                 }
 
+                boolean hasCustomModels = snapshot.hasChildren();
+                avatarMain.setVisibility(hasCustomModels ? View.GONE : View.VISIBLE);
+                
+                // Ensure Add Avatar button is always visible when we have custom models
+                btnAddAvatar.setVisibility(View.VISIBLE);
+                btnAddAvatar.setAlpha(1.0f);
+
                 for (DataSnapshot modelSnapshot : snapshot.getChildren()) {
                     AiModel model = modelSnapshot.getValue(AiModel.class);
                     if (model != null && model.url != null) {
                         addModelToAvatarList(model);
+                    }
+                }
+
+                // If collapsed and we have custom models, ensure one dynamic avatar is visible as the representative
+                if (!isExpanded && hasCustomModels && llAvatars.getChildCount() > 1) {
+                    View representative = llAvatars.getChildAt(llAvatars.getChildCount() - 2);
+                    if (representative != null) {
+                        representative.setVisibility(View.VISIBLE);
+                        representative.setAlpha(1.0f);
                     }
                 }
             }
@@ -286,9 +319,23 @@ public class AiActivity extends AppCompatActivity {
 
         newAvatar.setOnClickListener(v -> {
             Glide.with(this).load(model.url).into(ivMainModel);
-            setNoModelVisible(false);
             selectedModelUrl = model.url;
             selectedModelUri = null;
+            
+            setNoModelVisible(false);
+            updateBottomSheetLockedState();
+
+            // Highlight selected avatar
+            resetAvatarBorders();
+            newAvatar.setStrokeColor(ColorStateList.valueOf(Color.WHITE));
+            newAvatar.setStrokeWidth(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
+            
+            if (!isExpanded) {
+                toggleAvatars();
+            } else {
+                // Collapse after selection
+                toggleAvatars();
+            }
         });
 
         newAvatar.setOnLongClickListener(v -> {
@@ -301,11 +348,20 @@ public class AiActivity extends AppCompatActivity {
         newAvatar.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
     }
 
+    private void resetAvatarBorders() {
+        for (int i = 0; i < llAvatars.getChildCount(); i++) {
+            View v = llAvatars.getChildAt(i);
+            if (v instanceof ShapeableImageView) {
+                ((ShapeableImageView) v).setStrokeWidth(0);
+            }
+        }
+    }
+
     private ShapeableImageView createAvatarView() {
         ShapeableImageView newAvatar = new ShapeableImageView(this);
-        int size = (int) (40 * getResources().getDisplayMetrics().density);
+        int size = (int) (52 * getResources().getDisplayMetrics().density);
         int margin = (int) (8 * getResources().getDisplayMetrics().density);
-        int padding = (int) (2 * getResources().getDisplayMetrics().density);
+        int padding = (int) (4 * getResources().getDisplayMetrics().density);
 
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
         params.setMarginStart(margin);
@@ -348,6 +404,10 @@ public class AiActivity extends AppCompatActivity {
 
         // Add click listener to grabber for toggling
         grabber.setOnClickListener(v -> {
+            if (selectedModelUrl == null && selectedModelUri == null) {
+                Toast.makeText(this, "Please select an avatar first", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
                 bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             } else {
@@ -375,10 +435,17 @@ public class AiActivity extends AppCompatActivity {
             // Set initial state to collapsed
             bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             grabber.setRotation(0); // Pointing up when collapsed
+            
+            // Set initial disclaimer visibility
+            findViewById(R.id.tv_ai_disclaimer_header).setVisibility(View.VISIBLE);
+            findViewById(R.id.tv_ai_disclaimer_header).setAlpha(1.0f);
+            findViewById(R.id.tv_ai_disclaimer).setVisibility(View.GONE);
+            findViewById(R.id.tv_ai_disclaimer).setAlpha(0.0f);
 
-            // Dynamically adjust preview container bottom margin to sit above bottom sheet
-            updatePreviewContainerMargin(bottomSheetBehavior.getPeekHeight());
             updateMainModelHeight(bottomSheetBehavior.getPeekHeight());
+            
+            // Initial lock state
+            updateBottomSheetLockedState();
         });
 
         bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
@@ -398,6 +465,8 @@ public class AiActivity extends AppCompatActivity {
                 View btnFilter = findViewById(R.id.btn_filter);
                 View btnGenerateCollapsed = findViewById(R.id.btn_generate_collapsed);
                 View btnGenerateExpanded = findViewById(R.id.btn_generate_expanded);
+                View tvDisclaimerHeader = findViewById(R.id.tv_ai_disclaimer_header);
+                View tvDisclaimerBottom = findViewById(R.id.tv_ai_disclaimer);
 
                 // Rotate grabber icon (0 = up, 180 = down)
                 grabber.setRotation(180 * slideOffset);
@@ -406,26 +475,35 @@ public class AiActivity extends AppCompatActivity {
                 btnFilter.setAlpha(slideOffset);
                 btnGenerateCollapsed.setAlpha(1.0f - slideOffset);
                 btnGenerateExpanded.setAlpha(slideOffset);
+                
+                // Transition disclaimers
+                tvDisclaimerHeader.setAlpha(1.0f - slideOffset);
+                tvDisclaimerBottom.setAlpha(slideOffset);
 
                 // Update visibility to prevent clicks when hidden
                 if (slideOffset <= 0.05f) {
                     btnFilter.setVisibility(View.GONE);
                     btnGenerateExpanded.setVisibility(View.GONE);
                     btnGenerateCollapsed.setVisibility(View.VISIBLE);
+                    tvDisclaimerHeader.setVisibility(View.VISIBLE);
+                    tvDisclaimerBottom.setVisibility(View.GONE);
                 } else if (slideOffset >= 0.95f) {
                     btnFilter.setVisibility(View.VISIBLE);
                     btnGenerateExpanded.setVisibility(View.VISIBLE);
                     btnGenerateCollapsed.setVisibility(View.GONE);
+                    tvDisclaimerHeader.setVisibility(View.GONE);
+                    tvDisclaimerBottom.setVisibility(View.VISIBLE);
                 } else {
                     btnFilter.setVisibility(View.VISIBLE);
                     btnGenerateExpanded.setVisibility(View.VISIBLE);
                     btnGenerateCollapsed.setVisibility(View.VISIBLE);
+                    tvDisclaimerHeader.setVisibility(View.VISIBLE);
+                    tvDisclaimerBottom.setVisibility(View.VISIBLE);
                 }
 
                 // Update preview container position during slide
                 int currentHeight = (int) (bottomSheetBehavior.getPeekHeight() +
                     (bottomSheet.getHeight() - bottomSheetBehavior.getPeekHeight()) * slideOffset);
-                updatePreviewContainerMargin(currentHeight);
                 updateMainModelHeight(currentHeight);
             }
         });
@@ -438,16 +516,6 @@ public class AiActivity extends AppCompatActivity {
             // Subtract the bottomInset to compensate for fitsSystemWindows padding
             params.bottomMargin = Math.max(0, bottomSheetHeight - bottomInset);
             mainContent.setLayoutParams(params);
-        }
-    }
-
-    private void updatePreviewContainerMargin(int margin) {
-        if (llPreviewContainer.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) llPreviewContainer.getLayoutParams();
-            // Connect with a 4dp gap
-            int gap = (int) (4 * getResources().getDisplayMetrics().density);
-            params.bottomMargin = margin + gap;
-            llPreviewContainer.setLayoutParams(params);
         }
     }
 
@@ -570,23 +638,21 @@ public class AiActivity extends AppCompatActivity {
         }, () -> {
             // Expansion logic when item is clicked in collapsed state
             previewAdapter.setCollapsed(false);
-            ivPreviewToggleIcon.animate().rotation(180).setDuration(200).start();
+            updatePreview();
         });
         rvSelectedPreview.setAdapter(previewAdapter);
 
         setupSwipeNavigation();
 
-        // Remove setupPreviewSwipe() since it's now handled by the toggle listener
         btnTogglePreview.setOnClickListener(v -> {
-            if (!previewAdapter.isCollapsed()) {
-                // If expanded, collapse it
-                previewAdapter.setCollapsed(true);
-                ivPreviewToggleIcon.animate().rotation(0).setDuration(200).start();
-            } else {
-                // If collapsed, expand it
-                previewAdapter.setCollapsed(false);
-                ivPreviewToggleIcon.animate().rotation(180).setDuration(200).start();
-            }
+            previewAdapter.setCollapsed(!previewAdapter.isCollapsed());
+            updatePreview();
+        });
+
+        btnClearAll.setOnClickListener(v -> {
+            selectedItems.clear();
+            itemAdapter.notifyDataSetChanged();
+            updatePreview();
         });
     }
 
@@ -771,23 +837,52 @@ public class AiActivity extends AppCompatActivity {
         previewList.addAll(selectedItems);
         previewAdapter.updateList(new ArrayList<>(previewList));
 
+        int count = previewList.size();
+        if (tvItemCount != null) {
+            tvItemCount.setText(String.valueOf(count));
+        }
+
         // Show entire container if there is at least 1 item
-        if (previewList.size() >= 1) {
+        if (count >= 1) {
             llPreviewContainer.setVisibility(View.VISIBLE);
 
-            // Show toggle button ONLY if there are 2 or more items
-            if (previewList.size() >= 2) {
+            // Show Clear All and Toggle button ONLY if there are 2 or more items
+            if (count >= 2) {
                 btnTogglePreview.setVisibility(View.VISIBLE);
-                float rotation = previewAdapter.isCollapsed() ? 0 : 180;
+                boolean isColl = previewAdapter.isCollapsed();
+                float rotation = isColl ? 0 : 180;
                 ivPreviewToggleIcon.setRotation(rotation);
+
+                // Show Clear All only when NOT collapsed
+                btnClearAll.setVisibility(isColl ? View.GONE : View.VISIBLE);
+                btnClearAll.animate().alpha(isColl ? 0f : 1f).setDuration(200).start();
+
+                // Show counter only when collapsed
+                findViewById(R.id.cv_item_counter).setVisibility(isColl ? View.VISIBLE : View.GONE);
+
+                if (cvPreviewWrapper instanceof com.google.android.material.card.MaterialCardView) {
+                    com.google.android.material.card.MaterialCardView wrapper = (com.google.android.material.card.MaterialCardView) cvPreviewWrapper;
+                    wrapper.setStrokeWidth(isColl ? 0 : (int) (1 * getResources().getDisplayMetrics().density));
+                    wrapper.setCardBackgroundColor(isColl ? Color.TRANSPARENT : Color.parseColor("#26FFFFFF"));
+                }
             } else {
                 btnTogglePreview.setVisibility(View.GONE);
+                btnClearAll.setVisibility(View.GONE);
+                findViewById(R.id.cv_item_counter).setVisibility(View.GONE);
                 // If only 1 item remains, ensure it's expanded
                 previewAdapter.setCollapsed(false);
+
+                if (cvPreviewWrapper instanceof com.google.android.material.card.MaterialCardView) {
+                    com.google.android.material.card.MaterialCardView wrapper = (com.google.android.material.card.MaterialCardView) cvPreviewWrapper;
+                    wrapper.setStrokeWidth(0);
+                    wrapper.setCardBackgroundColor(Color.TRANSPARENT);
+                }
             }
         } else {
             // Hide container if no items are selected
             llPreviewContainer.setVisibility(View.GONE);
+            btnClearAll.setVisibility(View.GONE);
+            findViewById(R.id.cv_item_counter).setVisibility(View.GONE);
             llPreviewContainer.setTranslationX(0);
             ivPreviewToggleIcon.setRotation(0);
             previewAdapter.setCollapsed(false);
@@ -813,6 +908,28 @@ public class AiActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void updateBottomSheetLockedState() {
+        boolean isLocked = (selectedModelUrl == null && selectedModelUri == null);
+        View bottomSheet = findViewById(R.id.bottom_sheet_card);
+        if (bottomSheet != null) {
+            // Block all clicks to children when locked, but keep original appearance
+            ViewGroup content = findViewById(R.id.bottom_sheet_content);
+            if (content != null) {
+                enableViewAndChildren(content, !isLocked);
+            }
+        }
+    }
+
+    private void enableViewAndChildren(View view, boolean enabled) {
+        view.setEnabled(enabled);
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                enableViewAndChildren(group.getChildAt(i), enabled);
+            }
+        }
+    }
+
     private void setNoModelVisible(boolean visible) {
         if (cvNoModelMessage == null) return;
         
@@ -830,16 +947,28 @@ public class AiActivity extends AppCompatActivity {
                     .withEndAction(() -> cvNoModelMessage.setVisibility(View.GONE))
                     .start();
         }
+        updateBottomSheetLockedState();
     }
 
     private void toggleAvatars() {
         TransitionManager.beginDelayedTransition(llAvatars, new AutoTransition());
         isExpanded = !isExpanded;
         
-        // Toggle btnAddAvatar and any other children except the main avatar
+        // Identify the representative view that stays visible when collapsed
+        View representative = avatarMain.getVisibility() == View.VISIBLE ? avatarMain : null;
+        if (representative == null && llAvatars.getChildCount() > 1) {
+            // Pick the first added custom model (which is at index 1)
+            representative = llAvatars.getChildAt(1);
+        }
+
         for (int i = 0; i < llAvatars.getChildCount(); i++) {
             View child = llAvatars.getChildAt(i);
-            if (child.getId() != R.id.avatar_main) {
+            boolean isAddBtn = child.getId() == R.id.btn_add_avatar;
+            
+            if (child == representative || isAddBtn) {
+                child.setVisibility(View.VISIBLE);
+                child.setAlpha(1.0f);
+            } else if (child.getId() != R.id.avatar_main) {
                 child.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
                 child.setAlpha(isExpanded ? 1.0f : 0.0f);
             }
@@ -1190,29 +1319,53 @@ public class AiActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Process the Try-On/Edit request once the Model URL is secured (either from DB or Cloudinary).
+     * This method implements the "Strict Rulebook" for different Fal.ai endpoints.
+     */
     private void processWithModelUrl(String modelUrl, String garmentUrl, String categoryId) {
         String endpoint;
         JSONObject json = new JSONObject();
+        
         try {
             if (isEditApiCategory(categoryId)) {
+                // RULEBOOK FOR ACCESSORIES & FOOTWEAR (Generalist AI: banana-pro/edit)
                 endpoint = "https://queue.fal.run/fal-ai/nano-banana-pro/edit";
+                
+                // 1. ANATOMICAL PLACEMENT & PIXEL FIDELITY PROMPT
                 json.put("prompt", getEditPrompt(categoryId));
+                
+                // 2. REFERENCE FUSION
                 JSONArray images = new JSONArray();
-                images.put(modelUrl);
-                images.put(garmentUrl);
+                images.put(modelUrl);   // Image 1: The Person (Avatar)
+                images.put(garmentUrl); // Image 2: The Item (Clothes/Accessory)
                 json.put("image_urls", images);
+                
+                // 3. QUALITY & DIMENSION LOCKS
+                json.put("resolution", "1K");      // Match standard mobile photo pixel density
+                json.put("aspect_ratio", "1:1");   // STOP widening; preserve original framing
+                json.put("output_format", "png");  // High-fidelity lossless output
+                
             } else {
+                // RULEBOOK FOR APPAREL (Specialist AI: fashn/tryon)
                 endpoint = "https://queue.fal.run/fal-ai/fashn/tryon/v1.6";
+                
                 json.put("model_image", modelUrl);
                 json.put("garment_image", garmentUrl);
                 json.put("category", mapCategory(categoryId));
             }
+            
             submitFalAiJob(endpoint, json);
+            
         } catch (JSONException e) {
-            Log.e("AiActivity", "Error building JSON request", e);
+            Log.e("AiActivity", "Rulebook JSON Error", e);
+            handleAiFailure("JSON Error: " + e.getMessage());
         }
     }
 
+    /**
+     * Category Identifier: Routes items to the correct AI engine.
+     */
     private boolean isEditApiCategory(String categoryId) {
         if (categoryId == null) return false;
         switch (categoryId) {
@@ -1231,11 +1384,18 @@ public class AiActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * The AI Instruction Set: Simple instructions for natural blending 
+     * while protecting the face, pose, and frame.
+     */
     private String getEditPrompt(String categoryId) {
         String item = categoryId.toLowerCase();
         if (item.equals("socks & tights")) item = "socks";
         if (item.equals("bags")) item = "bag";
-        return "Add the " + item + " from the second image onto the person in the first image naturally.";
+        if (item.contains("headwear")) item = "headwear";
+
+        return "Add the " + item + " from the second image onto the person in the first image naturally. " +
+               "DO NOT change the face, DO NOT change the pose, and DO NOT widen the image.";
     }
 
     private String mapCategory(String categoryId) {
