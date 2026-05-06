@@ -51,6 +51,7 @@
     <string name="filter_title">Filters</string>
     <string name="label_season">SEASON</string>
     <string name="label_occasions">OCCASIONS</string>
+    <string name="label_colors">COLORS</string>
     <string name="btn_apply_filters">Apply Filters</string>
     <string name="btn_reset">Reset</string>
 

@@ -30,7 +30,8 @@ public class AiItemAdapter extends RecyclerView.Adapter<AiItemAdapter.ViewHolder
 
     private String currentSeason = "All";
     private String currentOccasion = "All";
-    private String currentSort = "All";
+    private String currentColor = "All";
+    private String currentSort = "Latest";
     private String currentCategoryName = "";
     private String currentCategoryId = "";
 
@@ -102,9 +103,10 @@ public class AiItemAdapter extends RecyclerView.Adapter<AiItemAdapter.ViewHolder
         if (holder.ivFilterBadge != null) {
             boolean matchesSeason = !"All".equalsIgnoreCase(currentSeason) && currentSeason.equalsIgnoreCase(item.getSeason());
             boolean matchesOccasion = !"All".equalsIgnoreCase(currentOccasion) && item.getOccasions() != null && item.getOccasions().contains(currentOccasion);
+            boolean matchesColor = !"All".equalsIgnoreCase(currentColor) && currentColor.equalsIgnoreCase(item.getColor());
             boolean matchesFave = "Faves".equalsIgnoreCase(currentSort) && item.isFavorite();
             
-            if (matchesSeason || matchesOccasion || matchesFave) {
+            if (matchesSeason || matchesOccasion || matchesColor || matchesFave) {
                 holder.ivFilterBadge.setVisibility(View.VISIBLE);
             } else {
                 holder.ivFilterBadge.setVisibility(View.GONE);
@@ -157,9 +159,10 @@ public class AiItemAdapter extends RecyclerView.Adapter<AiItemAdapter.ViewHolder
         return itemList.size() + 1;
     }
 
-    public void updateFilters(String season, String occasion, String sort) {
+    public void updateFilters(String season, String occasion, String color, String sort) {
         this.currentSeason = season;
         this.currentOccasion = occasion;
+        this.currentColor = color;
         this.currentSort = sort;
         notifyDataSetChanged();
     }

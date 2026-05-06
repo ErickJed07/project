@@ -133,7 +133,8 @@ public class AiActivity extends AppCompatActivity {
 
     private String selectedSeason = "All";
     private String selectedOccasion = "All";
-    private String selectedSort = "All";
+    private String selectedColor = "All";
+    private String selectedSort = "Latest";
     private String currentCategoryName = "";
     private String currentCategoryId = "all_clothes";
     private boolean isWomanSelected = true;
@@ -597,8 +598,14 @@ public class AiActivity extends AppCompatActivity {
         occasionAdapter.setSelected(selectedOccasion);
         rvOccasions.setAdapter(occasionAdapter);
 
+        RecyclerView rvColors = view.findViewById(R.id.rv_colors);
+        List<String> colors = Arrays.asList("All", "Black", "White", "Grey", "Beige", "Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Pink", "Brown", "Multi");
+        AiFilterChipAdapter colorAdapter = new AiFilterChipAdapter(this, colors, (item, pos) -> selectedColor = item);
+        colorAdapter.setSelected(selectedColor);
+        rvColors.setAdapter(colorAdapter);
+
         RecyclerView rvSort = view.findViewById(R.id.rv_sort_options);
-        List<String> sorts = Arrays.asList("All", "Faves", "Latest", "Oldest");
+        List<String> sorts = Arrays.asList("Latest", "Faves", "Oldest");
         AiFilterChipAdapter sortOptionAdapter = new AiFilterChipAdapter(this, sorts, (item, pos) -> selectedSort = item);
         sortOptionAdapter.setSelected(selectedSort);
         rvSort.setAdapter(sortOptionAdapter);
@@ -606,10 +613,13 @@ public class AiActivity extends AppCompatActivity {
         view.findViewById(R.id.btn_reset).setOnClickListener(v -> {
             seasonAdapter.reset();
             occasionAdapter.reset();
+            colorAdapter.reset();
             sortOptionAdapter.reset();
             selectedSeason = "All";
             selectedOccasion = "All";
-            selectedSort = "All";
+            selectedColor = "All";
+            selectedSort = "Latest";
+            sortOptionAdapter.setSelected(selectedSort);
         });
 
         view.findViewById(R.id.btn_apply_filters).setOnClickListener(v -> {
@@ -627,9 +637,10 @@ public class AiActivity extends AppCompatActivity {
         for (ClothingItem item : originalItemList) {
             boolean matchesSeason = selectedSeason.equals("All") || (item.getSeason() != null && item.getSeason().equalsIgnoreCase(selectedSeason));
             boolean matchesOccasion = selectedOccasion.equals("All") || (item.getOccasions() != null && item.getOccasions().contains(selectedOccasion));
+            boolean matchesColor = selectedColor.equals("All") || (item.getColor() != null && item.getColor().equalsIgnoreCase(selectedColor));
             boolean matchesFave = !selectedSort.equals("Faves") || item.isFavorite();
 
-            if (matchesSeason && matchesOccasion && matchesFave) {
+            if (matchesSeason && matchesOccasion && matchesColor && matchesFave) {
                 matchingItems.add(item);
             } else {
                 nonMatchingItems.add(item);
@@ -644,7 +655,7 @@ public class AiActivity extends AppCompatActivity {
         itemList.addAll(matchingItems);
         itemList.addAll(nonMatchingItems);
 
-        itemAdapter.updateFilters(selectedSeason, selectedOccasion, selectedSort);
+        itemAdapter.updateFilters(selectedSeason, selectedOccasion, selectedColor, selectedSort);
         itemAdapter.updateList(new ArrayList<>(itemList));
     }
 
@@ -863,6 +874,9 @@ public class AiActivity extends AppCompatActivity {
                 item.setSeason((String) seasons.get(0));
             }
         }
+
+        String color = photoSnap.child("color").getValue(String.class);
+        item.setColor(color);
 
         DataSnapshot occasionsSnap = photoSnap.child("occasions");
         List<String> occasionsList = new ArrayList<>();
