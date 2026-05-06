@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -22,7 +23,7 @@ public class AiItemAdapter extends RecyclerView.Adapter<AiItemAdapter.ViewHolder
 
     private Context context;
     private List<ClothingItem> itemList;
-    private Set<ClothingItem> selectedItems = new HashSet<>();
+    private Set<ClothingItem> selectedItems = new LinkedHashSet<>();
     private OnItemClickListener listener;
     private OnItemLongClickListener longClickListener;
     private OnAddClickListener addClickListener;
@@ -120,9 +121,20 @@ public class AiItemAdapter extends RecyclerView.Adapter<AiItemAdapter.ViewHolder
             if (selectedItems.contains(item)) {
                 selectedItems.remove(item);
             } else {
+                // Enforce one item per category
+                ClothingItem existingInCategory = null;
+                for (ClothingItem selected : selectedItems) {
+                    if (selected.getCategoryId() != null && selected.getCategoryId().equals(item.getCategoryId())) {
+                        existingInCategory = selected;
+                        break;
+                    }
+                }
+                if (existingInCategory != null) {
+                    selectedItems.remove(existingInCategory);
+                }
                 selectedItems.add(item);
             }
-            notifyItemChanged(holder.getAdapterPosition());
+            notifyDataSetChanged();
             if (listener != null) {
                 listener.onItemClick(item, selectedItems.contains(item));
             }

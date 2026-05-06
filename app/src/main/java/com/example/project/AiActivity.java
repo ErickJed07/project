@@ -74,6 +74,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -119,12 +120,17 @@ public class AiActivity extends AppCompatActivity {
     private List<ViewCategoriesActivity.CategoryModel> categoryList = new ArrayList<>();
     private List<ClothingItem> itemList = new ArrayList<>();
     private List<ClothingItem> originalItemList = new ArrayList<>();
-    private Set<ClothingItem> selectedItems = new HashSet<>();
+    private Set<ClothingItem> selectedItems = new LinkedHashSet<>();
     private List<ClothingItem> previewList = new ArrayList<>();
 
     private String selectedModelUrl = null;
     private Uri selectedModelUri = null;
     private static final String FAL_KEY = "14732117-ce26-436f-ac91-bb9d5d311539:244d86639b02ef3ed0d782990dc1a681";
+
+    // Chain Generation State
+    private List<ClothingItem> chainQueue = new ArrayList<>();
+    private int currentChainIndex = 0;
+    private String currentIntermediateModelUrl = null;
 
     private String selectedSeason = "All";
     private String selectedOccasion = "All";
@@ -617,6 +623,15 @@ public class AiActivity extends AppCompatActivity {
         rvItems.setLayoutManager(new GridLayoutManager(this, 3));
         itemAdapter = new AiItemAdapter(this, itemList, (item, isSelected) -> {
             if (isSelected) {
+                // Enforce one item per category in Activity's set too
+                ClothingItem existing = null;
+                for (ClothingItem s : selectedItems) {
+                    if (s.getCategoryId() != null && s.getCategoryId().equals(item.getCategoryId())) {
+                        existing = s;
+                        break;
+                    }
+                }
+                if (existing != null) selectedItems.remove(existing);
                 selectedItems.add(item);
             } else {
                 selectedItems.remove(item);
@@ -1275,16 +1290,15 @@ public class AiActivity extends AppCompatActivity {
         findViewById(R.id.btn_generate_collapsed).setEnabled(false);
         findViewById(R.id.btn_generate_expanded).setEnabled(false);
 
-        ClothingItem garment = selectedItems.iterator().next();
-        String garmentUrl = garment.getImageUrl();
-        String categoryId = garment.getCategoryId();
+        // Initialize chain queue
+        chainQueue.clear();
+        chainQueue.addAll(selectedItems);
+        currentChainIndex = 0;
 
-        Log.d("AiActivity", "Starting Virtual Try-On...");
-        Log.d("AiActivity", "Garment URL: " + garmentUrl);
-        Log.d("AiActivity", "Category ID: " + categoryId);
+        Log.d("AiActivity", "Starting Chain Virtual Try-On with " + chainQueue.size() + " items");
 
         if (selectedModelUrl != null) {
-            processWithModelUrl(selectedModelUrl, garmentUrl, categoryId);
+            startNextInChain(selectedModelUrl);
         } else {
             // Upload local URI to Cloudinary first
             Log.d("AiActivity", "Uploading local model URI to Cloudinary: " + selectedModelUri);
@@ -1301,7 +1315,7 @@ public class AiActivity extends AppCompatActivity {
                         public void onSuccess(String requestId, Map resultData) {
                             String modelUrl = (String) resultData.get("secure_url");
                             Log.d("AiActivity", "Cloudinary upload success! URL: " + modelUrl);
-                            runOnUiThread(() -> processWithModelUrl(modelUrl, garmentUrl, categoryId));
+                            runOnUiThread(() -> startNextInChain(modelUrl));
                         }
                         @Override
                         public void onError(String requestId, ErrorInfo error) {
@@ -1317,6 +1331,26 @@ public class AiActivity extends AppCompatActivity {
                         public void onReschedule(String requestId, ErrorInfo error) {}
                     }).dispatch();
         }
+    }
+
+    private void startNextInChain(String modelUrl) {
+        if (currentChainIndex >= chainQueue.size()) {
+            Log.d("AiActivity", "Chain generation completed.");
+            runOnUiThread(() -> {
+                pbLoading.setVisibility(View.GONE);
+                findViewById(R.id.btn_generate_collapsed).setEnabled(true);
+                findViewById(R.id.btn_generate_expanded).setEnabled(true);
+            });
+            return;
+        }
+
+        currentIntermediateModelUrl = modelUrl;
+        ClothingItem garment = chainQueue.get(currentChainIndex);
+        String garmentUrl = garment.getImageUrl();
+        String categoryId = garment.getCategoryId();
+
+        Log.d("AiActivity", "Processing item " + (currentChainIndex + 1) + "/" + chainQueue.size() + ": " + categoryId);
+        processWithModelUrl(modelUrl, garmentUrl, categoryId);
     }
 
     /**
@@ -1350,9 +1384,25 @@ public class AiActivity extends AppCompatActivity {
                 // RULEBOOK FOR APPAREL (Specialist AI: fashn/tryon)
                 endpoint = "https://queue.fal.run/fal-ai/fashn/tryon/v1.6";
                 
+                String falCategory = mapCategory(categoryId);
                 json.put("model_image", modelUrl);
                 json.put("garment_image", garmentUrl);
-                json.put("category", mapCategory(categoryId));
+                json.put("category", falCategory);
+
+                // Quality & Layering Improvements
+                json.put("mode", "quality");
+                json.put("garment_photo_type", "auto");
+                json.put("nsfw_filter", true);
+
+                // Styling Hint for Outerwear (to see the shirt inside)
+                if (isOuterwear(categoryId)) {
+                    json.put("prompt", "open jacket over the shirt");
+                }
+
+                // Support for long items (Long Coats, Dresses)
+                if (isLongGarment(categoryId)) {
+                    json.put("long_top", true);
+                }
             }
             
             submitFalAiJob(endpoint, json);
@@ -1361,6 +1411,14 @@ public class AiActivity extends AppCompatActivity {
             Log.e("AiActivity", "Rulebook JSON Error", e);
             handleAiFailure("JSON Error: " + e.getMessage());
         }
+    }
+
+    private boolean isOuterwear(String categoryId) {
+        return "Outerwear".equalsIgnoreCase(categoryId);
+    }
+
+    private boolean isLongGarment(String categoryId) {
+        return "Outerwear".equalsIgnoreCase(categoryId) || "Dresses".equalsIgnoreCase(categoryId);
     }
 
     /**
@@ -1534,11 +1592,12 @@ public class AiActivity extends AppCompatActivity {
                     Log.d("AiActivity", "Success! Result Image URL: " + resultUrl);
 
                     runOnUiThread(() -> {
-                        pbLoading.setVisibility(View.GONE);
-                        findViewById(R.id.btn_generate_collapsed).setEnabled(true);
-                        findViewById(R.id.btn_generate_expanded).setEnabled(true);
                         Glide.with(AiActivity.this).load(resultUrl).into(ivMainModel);
                         setNoModelVisible(false);
+                        
+                        // Increment and proceed to next item in chain
+                        currentChainIndex++;
+                        startNextInChain(resultUrl);
                     });
                 } catch (Exception e) {
                     handleAiFailure("Result parsing error: " + e.getMessage());

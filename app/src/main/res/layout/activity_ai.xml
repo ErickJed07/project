@@ -44,18 +44,6 @@
             app:layout_constraintTop_toTopOf="@+id/iv_main_model" />
 
         <!-- Gradient Overlay -->
-        <View
-            android:id="@+id/v_overlay"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:alpha="0.2"
-            android:background="@drawable/bg_ai_styling_gradient"
-            android:importantForAccessibility="no"
-            app:layout_constraintBottom_toBottomOf="@+id/iv_main_model"
-            app:layout_constraintEnd_toEndOf="@+id/iv_main_model"
-            app:layout_constraintStart_toStartOf="@+id/iv_main_model"
-            app:layout_constraintTop_toTopOf="@+id/iv_main_model"
-            app:layout_constraintVertical_bias="0.61" />
 
         <!-- No Model Message (Professional Upgrade) -->
         <com.google.android.material.card.MaterialCardView
@@ -564,5 +552,15 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
+
+    <View
+        android:id="@+id/v_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0.2"
+        android:background="@drawable/bg_ai_styling_gradient"
+        android:importantForAccessibility="no"
+        app:layout_anchor="@+id/cl_main_content"
+        app:layout_anchorGravity="center" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
