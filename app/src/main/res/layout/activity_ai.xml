@@ -106,19 +106,33 @@
                     android:textColor="#64748B"
                     android:textSize="14sp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_choose_model_action"
-                    style="@style/Widget.Material3.Button.TonalButton"
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
-                    android:paddingHorizontal="24dp"
-                    android:text="Select Avatar"
-                    android:textAllCaps="false"
-                    android:textColor="#1E293B"
-                    android:textStyle="bold"
-                    app:backgroundTint="#F1F5F9"
-                    app:cornerRadius="20dp" />
+                    app:cardBackgroundColor="#0D000000"
+                    app:cardCornerRadius="32dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#1A000000"
+                    app:strokeWidth="1dp">
+
+                    <HorizontalScrollView
+                        android:id="@+id/hsv_no_model_avatars"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/ll_no_model_avatars"
+                            android:layout_width="wrap_content"
+                            android:layout_height="64dp"
+                            android:gravity="center"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="12dp">
+                            <!-- Avatars will be injected here -->
+                        </LinearLayout>
+                    </HorizontalScrollView>
+                </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

@@ -102,10 +102,9 @@ import java.util.Map;
 
 public class AiActivity extends AppCompatActivity {
 
-    private ViewGroup llAvatars;
-    private View avatarMain, btnAddAvatar;
+    private ViewGroup llAvatars, llNoModelAvatars;
+    private View avatarMain, btnAddAvatar, cvAvatarContainer;
     private ImageView ivMainModel;
-    private boolean isExpanded = false;
     private Uri currentPhotoUri;
 
     private RecyclerView rvCategories, rvItems, rvSelectedPreview;
@@ -191,6 +190,7 @@ public class AiActivity extends AppCompatActivity {
         llAvatars = findViewById(R.id.ll_avatars);
         avatarMain = findViewById(R.id.avatar_main);
         btnAddAvatar = findViewById(R.id.btn_add_avatar);
+        cvAvatarContainer = findViewById(R.id.cv_avatar_container);
         ivMainModel = findViewById(R.id.iv_main_model);
         llEmptyState = findViewById(R.id.ll_empty_state);
         llPreviewContainer = findViewById(R.id.ll_preview_container);
@@ -200,6 +200,7 @@ public class AiActivity extends AppCompatActivity {
         btnClearAll = findViewById(R.id.btn_clear_all);
         ivPreviewToggleIcon = findViewById(R.id.iv_preview_toggle_icon);
         cvNoModelMessage = findViewById(R.id.cv_no_model_message);
+        llNoModelAvatars = findViewById(R.id.ll_no_model_avatars);
         pbLoading = findViewById(R.id.pb_loading);
 
         // Initialize Cloudinary
@@ -237,17 +238,7 @@ public class AiActivity extends AppCompatActivity {
         });
 
         avatarMain.setOnClickListener(v -> {
-            // If the user clicks the main avatar, we assume they select it as the model
-            ivMainModel.setImageResource(R.drawable.user_2);
-            selectedModelUrl = "https://idm-vton.github.io/inthewild/4/h/0.jpeg"; // Default public model URL
-            selectedModelUri = null;
-            
-            setNoModelVisible(false);
-            updateBottomSheetLockedState();
-
-            if (!isExpanded) {
-                toggleAvatars();
-            }
+            selectMainAvatar();
         });
         btnAddAvatar.setOnClickListener(v -> showAddAvatarOptions());
 
@@ -258,13 +249,6 @@ public class AiActivity extends AppCompatActivity {
         };
         findViewById(R.id.btn_generate_collapsed).setOnClickListener(generateListener);
         findViewById(R.id.btn_generate_expanded).setOnClickListener(generateListener);
-
-        findViewById(R.id.btn_choose_model_action).setOnClickListener(v -> {
-            if (!isExpanded) {
-                toggleAvatars();
-            }
-            Toast.makeText(this, "Select an avatar above", Toast.LENGTH_SHORT).show();
-        });
 
         setupRecyclerViews();
         setupBottomSheet();
@@ -280,20 +264,26 @@ public class AiActivity extends AppCompatActivity {
         dbRef.child(uid).child("ai_models").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // Clear existing dynamic avatars (everything between btnAddAvatar and avatarMain)
-                // In our current layout, llAvatars has: [btnAddAvatar] [Dynamically Added...] [avatarMain]
-                // We should keep btnAddAvatar (index 0) and avatarMain (index last)
+                // Clear existing dynamic avatars in both containers
                 int childCount = llAvatars.getChildCount();
                 for (int i = childCount - 2; i >= 1; i--) {
                     llAvatars.removeViewAt(i);
                 }
+                if (llNoModelAvatars != null) {
+                    llNoModelAvatars.removeAllViews();
+                    addPlusButtonToNoModel();
+                }
 
                 boolean hasCustomModels = snapshot.hasChildren();
-                avatarMain.setVisibility(hasCustomModels ? View.GONE : View.VISIBLE);
                 
-                // Ensure Add Avatar button is always visible when we have custom models
+                // Top-right container logic
                 btnAddAvatar.setVisibility(View.VISIBLE);
                 btnAddAvatar.setAlpha(1.0f);
+
+                // Center "No Model" card container logic
+                if (!hasCustomModels) {
+                    addDefaultAvatarToNoModel();
+                }
 
                 for (DataSnapshot modelSnapshot : snapshot.getChildren()) {
                     AiModel model = modelSnapshot.getValue(AiModel.class);
@@ -302,13 +292,15 @@ public class AiActivity extends AppCompatActivity {
                     }
                 }
 
-                // If collapsed and we have custom models, ensure one dynamic avatar is visible as the representative
-                if (!isExpanded && hasCustomModels && llAvatars.getChildCount() > 1) {
-                    View representative = llAvatars.getChildAt(llAvatars.getChildCount() - 2);
-                    if (representative != null) {
-                        representative.setVisibility(View.VISIBLE);
-                        representative.setAlpha(1.0f);
+                // Ensure everything in llAvatars is visible, but handle default avatar visibility
+                for (int i = 0; i < llAvatars.getChildCount(); i++) {
+                    View child = llAvatars.getChildAt(i);
+                    if (child == avatarMain) {
+                        child.setVisibility(hasCustomModels ? View.GONE : View.VISIBLE);
+                    } else {
+                        child.setVisibility(View.VISIBLE);
                     }
+                    child.setAlpha(1.0f);
                 }
             }
 
@@ -319,39 +311,102 @@ public class AiActivity extends AppCompatActivity {
         });
     }
 
-    private void addModelToAvatarList(AiModel model) {
-        ShapeableImageView newAvatar = createAvatarView();
-        Glide.with(this).load(model.url).into(newAvatar);
+    private void addPlusButtonToNoModel() {
+        if (llNoModelAvatars == null) return;
+        
+        com.google.android.material.card.MaterialCardView card = new com.google.android.material.card.MaterialCardView(this);
+        int size = (int) (44 * getResources().getDisplayMetrics().density);
+        int margin = (int) (8 * getResources().getDisplayMetrics().density);
+        
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+        params.setMarginEnd(margin);
+        card.setLayoutParams(params);
+        
+        card.setCardBackgroundColor(ColorStateList.valueOf(Color.parseColor("#0D000000")));
+        card.setRadius(22 * getResources().getDisplayMetrics().density);
+        card.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#1A000000")));
+        card.setStrokeWidth((int) (1 * getResources().getDisplayMetrics().density));
+        card.setCardElevation(0);
+        
+        ImageView iv = new ImageView(this);
+        int iconSize = (int) (20 * getResources().getDisplayMetrics().density);
+        android.widget.FrameLayout.LayoutParams ivParams = new android.widget.FrameLayout.LayoutParams(iconSize, iconSize, android.view.Gravity.CENTER);
+        iv.setLayoutParams(ivParams);
+        iv.setImageResource(R.drawable.plus);
+        iv.setImageTintList(ColorStateList.valueOf(Color.BLACK));
+        
+        card.addView(iv);
+        card.setOnClickListener(v -> showAddAvatarOptions());
+        
+        llNoModelAvatars.addView(card);
+    }
 
-        newAvatar.setOnClickListener(v -> {
-            Glide.with(this).load(model.url).into(ivMainModel);
-            selectedModelUrl = model.url;
-            selectedModelUri = null;
-            
-            setNoModelVisible(false);
-            updateBottomSheetLockedState();
+    private void addDefaultAvatarToNoModel() {
+        if (llNoModelAvatars == null) return;
+        ShapeableImageView defaultAvatar = createAvatarView();
+        defaultAvatar.setImageResource(R.drawable.user_2);
+        defaultAvatar.setOnClickListener(v -> selectMainAvatar());
+        llNoModelAvatars.addView(defaultAvatar);
+    }
 
-            // Highlight selected avatar
-            resetAvatarBorders();
-            newAvatar.setStrokeColor(ColorStateList.valueOf(Color.WHITE));
-            newAvatar.setStrokeWidth(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
-            
-            if (!isExpanded) {
-                toggleAvatars();
-            } else {
-                // Collapse after selection
-                toggleAvatars();
+    private void selectMainAvatar() {
+        ivMainModel.setImageResource(R.drawable.user_2);
+        selectedModelUrl = "https://idm-vton.github.io/inthewild/4/h/0.jpeg"; // Default public model URL
+        selectedModelUri = null;
+        
+        setNoModelVisible(false);
+        updateBottomSheetLockedState();
+
+        resetAvatarBorders();
+        highlightAvatarInContainer(llAvatars, avatarMain);
+        highlightAvatarInContainer(llNoModelAvatars, null); // Highlight by drawable if needed, but simple for now
+    }
+
+    private void highlightAvatarInContainer(ViewGroup container, View selected) {
+        if (container == null) return;
+        for (int i = 0; i < container.getChildCount(); i++) {
+            View v = container.getChildAt(i);
+            if (v instanceof ShapeableImageView) {
+                float width = (v == selected) ? 2 : 0;
+                ((ShapeableImageView) v).setStrokeWidth(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, width, getResources().getDisplayMetrics()));
             }
-        });
+        }
+    }
 
-        newAvatar.setOnLongClickListener(v -> {
+    private void addModelToAvatarList(AiModel model) {
+        // Add to top-right container
+        ShapeableImageView topAvatar = createAvatarView();
+        Glide.with(this).load(model.url).into(topAvatar);
+        topAvatar.setOnClickListener(v -> selectModel(model, topAvatar));
+        topAvatar.setOnLongClickListener(v -> {
             showDeleteModelDialog(model);
             return true;
         });
+        llAvatars.addView(topAvatar, 1);
+        topAvatar.setVisibility(View.VISIBLE);
+        topAvatar.setAlpha(1.0f);
 
-        // Insert at index 1 (between Plus button and Main avatar)
-        llAvatars.addView(newAvatar, 1);
-        newAvatar.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+        // Add to center "No Model" card container
+        if (llNoModelAvatars != null) {
+            ShapeableImageView cardAvatar = createAvatarView();
+            Glide.with(this).load(model.url).into(cardAvatar);
+            cardAvatar.setOnClickListener(v -> selectModel(model, topAvatar)); // Using topAvatar for highlighting ref
+            llNoModelAvatars.addView(cardAvatar);
+        }
+    }
+
+    private void selectModel(AiModel model, ShapeableImageView avatarView) {
+        Glide.with(this).load(model.url).into(ivMainModel);
+        selectedModelUrl = model.url;
+        selectedModelUri = null;
+        
+        setNoModelVisible(false);
+        updateBottomSheetLockedState();
+
+        resetAvatarBorders();
+        if (avatarView != null) {
+            avatarView.setStrokeWidth(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
+        }
     }
 
     private void resetAvatarBorders() {
@@ -955,40 +1010,26 @@ public class AiActivity extends AppCompatActivity {
                     .alpha(1f)
                     .setDuration(300)
                     .setListener(null);
+            
+            if (cvAvatarContainer != null) {
+                cvAvatarContainer.animate().alpha(0f).setDuration(300).withEndAction(() -> cvAvatarContainer.setVisibility(View.GONE)).start();
+            }
         } else {
             cvNoModelMessage.animate()
                     .alpha(0f)
                     .setDuration(300)
                     .withEndAction(() -> cvNoModelMessage.setVisibility(View.GONE))
                     .start();
+
+            if (cvAvatarContainer != null) {
+                cvAvatarContainer.setVisibility(View.VISIBLE);
+                cvAvatarContainer.animate().alpha(1f).setDuration(300).start();
+            }
         }
         updateBottomSheetLockedState();
     }
 
-    private void toggleAvatars() {
-        TransitionManager.beginDelayedTransition(llAvatars, new AutoTransition());
-        isExpanded = !isExpanded;
-        
-        // Identify the representative view that stays visible when collapsed
-        View representative = avatarMain.getVisibility() == View.VISIBLE ? avatarMain : null;
-        if (representative == null && llAvatars.getChildCount() > 1) {
-            // Pick the first added custom model (which is at index 1)
-            representative = llAvatars.getChildAt(1);
-        }
-
-        for (int i = 0; i < llAvatars.getChildCount(); i++) {
-            View child = llAvatars.getChildAt(i);
-            boolean isAddBtn = child.getId() == R.id.btn_add_avatar;
-            
-            if (child == representative || isAddBtn) {
-                child.setVisibility(View.VISIBLE);
-                child.setAlpha(1.0f);
-            } else if (child.getId() != R.id.avatar_main) {
-                child.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
-                child.setAlpha(isExpanded ? 1.0f : 0.0f);
-            }
-        }
-    }
+    // toggleAvatars removed as per user request to remove expand/collapse behavior
 
     private void showAddAvatarOptions() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);

@@ -56,7 +56,8 @@
 
     <!-- AI Screen No Model State -->
     <string name="ai_no_model_title">Style Your Model</string>
-    <string name="ai_no_model_desc">Select an avatar or upload a photo of yourself to begin your AI styling journey.</string>
+    <string name="ai_no_model_desc">Choose from avatars you can select with or upload a photo of yourself to begin your AI styling journey.</string>
+    <string name="ai_select_model">Select Model</string>
 
     <!-- AI Validation Errors -->
     <string name="error_puffy_clothes">Model is wearing bulky or puffy clothes. Please use form-fitting attire for accurate measurements.</string>
