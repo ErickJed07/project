@@ -641,8 +641,9 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void updateMainModelPosition() {
-        if (resultBehavior != null && resultBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
-            updateMainModelHeight(resultBehavior.getPeekHeight());
+        if (resultBehavior != null && resultBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+            View resultSheet = findViewById(R.id.bottom_sheet_result);
+            updateMainModelHeight(resultSheet.getHeight());
         } else if (selectionBehavior != null && selectionBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
             View selectionSheet = findViewById(R.id.bottom_sheet_selection);
             float offset = selectionBehavior.calculateSlideOffset();
@@ -659,8 +660,7 @@ public class AiActivity extends AppCompatActivity {
         View mainContent = findViewById(R.id.cl_main_content);
         if (mainContent != null && mainContent.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) mainContent.getLayoutParams();
-            // Subtract the bottomInset to compensate for fitsSystemWindows padding
-            params.bottomMargin = Math.max(0, bottomSheetHeight - bottomInset);
+            params.bottomMargin = Math.max(0, bottomSheetHeight);
             mainContent.setLayoutParams(params);
         }
     }
@@ -1590,7 +1590,7 @@ public class AiActivity extends AppCompatActivity {
             View resultSheet = findViewById(R.id.bottom_sheet_result);
             resultSheet.setVisibility(View.VISIBLE);
             resultBehavior.setHideable(false);
-            resultBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            resultBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
 
             // Show and load original image in the floating result preview
             View resultPreview = findViewById(R.id.cv_result_preview_container);
@@ -1609,8 +1609,6 @@ public class AiActivity extends AppCompatActivity {
             }
 
             resultSheet.post(() -> {
-                int height = resultSheet.getHeight();
-                resultBehavior.setPeekHeight(height);
                 updateMainModelPosition();
             });
 
