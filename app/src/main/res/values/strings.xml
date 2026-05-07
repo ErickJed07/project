@@ -70,6 +70,13 @@
     <string name="error_image_blurry">The image appears to be blurry. Please provide a sharper photo.</string>
     <string name="error_poor_lighting">Poor lighting detected. Please use a well-lit environment.</string>
     <string name="ai_stylist_result_title">AI Stylist Result</string>
+    <string name="ai_clear_selections">Clear all selections</string>
+    <string name="ai_toggle_preview">Toggle preview list</string>
+    <string name="ai_result_preview">Result preview</string>
+    <string name="ai_clear">Clear</string>
+    <string name="ai_step_format">Step %1$d of %2$d</string>
+    <string name="ai_processing_time">This usually takes 15&#8211;20 seconds</string>
+    <string name="test_ui">Test UI</string>
     <string name="before">BEFORE</string>
     <string name="styling_complete">STYLING COMPLETE</string>
     <string name="pick_clothes">PICK CLOTHES</string>

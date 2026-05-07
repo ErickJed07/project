@@ -109,7 +109,7 @@ public class AiActivity extends AppCompatActivity {
 
     private RecyclerView rvCategories, rvItems, rvSelectedPreview;
     private View llEmptyState, llPreviewContainer, btnTogglePreview, cvNoModelMessage, cvPreviewWrapper, btnClearAll, clProgressOverlay, flItemsContainer;
-    private View btnToggleBefore, btnTryAgain, clSelectionState, clResultState, bottomSheetGrabber;
+    private View  btnTryAgain, clSelectionState, clResultState, bottomSheetGrabber;
     private com.google.android.material.button.MaterialButton btnGenerateCollapsed, btnGenerateExpanded, btnSaveResult;
     private String originalModelUrl = null;
     private Uri originalModelUri = null;
@@ -219,7 +219,7 @@ public class AiActivity extends AppCompatActivity {
         pbLoading = findViewById(R.id.pb_loading);
         flItemsContainer = findViewById(R.id.fl_items_container);
 
-        btnToggleBefore = findViewById(R.id.btn_toggle_before);
+
         btnTryAgain = findViewById(R.id.btn_try_again);
         clSelectionState = findViewById(R.id.cl_selection_state);
         clResultState = findViewById(R.id.cl_result_state);
@@ -261,41 +261,14 @@ public class AiActivity extends AppCompatActivity {
                 }
                 return false;
             });
-            
+
             cvResultPreview.setOnClickListener(v -> {
                 // Optional: Full screen zoom on click if needed
                 // showImagePreview(lastAiResultUrl != null ? lastAiResultUrl : lastAiResultRaw);
             });
         }
 
-        btnToggleBefore.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    // Hold: Switch to original image
-                    if (originalModelUrl != null) {
-                        Glide.with(AiActivity.this).load(originalModelUrl).into(ivMainModel);
-                    } else if (originalModelUri != null) {
-                        Glide.with(AiActivity.this).load(originalModelUri).into(ivMainModel);
-                    } else {
-                        ivMainModel.setImageResource(R.drawable.user_2);
-                    }
-                    return true;
 
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    v.performClick();
-                    // Restore result image
-                    if (lastAiResultUrl != null) {
-                        Glide.with(AiActivity.this).load(lastAiResultUrl).into(ivMainModel);
-                    } else if (lastAiResultRaw instanceof Integer) {
-                        ivMainModel.setImageResource((Integer) lastAiResultRaw);
-                    } else if (lastAiResultRaw != null) {
-                        Glide.with(AiActivity.this).load(lastAiResultRaw).into(ivMainModel);
-                    }
-                    return true;
-            }
-            return false;
-        });
 
         // Initialize Cloudinary
         try {
@@ -452,8 +425,8 @@ public class AiActivity extends AppCompatActivity {
         originalModelUri = null;
         lastAiResultUrl = null;
         lastAiResultRaw = null;
-        btnToggleBefore.setVisibility(View.GONE);
-        
+
+
         setNoModelVisible(false);
         updateBottomSheetLockedState();
 
@@ -504,8 +477,7 @@ public class AiActivity extends AppCompatActivity {
         originalModelUri = null;
         lastAiResultUrl = null;
         lastAiResultRaw = null;
-        btnToggleBefore.setVisibility(View.GONE);
-        
+
         setNoModelVisible(false);
         updateBottomSheetLockedState();
 
@@ -593,13 +565,13 @@ public class AiActivity extends AppCompatActivity {
             int peekHeight = header.getBottom() + (int) getResources().getDimension(R.dimen.spacing_small);
             selectionBehavior.setPeekHeight(peekHeight);
             selectionBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-            
+
             // Initial visibility: Only header, hide categories and items
             rvCategories.setVisibility(View.GONE);
             rvCategories.setAlpha(0f);
             flItemsContainer.setVisibility(View.GONE);
             flItemsContainer.setAlpha(0f);
-            
+
             updateMainModelHeight(selectionBehavior.getPeekHeight());
             updateBottomSheetLockedState();
         });
@@ -632,7 +604,7 @@ public class AiActivity extends AppCompatActivity {
                 btnFilter.setAlpha(slideOffset);
                 btnGenerateCollapsed.setAlpha(1.0f - slideOffset);
                 btnGenerateExpanded.setAlpha(slideOffset);
-                
+
                 rvCategories.setAlpha(slideOffset);
                 flItemsContainer.setAlpha(slideOffset);
 
@@ -669,12 +641,10 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void updateMainModelPosition() {
-        View resultSheet = findViewById(R.id.bottom_sheet_result);
-        View selectionSheet = findViewById(R.id.bottom_sheet_selection);
-
-        if (resultSheet.getVisibility() == View.VISIBLE) {
-            updateMainModelHeight(resultSheet.getHeight());
-        } else if (selectionSheet.getVisibility() == View.VISIBLE && selectionBehavior != null) {
+        if (resultBehavior != null && resultBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
+            updateMainModelHeight(resultBehavior.getPeekHeight());
+        } else if (selectionBehavior != null && selectionBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
+            View selectionSheet = findViewById(R.id.bottom_sheet_selection);
             float offset = selectionBehavior.calculateSlideOffset();
             if (Float.isNaN(offset) || offset < 0) offset = 0f;
             int currentHeight = (int) (selectionBehavior.getPeekHeight() +
@@ -1283,6 +1253,9 @@ public class AiActivity extends AppCompatActivity {
             lastAiResultUrl = null;
             
             // Populate the thumbnail in bottom sheet with the original image
+            View resultPreview = findViewById(R.id.cv_result_preview_container);
+            if (resultPreview != null) resultPreview.setVisibility(View.VISIBLE);
+
             ImageView ivResultPreview = findViewById(R.id.iv_result_preview);
             if (ivResultPreview != null) {
                 if (originalModelUrl != null) {
@@ -1292,7 +1265,7 @@ public class AiActivity extends AppCompatActivity {
                 }
             }
 
-            btnToggleBefore.setVisibility(View.VISIBLE);
+
             setResultMode(true);
         }, 10500);
     }
@@ -1369,7 +1342,6 @@ public class AiActivity extends AppCompatActivity {
                             originalModelUri = null;
                             lastAiResultUrl = null;
                             lastAiResultRaw = null;
-                            btnToggleBefore.setVisibility(View.GONE);
 
                             showProgress(false, null, null, 100);
                         });
@@ -1607,36 +1579,35 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void setResultMode(boolean isResultMode) {
-        ViewGroup root = findViewById(R.id.cl_main_content).getParent() instanceof ViewGroup ? (ViewGroup) findViewById(R.id.cl_main_content).getParent() : null;
-        if (root != null) {
-            TransitionManager.beginDelayedTransition(root, new AutoTransition());
-        }
-
         if (isResultMode) {
             showStylingCompleteDialog();
-            
+
             // Hide Selection Sheet
             selectionBehavior.setHideable(true);
             selectionBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
-            findViewById(R.id.bottom_sheet_selection).setVisibility(View.GONE);
             
             // Show Result Sheet
             View resultSheet = findViewById(R.id.bottom_sheet_result);
             resultSheet.setVisibility(View.VISIBLE);
+            resultBehavior.setHideable(false);
             resultBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
 
-            // Load original image in the result preview as a reference
-            ImageView ivResultPreview = findViewById(R.id.iv_result_preview);
-            if (ivResultPreview != null) {
-                if (originalModelUrl != null) {
-                    Glide.with(this).load(originalModelUrl).into(ivResultPreview);
-                } else if (originalModelUri != null) {
-                    Glide.with(this).load(originalModelUri).into(ivResultPreview);
-                } else {
-                    ivResultPreview.setImageResource(R.drawable.user_2);
+            // Show and load original image in the floating result preview
+            View resultPreview = findViewById(R.id.cv_result_preview_container);
+            if (resultPreview != null) {
+                resultPreview.setVisibility(View.VISIBLE);
+                ImageView ivResultPreview = findViewById(R.id.iv_result_preview);
+                if (ivResultPreview != null) {
+                    if (originalModelUrl != null) {
+                        Glide.with(this).load(originalModelUrl).into(ivResultPreview);
+                    } else if (originalModelUri != null) {
+                        Glide.with(this).load(originalModelUri).into(ivResultPreview);
+                    } else {
+                        ivResultPreview.setImageResource(R.drawable.user_2);
+                    }
                 }
             }
-            
+
             resultSheet.post(() -> {
                 int height = resultSheet.getHeight();
                 resultBehavior.setPeekHeight(height);
@@ -1644,13 +1615,14 @@ public class AiActivity extends AppCompatActivity {
             });
 
         } else {
-            // Hide Result Sheet
+            // Hide Result Sheet and floating preview
+            resultBehavior.setHideable(true);
             resultBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
-            findViewById(R.id.bottom_sheet_result).setVisibility(View.GONE);
-            
+            View resultPreview = findViewById(R.id.cv_result_preview_container);
+            if (resultPreview != null) resultPreview.setVisibility(View.GONE);
+
             // Show Selection Sheet
             selectionBehavior.setHideable(false);
-            selectionBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             
             if (btnGenerateExpanded != null) {
                 btnGenerateExpanded.setText(R.string.generate_outfit_btn);
@@ -1661,8 +1633,8 @@ public class AiActivity extends AppCompatActivity {
                 btnGenerateCollapsed.setVisibility(View.VISIBLE);
             }
             
-            View selectionSheet = findViewById(R.id.bottom_sheet_selection);
-            selectionSheet.post(() -> {
+            findViewById(R.id.bottom_sheet_selection).post(() -> {
+                selectionBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
                 updateMainModelPosition();
                 updateItemsUI();
             });
@@ -1672,12 +1644,6 @@ public class AiActivity extends AppCompatActivity {
     private void resetToSelectionMode() {
         setResultMode(false);
         if (btnSaveResult != null) btnSaveResult.setEnabled(true);
-        btnToggleBefore.setVisibility(View.GONE);
-        
-        // Expand the bottom sheet so user can immediately see their clothes again
-        if (selectionBehavior != null) {
-            selectionBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-        }
         
         updatePreview();
         updateBottomSheetLockedState();
@@ -1778,7 +1744,6 @@ public class AiActivity extends AppCompatActivity {
                 findViewById(R.id.btn_generate_expanded).setEnabled(true);
                 
                 // Show Before Toggle after successful generation
-                btnToggleBefore.setVisibility(View.VISIBLE);
                 setResultMode(true);
             });
             return;
