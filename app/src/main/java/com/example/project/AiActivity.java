@@ -638,6 +638,23 @@ public class AiActivity extends AppCompatActivity {
         resultBehavior.setDraggable(false);
         resultBehavior.setHideable(true);
         resultBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
+
+        resultBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
+            @Override
+            public void onStateChanged(@NonNull View bottomSheet, int newState) {
+                if (newState == BottomSheetBehavior.STATE_EXPANDED) {
+                    updateMainModelPosition();
+                }
+            }
+
+            @Override
+            public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+                if (resultBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
+                    int height = (int) (bottomSheet.getHeight() * slideOffset);
+                    updateMainModelHeight(height);
+                }
+            }
+        });
     }
 
     private void updateMainModelPosition() {
@@ -662,6 +679,29 @@ public class AiActivity extends AppCompatActivity {
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) mainContent.getLayoutParams();
             params.bottomMargin = Math.max(0, bottomSheetHeight);
             mainContent.setLayoutParams(params);
+        }
+
+        // Apply background dimming overlay logic
+        View overlay = findViewById(R.id.v_dim_overlay);
+        if (overlay != null) {
+            float maxDim = 0.5f;
+            float dimAmount = 0f;
+            
+            if (resultBehavior != null && resultBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
+                // Dim based on result sheet expansion
+                float offset = resultBehavior.calculateSlideOffset();
+                // When expanded, offset is usually 1.0. When hidden/collapsed, it's 0.0 or less.
+                if (Float.isNaN(offset)) offset = 1f; 
+                dimAmount = Math.max(0, offset) * maxDim;
+            } else if (selectionBehavior != null && selectionBehavior.getState() != BottomSheetBehavior.STATE_HIDDEN) {
+                // Dim based on selection sheet expansion
+                float offset = selectionBehavior.calculateSlideOffset();
+                if (Float.isNaN(offset)) offset = 0f;
+                dimAmount = Math.max(0, offset) * maxDim;
+            }
+            
+            overlay.setAlpha(dimAmount);
+            overlay.setVisibility(dimAmount > 0.01f ? View.VISIBLE : View.GONE);
         }
     }
 

@@ -13,17 +13,17 @@
         android:fitsSystemWindows="false">
 
         <!-- Main Model Image -->
-        <ImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/iv_main_model"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:contentDescription="@null"
             android:scaleType="centerCrop"
-            android:src="@drawable/one"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Project.MainModel"
             tools:srcCompat="@tools:sample/backgrounds/scenic" />
 
         <!-- Loading Indicator -->
@@ -131,6 +131,24 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Dim Overlay -->
+        <View
+            android:id="@+id/v_dim_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80000000"
+            android:visibility="gone"
+            android:clickable="false"
+            android:focusable="false"
+            android:importantForAccessibility="no" />
+
+        <!-- Bottom Shadow Overlay for Image -->
+        <View
+            android:id="@+id/v_image_shadow"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <!-- Back Button -->
         <com.google.android.material.card.MaterialCardView

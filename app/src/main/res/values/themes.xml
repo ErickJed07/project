@@ -15,6 +15,14 @@
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
+    <style name="ShapeAppearance.Project.MainModel" parent="ShapeAppearance.Material3.Corner.ExtraLarge">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">0dp</item>
+        <item name="cornerSizeTopRight">0dp</item>
+        <item name="cornerSizeBottomLeft">@dimen/bottom_sheet_corner_radius</item>
+        <item name="cornerSizeBottomRight">@dimen/bottom_sheet_corner_radius</item>
+    </style>
+
     <style name="Theme.UCrop.Project" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:statusBarColor">@color/white</item>
