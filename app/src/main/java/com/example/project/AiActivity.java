@@ -108,10 +108,19 @@ public class AiActivity extends AppCompatActivity {
     private Uri currentPhotoUri;
 
     private RecyclerView rvCategories, rvItems, rvSelectedPreview;
-    private View llEmptyState, llPreviewContainer, btnTogglePreview, cvNoModelMessage, cvPreviewWrapper, btnClearAll;
-    private TextView tvItemCount;
-    private ImageView ivPreviewToggleIcon;
-    private CircularProgressIndicator pbLoading;
+    private View llEmptyState, llPreviewContainer, btnTogglePreview, cvNoModelMessage, cvPreviewWrapper, btnClearAll, clProgressOverlay, flItemsContainer;
+    private View btnToggleBefore, btnTryAgain, clSelectionState, clResultState, bottomSheetGrabber;
+    private com.google.android.material.button.MaterialButton btnGenerateCollapsed, btnGenerateExpanded, btnSaveResult;
+    private String originalModelUrl = null;
+    private Uri originalModelUri = null;
+    private String lastAiResultUrl = null;
+    private Object lastAiResultRaw = null; // Can be Drawable or URI/URL
+    private TextView tvItemCount, tvProgressMessage, tvProgressStep;
+    private ImageView ivPreviewToggleIcon, ivProgressIcon;
+    private com.google.android.material.progressindicator.LinearProgressIndicator pbOverallProgress;
+    private com.google.android.material.progressindicator.CircularProgressIndicator pbLoading;
+    private int activeLoadingTasks = 0;
+    private android.animation.ObjectAnimator pulseAnimator;
     private AiCategoryAdapter categoryAdapter;
     private AiItemAdapter itemAdapter;
     private AiPreviewAdapter previewAdapter;
@@ -139,7 +148,7 @@ public class AiActivity extends AppCompatActivity {
     private String currentCategoryId = "all_clothes";
     private boolean isWomanSelected = true;
 
-    private BottomSheetBehavior<View> bottomSheetBehavior;
+    private BottomSheetBehavior<View> selectionBehavior, resultBehavior;
     private int bottomInset = 0;
 
     private FirebaseAuth mAuth;
@@ -202,7 +211,91 @@ public class AiActivity extends AppCompatActivity {
         ivPreviewToggleIcon = findViewById(R.id.iv_preview_toggle_icon);
         cvNoModelMessage = findViewById(R.id.cv_no_model_message);
         llNoModelAvatars = findViewById(R.id.ll_no_model_avatars);
+        clProgressOverlay = findViewById(R.id.cl_progress_overlay);
+        tvProgressMessage = findViewById(R.id.tv_progress_message);
+        tvProgressStep = findViewById(R.id.tv_progress_step);
+        ivProgressIcon = findViewById(R.id.iv_progress_icon);
+        pbOverallProgress = findViewById(R.id.pb_overall_progress);
         pbLoading = findViewById(R.id.pb_loading);
+        flItemsContainer = findViewById(R.id.fl_items_container);
+
+        btnToggleBefore = findViewById(R.id.btn_toggle_before);
+        btnTryAgain = findViewById(R.id.btn_try_again);
+        clSelectionState = findViewById(R.id.cl_selection_state);
+        clResultState = findViewById(R.id.cl_result_state);
+        btnSaveResult = findViewById(R.id.btn_save_result);
+        btnGenerateCollapsed = findViewById(R.id.btn_generate_collapsed);
+        btnGenerateExpanded = findViewById(R.id.btn_generate_expanded);
+        bottomSheetGrabber = findViewById(R.id.bottom_sheet_grabber);
+
+        btnTryAgain.setOnClickListener(v -> resetToSelectionMode());
+        btnSaveResult.setOnClickListener(v -> performVirtualTryOn());
+
+        View cvResultPreview = findViewById(R.id.cv_result_preview_container);
+        if (cvResultPreview != null) {
+            cvResultPreview.setOnTouchListener((v, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Hold: Switch main view to original image
+                        if (originalModelUrl != null) {
+                            Glide.with(AiActivity.this).load(originalModelUrl).into(ivMainModel);
+                        } else if (originalModelUri != null) {
+                            Glide.with(AiActivity.this).load(originalModelUri).into(ivMainModel);
+                        } else {
+                            ivMainModel.setImageResource(R.drawable.user_2);
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        v.performClick();
+                        // Restore result image
+                        if (lastAiResultUrl != null) {
+                            Glide.with(AiActivity.this).load(lastAiResultUrl).into(ivMainModel);
+                        } else if (lastAiResultRaw instanceof Integer) {
+                            ivMainModel.setImageResource((Integer) lastAiResultRaw);
+                        } else if (lastAiResultRaw != null) {
+                            Glide.with(AiActivity.this).load(lastAiResultRaw).into(ivMainModel);
+                        }
+                        return true;
+                }
+                return false;
+            });
+            
+            cvResultPreview.setOnClickListener(v -> {
+                // Optional: Full screen zoom on click if needed
+                // showImagePreview(lastAiResultUrl != null ? lastAiResultUrl : lastAiResultRaw);
+            });
+        }
+
+        btnToggleBefore.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    // Hold: Switch to original image
+                    if (originalModelUrl != null) {
+                        Glide.with(AiActivity.this).load(originalModelUrl).into(ivMainModel);
+                    } else if (originalModelUri != null) {
+                        Glide.with(AiActivity.this).load(originalModelUri).into(ivMainModel);
+                    } else {
+                        ivMainModel.setImageResource(R.drawable.user_2);
+                    }
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    v.performClick();
+                    // Restore result image
+                    if (lastAiResultUrl != null) {
+                        Glide.with(AiActivity.this).load(lastAiResultUrl).into(ivMainModel);
+                    } else if (lastAiResultRaw instanceof Integer) {
+                        ivMainModel.setImageResource((Integer) lastAiResultRaw);
+                    } else if (lastAiResultRaw != null) {
+                        Glide.with(AiActivity.this).load(lastAiResultRaw).into(ivMainModel);
+                    }
+                    return true;
+            }
+            return false;
+        });
 
         // Initialize Cloudinary
         try {
@@ -222,6 +315,7 @@ public class AiActivity extends AppCompatActivity {
         btnAddAvatar.setAlpha(0f);
 
         findViewById(R.id.btn_back_ai).setOnClickListener(v -> finish());
+        findViewById(R.id.btn_test_progress).setOnClickListener(v -> simulateProgressSequence());
 
         View mainContent = findViewById(R.id.cl_main_content);
         ViewCompat.setOnApplyWindowInsetsListener(mainContent, (v, insets) -> {
@@ -229,11 +323,7 @@ public class AiActivity extends AppCompatActivity {
             v.setPadding(0, systemBars.top, 0, 0);
             bottomInset = systemBars.bottom;
 
-            if (bottomSheetBehavior != null) {
-                int currentHeight = (int) (bottomSheetBehavior.getPeekHeight() +
-                        (findViewById(R.id.bottom_sheet_card).getHeight() - bottomSheetBehavior.getPeekHeight()) * bottomSheetBehavior.calculateSlideOffset());
-                updateMainModelHeight(currentHeight);
-            }
+            updateMainModelPosition();
 
             return WindowInsetsCompat.CONSUMED;
         });
@@ -262,9 +352,11 @@ public class AiActivity extends AppCompatActivity {
         if (mAuth.getCurrentUser() == null) return;
         String uid = mAuth.getCurrentUser().getUid();
 
+        incrementLoading();
         dbRef.child(uid).child("ai_models").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                decrementLoading();
                 // Clear existing dynamic avatars in both containers
                 int childCount = llAvatars.getChildCount();
                 for (int i = childCount - 2; i >= 1; i--) {
@@ -307,6 +399,7 @@ public class AiActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                decrementLoading();
                 Log.e("AiActivity", "Failed to load models: " + error.getMessage());
             }
         });
@@ -355,6 +448,12 @@ public class AiActivity extends AppCompatActivity {
         selectedModelUrl = "https://idm-vton.github.io/inthewild/4/h/0.jpeg"; // Default public model URL
         selectedModelUri = null;
         
+        originalModelUrl = selectedModelUrl;
+        originalModelUri = null;
+        lastAiResultUrl = null;
+        lastAiResultRaw = null;
+        btnToggleBefore.setVisibility(View.GONE);
+        
         setNoModelVisible(false);
         updateBottomSheetLockedState();
 
@@ -400,6 +499,12 @@ public class AiActivity extends AppCompatActivity {
         Glide.with(this).load(model.url).into(ivMainModel);
         selectedModelUrl = model.url;
         selectedModelUri = null;
+        
+        originalModelUrl = selectedModelUrl;
+        originalModelUri = null;
+        lastAiResultUrl = null;
+        lastAiResultRaw = null;
+        btnToggleBefore.setVisibility(View.GONE);
         
         setNoModelVisible(false);
         updateBottomSheetLockedState();
@@ -457,68 +562,63 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void setupBottomSheet() {
-        View bottomSheet = findViewById(R.id.bottom_sheet_card);
-        View grabber = findViewById(R.id.bottom_sheet_grabber);
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+        View selectionSheet = findViewById(R.id.bottom_sheet_selection);
+        View resultSheet = findViewById(R.id.bottom_sheet_result);
+        
+        selectionBehavior = BottomSheetBehavior.from(selectionSheet);
+        resultBehavior = BottomSheetBehavior.from(resultSheet);
 
-        // Disable manual dragging
-        bottomSheetBehavior.setDraggable(false);
-
-        // Add click listener to grabber for toggling
-        grabber.setOnClickListener(v -> {
+        // Selection Sheet Configuration
+        selectionBehavior.setDraggable(false);
+        bottomSheetGrabber.setOnClickListener(v -> {
             if (selectedModelUrl == null && selectedModelUri == null) {
                 Toast.makeText(this, "Please select an avatar first", Toast.LENGTH_SHORT).show();
                 return;
             }
-            if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
-                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            if (selectionBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+                selectionBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             } else {
-                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                selectionBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
             }
         });
 
-        // Ensure llAvatars is visible
-        llAvatars.setVisibility(View.VISIBLE);
-
-        // Calculate half screen height
-        bottomSheet.post(() -> {
+        selectionSheet.post(() -> {
             int screenHeight = getResources().getDisplayMetrics().heightPixels;
             int halfHeight = screenHeight / 2;
-
-            ViewGroup.LayoutParams params = bottomSheet.getLayoutParams();
+            ViewGroup.LayoutParams params = selectionSheet.getLayoutParams();
             params.height = halfHeight;
-            bottomSheet.setLayoutParams(params);
+            selectionSheet.setLayoutParams(params);
 
-            // Calculate peek height to show only the header (Wardrobe + Filter)
             View header = findViewById(R.id.cl_header);
             int peekHeight = header.getBottom() + (int) getResources().getDimension(R.dimen.spacing_small);
-            bottomSheetBehavior.setPeekHeight(peekHeight);
-
-            // Set initial state to collapsed
-            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-            grabber.setRotation(0); // Pointing up when collapsed
+            selectionBehavior.setPeekHeight(peekHeight);
+            selectionBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             
-            // Set initial disclaimer visibility
-            findViewById(R.id.tv_ai_disclaimer_header).setVisibility(View.VISIBLE);
-            findViewById(R.id.tv_ai_disclaimer_header).setAlpha(1.0f);
-            findViewById(R.id.tv_ai_disclaimer).setVisibility(View.GONE);
-            findViewById(R.id.tv_ai_disclaimer).setAlpha(0.0f);
-
-            updateMainModelHeight(bottomSheetBehavior.getPeekHeight());
+            // Initial visibility: Only header, hide categories and items
+            rvCategories.setVisibility(View.GONE);
+            rvCategories.setAlpha(0f);
+            flItemsContainer.setVisibility(View.GONE);
+            flItemsContainer.setAlpha(0f);
             
-            // Initial lock state
+            updateMainModelHeight(selectionBehavior.getPeekHeight());
             updateBottomSheetLockedState();
         });
 
-        bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
+        selectionBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
             public void onStateChanged(@NonNull View bottomSheet, int newState) {
                 if (newState == BottomSheetBehavior.STATE_DRAGGING || newState == BottomSheetBehavior.STATE_EXPANDED) {
                     if (!(rvItems.getLayoutManager() instanceof GridLayoutManager)) {
                         rvItems.setLayoutManager(new GridLayoutManager(AiActivity.this, 3));
                     }
+                    // Ensure they become visible when moving away from collapsed
+                    rvCategories.setVisibility(View.VISIBLE);
+                    flItemsContainer.setVisibility(View.VISIBLE);
                 } else if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
                     rvItems.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(AiActivity.this, RecyclerView.HORIZONTAL, false));
+                    // Ensure they are hidden when collapsed
+                    rvCategories.setVisibility(View.GONE);
+                    flItemsContainer.setVisibility(View.GONE);
                 }
             }
 
@@ -527,48 +627,62 @@ public class AiActivity extends AppCompatActivity {
                 View btnFilter = findViewById(R.id.btn_filter);
                 View btnGenerateCollapsed = findViewById(R.id.btn_generate_collapsed);
                 View btnGenerateExpanded = findViewById(R.id.btn_generate_expanded);
-                View tvDisclaimerHeader = findViewById(R.id.tv_ai_disclaimer_header);
-                View tvDisclaimerBottom = findViewById(R.id.tv_ai_disclaimer);
 
-                // Rotate grabber icon (0 = up, 180 = down)
-                grabber.setRotation(180 * slideOffset);
-
-                // Transition alpha based on slideOffset (0.0 = collapsed, 1.0 = expanded)
+                bottomSheetGrabber.setRotation(180 * slideOffset);
                 btnFilter.setAlpha(slideOffset);
                 btnGenerateCollapsed.setAlpha(1.0f - slideOffset);
                 btnGenerateExpanded.setAlpha(slideOffset);
                 
-                // Transition disclaimers
-                tvDisclaimerHeader.setAlpha(1.0f - slideOffset);
-                tvDisclaimerBottom.setAlpha(slideOffset);
+                rvCategories.setAlpha(slideOffset);
+                flItemsContainer.setAlpha(slideOffset);
 
-                // Update visibility to prevent clicks when hidden
                 if (slideOffset <= 0.05f) {
                     btnFilter.setVisibility(View.GONE);
                     btnGenerateExpanded.setVisibility(View.GONE);
                     btnGenerateCollapsed.setVisibility(View.VISIBLE);
-                    tvDisclaimerHeader.setVisibility(View.VISIBLE);
-                    tvDisclaimerBottom.setVisibility(View.GONE);
+                    rvCategories.setVisibility(View.GONE);
+                    flItemsContainer.setVisibility(View.GONE);
                 } else if (slideOffset >= 0.95f) {
                     btnFilter.setVisibility(View.VISIBLE);
                     btnGenerateExpanded.setVisibility(View.VISIBLE);
                     btnGenerateCollapsed.setVisibility(View.GONE);
-                    tvDisclaimerHeader.setVisibility(View.GONE);
-                    tvDisclaimerBottom.setVisibility(View.VISIBLE);
+                    rvCategories.setVisibility(View.VISIBLE);
+                    flItemsContainer.setVisibility(View.VISIBLE);
                 } else {
                     btnFilter.setVisibility(View.VISIBLE);
                     btnGenerateExpanded.setVisibility(View.VISIBLE);
                     btnGenerateCollapsed.setVisibility(View.VISIBLE);
-                    tvDisclaimerHeader.setVisibility(View.VISIBLE);
-                    tvDisclaimerBottom.setVisibility(View.VISIBLE);
+                    rvCategories.setVisibility(View.VISIBLE);
+                    flItemsContainer.setVisibility(View.VISIBLE);
                 }
 
-                // Update preview container position during slide
-                int currentHeight = (int) (bottomSheetBehavior.getPeekHeight() +
-                    (bottomSheet.getHeight() - bottomSheetBehavior.getPeekHeight()) * slideOffset);
+                int currentHeight = (int) (selectionBehavior.getPeekHeight() +
+                    (bottomSheet.getHeight() - selectionBehavior.getPeekHeight()) * slideOffset);
                 updateMainModelHeight(currentHeight);
             }
         });
+
+        // Result Sheet Configuration
+        resultBehavior.setDraggable(false);
+        resultBehavior.setHideable(true);
+        resultBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
+    }
+
+    private void updateMainModelPosition() {
+        View resultSheet = findViewById(R.id.bottom_sheet_result);
+        View selectionSheet = findViewById(R.id.bottom_sheet_selection);
+
+        if (resultSheet.getVisibility() == View.VISIBLE) {
+            updateMainModelHeight(resultSheet.getHeight());
+        } else if (selectionSheet.getVisibility() == View.VISIBLE && selectionBehavior != null) {
+            float offset = selectionBehavior.calculateSlideOffset();
+            if (Float.isNaN(offset) || offset < 0) offset = 0f;
+            int currentHeight = (int) (selectionBehavior.getPeekHeight() +
+                    (selectionSheet.getHeight() - selectionBehavior.getPeekHeight()) * offset);
+            updateMainModelHeight(currentHeight);
+        } else {
+            updateMainModelHeight(0);
+        }
     }
 
     private void updateMainModelHeight(int bottomSheetHeight) {
@@ -741,9 +855,11 @@ public class AiActivity extends AppCompatActivity {
         if (mAuth.getCurrentUser() == null) return;
         String uid = mAuth.getCurrentUser().getUid();
 
+        incrementLoading();
         dbRef.child(uid).child("categories").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                decrementLoading();
                 categoryList.clear();
                 int totalItems = 0;
 
@@ -785,6 +901,7 @@ public class AiActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                decrementLoading();
                 Toast.makeText(AiActivity.this, "Failed to load categories", Toast.LENGTH_SHORT).show();
             }
         });
@@ -803,9 +920,11 @@ public class AiActivity extends AppCompatActivity {
             photosRef = dbRef.child(uid).child("categories").child(categoryId).child("photos");
         }
 
+        incrementLoading();
         photosRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                decrementLoading();
                 itemList.clear();
                 originalItemList.clear();
                 for (DataSnapshot photoSnap : snapshot.getChildren()) {
@@ -820,6 +939,7 @@ public class AiActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                decrementLoading();
                 Toast.makeText(AiActivity.this, "Failed to load items", Toast.LENGTH_SHORT).show();
             }
         });
@@ -829,9 +949,11 @@ public class AiActivity extends AppCompatActivity {
         if (mAuth.getCurrentUser() == null) return;
         String uid = mAuth.getCurrentUser().getUid();
 
+        incrementLoading();
         dbRef.child(uid).child("categories").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                decrementLoading();
                 itemList.clear();
                 originalItemList.clear();
                 for (DataSnapshot categorySnap : snapshot.getChildren()) {
@@ -850,6 +972,7 @@ public class AiActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                decrementLoading();
                 Toast.makeText(AiActivity.this, "Failed to load all items", Toast.LENGTH_SHORT).show();
             }
         });
@@ -975,13 +1098,17 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void showImagePreview(ClothingItem item) {
+        showImagePreview(item.getImageUrl());
+    }
+
+    private void showImagePreview(Object imageSource) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_image_preview, null);
         builder.setView(dialogView);
 
         ImageView ivFull = dialogView.findViewById(R.id.iv_preview_full);
         Glide.with(this)
-                .load(item.getImageUrl())
+                .load(imageSource)
                 .placeholder(R.drawable.box_background)
                 .into(ivFull);
 
@@ -994,13 +1121,10 @@ public class AiActivity extends AppCompatActivity {
 
     private void updateBottomSheetLockedState() {
         boolean isLocked = (selectedModelUrl == null && selectedModelUri == null);
-        View bottomSheet = findViewById(R.id.bottom_sheet_card);
-        if (bottomSheet != null) {
+        View bottomSheet = findViewById(R.id.bottom_sheet_selection);
+        if (bottomSheet != null && clSelectionState != null) {
             // Block all clicks to children when locked, but keep original appearance
-            ViewGroup content = findViewById(R.id.bottom_sheet_content);
-            if (content != null) {
-                enableViewAndChildren(content, !isLocked);
-            }
+            enableViewAndChildren(clSelectionState, !isLocked);
         }
     }
 
@@ -1117,8 +1241,116 @@ public class AiActivity extends AppCompatActivity {
         }
     }
 
+    private void incrementLoading() {
+        activeLoadingTasks++;
+        if (pbLoading != null) {
+            pbLoading.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void decrementLoading() {
+        activeLoadingTasks--;
+        if (activeLoadingTasks <= 0) {
+            activeLoadingTasks = 0;
+            if (pbLoading != null) {
+                pbLoading.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void simulateProgressSequence() {
+        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+
+        showProgress(true, "Getting ready...", "Uploading model...", 5);
+
+        handler.postDelayed(() -> showProgress(true, "Analyzing style...", "Preparing...", 15), 1500);
+
+        handler.postDelayed(() -> showProgress(true, "Synthesizing Dresses...", "Step 1 of 4", 25), 2500);
+
+        handler.postDelayed(() -> showProgress(true, "Synthesizing Eyewear...", "Step 2 of 4", 45), 4500);
+
+        handler.postDelayed(() -> showProgress(true, "Synthesizing Jewelry...", "Step 3 of 4", 65), 6500);
+
+        handler.postDelayed(() -> showProgress(true, "Synthesizing Handwear...", "Step 4 of 4", 85), 8500);
+
+        handler.postDelayed(() -> {
+            showProgress(false, null, null, 100);
+            
+            // Set dummy result for testing
+            int dummyRes = R.drawable.user_2;
+            ivMainModel.setImageResource(dummyRes);
+            lastAiResultRaw = dummyRes;
+            lastAiResultUrl = null;
+            
+            // Populate the thumbnail in bottom sheet with the original image
+            ImageView ivResultPreview = findViewById(R.id.iv_result_preview);
+            if (ivResultPreview != null) {
+                if (originalModelUrl != null) {
+                    Glide.with(this).load(originalModelUrl).into(ivResultPreview);
+                } else {
+                    ivResultPreview.setImageResource(R.drawable.user_2);
+                }
+            }
+
+            btnToggleBefore.setVisibility(View.VISIBLE);
+            setResultMode(true);
+        }, 10500);
+    }
+
+    private void showProgress(boolean show, String message, String step, int progress) {
+        runOnUiThread(() -> {
+            if (clProgressOverlay != null) {
+                clProgressOverlay.setVisibility(show ? View.VISIBLE : View.GONE);
+                if (show) {
+                    startPulsingAnimation();
+                } else {
+                    stopPulsingAnimation();
+                }
+            }
+            if (tvProgressMessage != null && message != null) {
+                tvProgressMessage.setText(message);
+            }
+            if (tvProgressStep != null && step != null) {
+                tvProgressStep.setText(step);
+                tvProgressStep.setVisibility(View.VISIBLE);
+            } else if (tvProgressStep != null) {
+                tvProgressStep.setVisibility(View.GONE);
+            }
+            if (pbOverallProgress != null) {
+                pbOverallProgress.setProgress(progress, true);
+            }
+        });
+    }
+
+    private void startPulsingAnimation() {
+        if (ivProgressIcon == null) return;
+        if (pulseAnimator == null) {
+            pulseAnimator = android.animation.ObjectAnimator.ofFloat(ivProgressIcon, View.SCALE_X, 1f, 1.2f, 1f);
+            pulseAnimator.setDuration(1500);
+            pulseAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            pulseAnimator.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+            
+            android.animation.ObjectAnimator scaleY = android.animation.ObjectAnimator.ofFloat(ivProgressIcon, View.SCALE_Y, 1f, 1.2f, 1f);
+            scaleY.setDuration(1500);
+            scaleY.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            scaleY.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+            
+            android.animation.AnimatorSet set = new android.animation.AnimatorSet();
+            set.playTogether(pulseAnimator, scaleY);
+            set.start();
+        } else if (!pulseAnimator.isRunning()) {
+            pulseAnimator.start();
+        }
+    }
+
+    private void stopPulsingAnimation() {
+        if (pulseAnimator != null) {
+            pulseAnimator.cancel();
+        }
+    }
+
     private void uploadModelToCloudinary(Uri uri) {
-        pbLoading.setVisibility(View.VISIBLE);
+        showProgress(true, "Uploading model...", null, 20);
         MediaManager.get().upload(uri)
                 .option("folder", "Models")
                 .callback(new UploadCallback() {
@@ -1132,11 +1364,19 @@ public class AiActivity extends AppCompatActivity {
                             setNoModelVisible(false);
                             selectedModelUrl = url;
                             selectedModelUri = null;
+
+                            originalModelUrl = url;
+                            originalModelUri = null;
+                            lastAiResultUrl = null;
+                            lastAiResultRaw = null;
+                            btnToggleBefore.setVisibility(View.GONE);
+
+                            showProgress(false, null, null, 100);
                         });
                     }
                     @Override public void onError(String requestId, ErrorInfo error) {
                         runOnUiThread(() -> {
-                            pbLoading.setVisibility(View.GONE);
+                            showProgress(false, null, null, 0);
                             Toast.makeText(AiActivity.this, "Upload failed", Toast.LENGTH_SHORT).show();
                         });
                     }
@@ -1153,12 +1393,11 @@ public class AiActivity extends AppCompatActivity {
 
         dbRef.child(uid).child("ai_models").child(id).setValue(model)
                 .addOnSuccessListener(aVoid -> runOnUiThread(() -> {
-                    pbLoading.setVisibility(View.GONE);
                     Toast.makeText(this, "Model saved!", Toast.LENGTH_SHORT).show();
                 }))
                 .addOnFailureListener(e -> runOnUiThread(() -> {
-                    pbLoading.setVisibility(View.GONE);
                     Toast.makeText(this, "Failed to save model", Toast.LENGTH_SHORT).show();
+                    if (btnSaveResult != null) btnSaveResult.setEnabled(true);
                 }));
     }
 
@@ -1257,7 +1496,7 @@ public class AiActivity extends AppCompatActivity {
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 // Only allow category swipe when bottom sheet is expanded (vertical grid)
-                if (bottomSheetBehavior == null || bottomSheetBehavior.getState() != BottomSheetBehavior.STATE_EXPANDED) {
+                if (selectionBehavior == null || selectionBehavior.getState() != BottomSheetBehavior.STATE_EXPANDED) {
                     return false;
                 }
 
@@ -1330,7 +1569,145 @@ public class AiActivity extends AppCompatActivity {
                 .start();
     }
 
+    private void showStylingCompleteDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_styling_complete, null);
+        builder.setView(dialogView);
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        // Animated Icon
+        View icon = dialogView.findViewById(R.id.iv_success_icon);
+        icon.setAlpha(0f);
+        icon.setScaleX(0.5f);
+        icon.setScaleY(0.5f);
+
+        dialog.setOnShowListener(d -> {
+            icon.animate()
+                .alpha(1f)
+                .scaleX(1.2f)
+                .scaleY(1.2f)
+                .setDuration(500)
+                .setInterpolator(new android.view.animation.OvershootInterpolator())
+                .withEndAction(() -> icon.animate().scaleX(1.0f).scaleY(1.0f).setDuration(200).start())
+                .start();
+        });
+
+        dialogView.findViewById(R.id.btn_dialog_ok).setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+
+        // Force 300dp width
+        if (dialog.getWindow() != null) {
+            int width = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 300, getResources().getDisplayMetrics());
+            dialog.getWindow().setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void setResultMode(boolean isResultMode) {
+        ViewGroup root = findViewById(R.id.cl_main_content).getParent() instanceof ViewGroup ? (ViewGroup) findViewById(R.id.cl_main_content).getParent() : null;
+        if (root != null) {
+            TransitionManager.beginDelayedTransition(root, new AutoTransition());
+        }
+
+        if (isResultMode) {
+            showStylingCompleteDialog();
+            
+            // Hide Selection Sheet
+            selectionBehavior.setHideable(true);
+            selectionBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
+            findViewById(R.id.bottom_sheet_selection).setVisibility(View.GONE);
+            
+            // Show Result Sheet
+            View resultSheet = findViewById(R.id.bottom_sheet_result);
+            resultSheet.setVisibility(View.VISIBLE);
+            resultBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+
+            // Load original image in the result preview as a reference
+            ImageView ivResultPreview = findViewById(R.id.iv_result_preview);
+            if (ivResultPreview != null) {
+                if (originalModelUrl != null) {
+                    Glide.with(this).load(originalModelUrl).into(ivResultPreview);
+                } else if (originalModelUri != null) {
+                    Glide.with(this).load(originalModelUri).into(ivResultPreview);
+                } else {
+                    ivResultPreview.setImageResource(R.drawable.user_2);
+                }
+            }
+            
+            resultSheet.post(() -> {
+                int height = resultSheet.getHeight();
+                resultBehavior.setPeekHeight(height);
+                updateMainModelPosition();
+            });
+
+        } else {
+            // Hide Result Sheet
+            resultBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
+            findViewById(R.id.bottom_sheet_result).setVisibility(View.GONE);
+            
+            // Show Selection Sheet
+            selectionBehavior.setHideable(false);
+            selectionBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            
+            if (btnGenerateExpanded != null) {
+                btnGenerateExpanded.setText(R.string.generate_outfit_btn);
+                btnGenerateExpanded.setIconResource(R.drawable.magic);
+            }
+            if (btnGenerateCollapsed != null) {
+                btnGenerateCollapsed.setIconResource(R.drawable.magic);
+                btnGenerateCollapsed.setVisibility(View.VISIBLE);
+            }
+            
+            View selectionSheet = findViewById(R.id.bottom_sheet_selection);
+            selectionSheet.post(() -> {
+                updateMainModelPosition();
+                updateItemsUI();
+            });
+        }
+    }
+
+    private void resetToSelectionMode() {
+        setResultMode(false);
+        if (btnSaveResult != null) btnSaveResult.setEnabled(true);
+        btnToggleBefore.setVisibility(View.GONE);
+        
+        // Expand the bottom sheet so user can immediately see their clothes again
+        if (selectionBehavior != null) {
+            selectionBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+        }
+        
+        updatePreview();
+        updateBottomSheetLockedState();
+
+        // Restore original image to main view
+        if (originalModelUrl != null) {
+            Glide.with(this).load(originalModelUrl).into(ivMainModel);
+        } else if (originalModelUri != null) {
+            Glide.with(this).load(originalModelUri).into(ivMainModel);
+        } else {
+            ivMainModel.setImageResource(R.drawable.user_2);
+        }
+        
+        // Clear AI results
+        lastAiResultUrl = null;
+        lastAiResultRaw = null;
+    }
+
     private void performVirtualTryOn() {
+        if (clResultState != null && clResultState.getVisibility() == View.VISIBLE) {
+            // Save logic
+            if (lastAiResultUrl != null) {
+                if (btnSaveResult != null) btnSaveResult.setEnabled(false);
+                saveModelToFirebase(lastAiResultUrl);
+            } else {
+                Toast.makeText(this, "No result to save", Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+
         if (selectedItems.isEmpty()) {
             Toast.makeText(this, "Please select at least one garment", Toast.LENGTH_SHORT).show();
             return;
@@ -1341,7 +1718,7 @@ public class AiActivity extends AppCompatActivity {
             return;
         }
 
-        pbLoading.setVisibility(View.VISIBLE);
+        showProgress(true, "Synthesizing your look...", "Preparing...", 0);
         findViewById(R.id.btn_generate_collapsed).setEnabled(false);
         findViewById(R.id.btn_generate_expanded).setEnabled(false);
 
@@ -1370,13 +1747,17 @@ public class AiActivity extends AppCompatActivity {
                         public void onSuccess(String requestId, Map resultData) {
                             String modelUrl = (String) resultData.get("secure_url");
                             Log.d("AiActivity", "Cloudinary upload success! URL: " + modelUrl);
+                            
+                            originalModelUrl = modelUrl;
+                            originalModelUri = null;
+
                             runOnUiThread(() -> startNextInChain(modelUrl));
                         }
                         @Override
                         public void onError(String requestId, ErrorInfo error) {
                             Log.e("AiActivity", "Cloudinary upload failed: " + error.getDescription());
                             runOnUiThread(() -> {
-                                pbLoading.setVisibility(View.GONE);
+                                showProgress(false, null, null, 0);
                                 findViewById(R.id.btn_generate_collapsed).setEnabled(true);
                                 findViewById(R.id.btn_generate_expanded).setEnabled(true);
                                 Toast.makeText(AiActivity.this, "Upload failed: " + error.getDescription(), Toast.LENGTH_LONG).show();
@@ -1392,9 +1773,13 @@ public class AiActivity extends AppCompatActivity {
         if (currentChainIndex >= chainQueue.size()) {
             Log.d("AiActivity", "Chain generation completed.");
             runOnUiThread(() -> {
-                pbLoading.setVisibility(View.GONE);
+                showProgress(false, null, null, 100);
                 findViewById(R.id.btn_generate_collapsed).setEnabled(true);
                 findViewById(R.id.btn_generate_expanded).setEnabled(true);
+                
+                // Show Before Toggle after successful generation
+                btnToggleBefore.setVisibility(View.VISIBLE);
+                setResultMode(true);
             });
             return;
         }
@@ -1403,7 +1788,17 @@ public class AiActivity extends AppCompatActivity {
         ClothingItem garment = chainQueue.get(currentChainIndex);
         String garmentUrl = garment.getImageUrl();
         String categoryId = garment.getCategoryId();
+        
+        // Get human-readable category name from CategoryManager
+        CategoryManager.CategoryItem catItem = CategoryManager.getCategoryById(categoryId, isWomanSelected);
+        String categoryName = (catItem != null) ? catItem.name : categoryId;
 
+        String stepMsg = "Step " + (currentChainIndex + 1) + " of " + chainQueue.size();
+        String mainMsg = "Synthesizing " + categoryName + "...";
+        // Progress: starts at 20% (after prep), ends at 100%
+        int progress = 20 + (int) (((float) (currentChainIndex) / chainQueue.size()) * 80);
+        showProgress(true, mainMsg, stepMsg, progress);
+        
         Log.d("AiActivity", "Processing item " + (currentChainIndex + 1) + "/" + chainQueue.size() + ": " + categoryId);
         processWithModelUrl(modelUrl, garmentUrl, categoryId);
     }
@@ -1650,6 +2045,9 @@ public class AiActivity extends AppCompatActivity {
                         Glide.with(AiActivity.this).load(resultUrl).into(ivMainModel);
                         setNoModelVisible(false);
                         
+                        lastAiResultUrl = resultUrl;
+                        lastAiResultRaw = null;
+
                         // Increment and proceed to next item in chain
                         currentChainIndex++;
                         startNextInChain(resultUrl);
@@ -1664,7 +2062,7 @@ public class AiActivity extends AppCompatActivity {
     private void handleAiFailure(String message) {
         Log.e("AiActivity", "AI Error: " + message);
         runOnUiThread(() -> {
-            pbLoading.setVisibility(View.GONE);
+            showProgress(false, null, null, 0);
             findViewById(R.id.btn_generate_collapsed).setEnabled(true);
             findViewById(R.id.btn_generate_expanded).setEnabled(true);
             Toast.makeText(AiActivity.this, "AI failed: " + message, Toast.LENGTH_SHORT).show();

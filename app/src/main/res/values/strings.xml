@@ -56,8 +56,8 @@
     <string name="btn_reset">Reset</string>
 
     <!-- AI Screen No Model State -->
-    <string name="ai_no_model_title">Style Your Model</string>
-    <string name="ai_no_model_desc">Choose from avatars you can select with or upload a photo of yourself to begin your AI styling journey.</string>
+    <string name="ai_no_model_title">Try On Clothes with AI</string>
+    <string name="ai_no_model_desc">Pick an avatar or upload a full photo of yourself to see how clothes look on you.</string>
     <string name="ai_select_model">Select Model</string>
 
     <!-- AI Validation Errors -->
@@ -70,4 +70,15 @@
     <string name="error_image_blurry">The image appears to be blurry. Please provide a sharper photo.</string>
     <string name="error_poor_lighting">Poor lighting detected. Please use a well-lit environment.</string>
     <string name="ai_stylist_result_title">AI Stylist Result</string>
+    <string name="before">BEFORE</string>
+    <string name="styling_complete">STYLING COMPLETE</string>
+    <string name="pick_clothes">PICK CLOTHES</string>
+    <string name="try_again">Cancel</string>
+    <string name="save_result">Save</string>
+    <string name="ai_disclaimer">AI can make mistakes. Please check the results.</string>
+    <string name="ai_synthesizing">Creating your look…</string>
+    <string name="ai_result_ready_title">Look Ready!</string>
+    <string name="ai_result_ready_desc">Your AI-styled outfit is complete.</string>
+    <string name="styling_complete_desc">Your personalized look has been crafted. Save it to your collection or continue exploring.</string>
+    <string name="got_it">CONTINUE</string>
 </resources>
