@@ -17,6 +17,7 @@ public class AiPreviewAdapter extends RecyclerView.Adapter<AiPreviewAdapter.View
     private OnRemoveClickListener removeListener;
     private OnItemClickListener itemClickListener;
     private boolean isCollapsed = false;
+    private boolean isResultMode = false;
 
     public interface OnRemoveClickListener {
         void onRemoveClick(ClothingItem item);
@@ -50,8 +51,8 @@ public class AiPreviewAdapter extends RecyclerView.Adapter<AiPreviewAdapter.View
                 .placeholder(R.drawable.box_background)
                 .into(holder.ivSelectedImage);
 
-        // Show remove button whenever NOT collapsed (even for 1 item)
-        if (!isCollapsed) {
+        // Show remove button whenever NOT collapsed AND NOT in result mode
+        if (!isCollapsed && !isResultMode) {
             holder.btnRemove.setVisibility(View.VISIBLE);
             holder.btnRemove.setOnClickListener(v -> {
                 if (removeListener != null) {
@@ -83,6 +84,11 @@ public class AiPreviewAdapter extends RecyclerView.Adapter<AiPreviewAdapter.View
 
     public boolean isCollapsed() {
         return isCollapsed;
+    }
+
+    public void setResultMode(boolean resultMode) {
+        this.isResultMode = resultMode;
+        notifyDataSetChanged();
     }
 
     public void updateList(List<ClothingItem> newList) {

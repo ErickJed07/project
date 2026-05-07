@@ -59,6 +59,7 @@
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
         <activity android:name=".G1_ClosetActivity"/>
         <activity android:name=".G7_NewOutfitActivity" android:exported="true" />
+        <activity android:name=".OutfitDetailsActivity" android:exported="false" />
 
         <!-- Combined Viewer Activity -->
         <activity android:name=".I_ProfilePostActivity" android:exported="true" />

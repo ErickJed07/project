@@ -1,5 +1,8 @@
 package com.example.project;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class E_Calendar_Event {
 
     private String id;
@@ -9,6 +12,7 @@ public class E_Calendar_Event {
     private String reminder;  // Matches Firebase key "reminder"
     private String imageUrl;  // <--- CRITICAL CHANGE: Matches Firebase key "imageUrl"
     private long timestamp;
+    private List<ClothingItem> items; // Items associated with this outfit
 
     // Required empty constructor for Firebase
     public E_Calendar_Event() { }
@@ -21,6 +25,18 @@ public class E_Calendar_Event {
         this.imageUrl = imageUrl;
         this.reminder = reminder;
         this.timestamp = timestamp;
+        this.items = new ArrayList<>();
+    }
+
+    public E_Calendar_Event(String id, String title, String date, String time, String imageUrl, String reminder, long timestamp, List<ClothingItem> items) {
+        this.id = id;
+        this.title = title;
+        this.date = date;
+        this.time = time;
+        this.imageUrl = imageUrl;
+        this.reminder = reminder;
+        this.timestamp = timestamp;
+        this.items = items;
     }
 
     // --- GETTERS AND SETTERS ---
@@ -44,4 +60,7 @@ public class E_Calendar_Event {
 
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+
+    public List<ClothingItem> getItems() { return items; }
+    public void setItems(List<ClothingItem> items) { this.items = items; }
 }

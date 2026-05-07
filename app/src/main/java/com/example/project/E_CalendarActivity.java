@@ -120,6 +120,93 @@ public class E_CalendarActivity extends AppCompatActivity {
         });
         eventRecyclerView.setAdapter(calendarEventAdapter);
 
+        // Best Upgrade: Add Swipe to Delete with Haptic Feedback and Visual Background
+        new androidx.recyclerview.widget.ItemTouchHelper(new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
+            @Override
+            public boolean onMove(@NonNull androidx.recyclerview.widget.RecyclerView rv, @NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder vh, @NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder viewHolder, int direction) {
+                int position = viewHolder.getBindingAdapterPosition();
+                E_Calendar_Event event = calendarEventList.get(position);
+                
+                // Haptic feedback for the trigger
+                viewHolder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                
+                // Best Practice: Show confirmation dialog to prevent accidental deletion
+                new androidx.appcompat.app.AlertDialog.Builder(E_CalendarActivity.this)
+                    .setTitle("Delete Schedule")
+                    .setMessage("Are you sure you want to remove this outfit from your calendar?")
+                    .setPositiveButton("Delete", (dialog, which) -> {
+                        calendarEventAdapter.performDeleteEvent(event, position, E_CalendarActivity.this, null);
+                        com.google.android.material.snackbar.Snackbar.make(eventRecyclerView, "Event deleted", com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show();
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> {
+                        // Crucial: Refresh the adapter to slide the item back into place
+                        calendarEventAdapter.notifyItemChanged(position);
+                    })
+                    .setOnCancelListener(dialog -> {
+                        // Also refresh if they tap outside the dialog
+                        calendarEventAdapter.notifyItemChanged(position);
+                    })
+                    .show();
+            }
+
+            @Override
+            public float getSwipeThreshold(@NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder viewHolder) {
+                // Require a 70% swipe across the screen to trigger (hard swipe)
+                return 0.7f;
+            }
+
+            @Override
+            public float getSwipeEscapeVelocity(float defaultValue) {
+                // Increase the velocity needed to "fling" it away
+                return defaultValue * 5;
+            }
+
+            @Override
+            public void onChildDraw(@NonNull android.graphics.Canvas c, @NonNull androidx.recyclerview.widget.RecyclerView recyclerView, @NonNull androidx.recyclerview.widget.RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+                if (actionState == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    View itemView = viewHolder.itemView;
+                    android.graphics.Paint p = new android.graphics.Paint();
+                    
+                    if (dX < 0) { // Swiping to the left
+                        // Draw red background
+                        p.setColor(android.graphics.Color.parseColor("#EF4444"));
+                        android.graphics.RectF background = new android.graphics.RectF(
+                            (float) itemView.getRight() + dX, (float) itemView.getTop(),
+                            (float) itemView.getRight(), (float) itemView.getBottom());
+                        
+                        // Round the background corners to match the card
+                        float radius = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 20, getResources().getDisplayMetrics());
+                        c.drawRoundRect(background, radius, radius, p);
+
+                        // Draw delete icon (scaled down)
+                        android.graphics.drawable.Drawable icon = androidx.core.content.ContextCompat.getDrawable(E_CalendarActivity.this, R.drawable.delete);
+                        if (icon != null) {
+                            icon.setTint(android.graphics.Color.WHITE);
+                            
+                            // Define fixed icon size (e.g., 24dp)
+                            int iconSize = (int) android.util.TypedValue.applyDimension(
+                                android.util.TypedValue.COMPLEX_UNIT_DIP, 24, getResources().getDisplayMetrics());
+                            
+                            int margin = (itemView.getHeight() - iconSize) / 2;
+                            int top = itemView.getTop() + margin;
+                            int bottom = top + iconSize;
+                            int right = itemView.getRight() - margin;
+                            int left = right - iconSize;
+
+                            icon.setBounds(left, top, right, bottom);
+                            icon.draw(c);
+                        }
+                    }
+                }
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+            }
+        }).attachToRecyclerView(eventRecyclerView);
+
         calendar = Calendar.getInstance();
 
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());

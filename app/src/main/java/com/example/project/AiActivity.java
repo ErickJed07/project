@@ -156,6 +156,7 @@ public class AiActivity extends AppCompatActivity {
     private String currentCategoryName = "";
     private String currentCategoryId = "all_clothes";
     private boolean isWomanSelected = true;
+    private boolean isInResultMode = false;
 
     private BottomSheetBehavior<View> selectionBehavior, resultBehavior;
     private int bottomInset = 0;
@@ -1028,8 +1029,23 @@ public class AiActivity extends AppCompatActivity {
             }
         }
 
-        String color = photoSnap.child("color").getValue(String.class);
+        Object colorObj = photoSnap.child("colors").getValue();
+        String color = null;
+        if (colorObj instanceof String) {
+            color = (String) colorObj;
+        } else if (colorObj instanceof List) {
+            List<?> colors = (List<?>) colorObj;
+            if (!colors.isEmpty() && colors.get(0) instanceof String) {
+                color = (String) colors.get(0);
+                // If there are more colors, we could join them, but usually one is enough for a label
+            }
+        } else if (photoSnap.child("color").exists()) {
+            color = photoSnap.child("color").getValue(String.class);
+        }
         item.setColor(color);
+
+        String size = photoSnap.child("size").getValue(String.class);
+        item.setSize(size);
 
         DataSnapshot occasionsSnap = photoSnap.child("occasions");
         List<String> occasionsList = new ArrayList<>();
@@ -1083,8 +1099,8 @@ public class AiActivity extends AppCompatActivity {
         if (count >= 1) {
             llPreviewContainer.setVisibility(View.VISIBLE);
 
-            // Show Clear All and Toggle button ONLY if there are 2 or more items
-            if (count >= 2) {
+            // Show Clear All and Toggle button ONLY if there are 2 or more items AND not in result mode
+            if (count >= 2 && !isInResultMode) {
                 btnTogglePreview.setVisibility(View.VISIBLE);
                 boolean isColl = previewAdapter.isCollapsed();
                 float rotation = isColl ? 0 : 180;
@@ -1101,6 +1117,18 @@ public class AiActivity extends AppCompatActivity {
                     com.google.android.material.card.MaterialCardView wrapper = (com.google.android.material.card.MaterialCardView) cvPreviewWrapper;
                     wrapper.setStrokeWidth(isColl ? 0 : (int) (1 * getResources().getDisplayMetrics().density));
                     wrapper.setCardBackgroundColor(isColl ? Color.TRANSPARENT : Color.parseColor("#26FFFFFF"));
+                }
+            } else if (isInResultMode) {
+                // Hide controls in result mode
+                btnTogglePreview.setVisibility(View.GONE);
+                btnClearAll.setVisibility(View.GONE);
+                findViewById(R.id.cv_item_counter).setVisibility(View.GONE);
+                previewAdapter.setCollapsed(false); // Force expand in result mode to see everything used
+
+                if (cvPreviewWrapper instanceof com.google.android.material.card.MaterialCardView) {
+                    com.google.android.material.card.MaterialCardView wrapper = (com.google.android.material.card.MaterialCardView) cvPreviewWrapper;
+                    wrapper.setStrokeWidth((int) (1 * getResources().getDisplayMetrics().density));
+                    wrapper.setCardBackgroundColor(Color.parseColor("#26FFFFFF"));
                 }
             } else {
                 btnTogglePreview.setVisibility(View.GONE);
@@ -1289,20 +1317,41 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void simulateProgressSequence() {
+        // Auto-select items if none selected, to demonstrate the UI
+        if (selectedItems.isEmpty() && !originalItemList.isEmpty()) {
+            List<ClothingItem> temp = new ArrayList<>(originalItemList);
+            Collections.shuffle(temp);
+            // Select up to 3 random items from different categories if possible
+            for (int i = 0; i < Math.min(3, temp.size()); i++) {
+                selectedItems.add(temp.get(i));
+            }
+            updatePreview();
+            if (itemAdapter != null) itemAdapter.notifyDataSetChanged();
+        }
+
+        List<ClothingItem> testItems = new ArrayList<>(selectedItems);
+        int totalSteps = Math.max(1, testItems.size());
         android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
 
         showProgress(true, "Getting ready...", "Uploading model...", 5);
-
         handler.postDelayed(() -> showProgress(true, "Analyzing style...", "Preparing...", 15), 1500);
 
-        handler.postDelayed(() -> showProgress(true, "Synthesizing Dresses...", "Step 1 of 4", 25), 2500);
+        for (int i = 0; i < testItems.size(); i++) {
+            final int index = i;
+            ClothingItem item = testItems.get(i);
+            String categoryId = item.getCategoryId();
+            CategoryManager.CategoryItem cat = CategoryManager.getCategoryById(categoryId, isWomanSelected);
+            String catName = (cat != null) ? cat.name : "Garments";
 
-        handler.postDelayed(() -> showProgress(true, "Synthesizing Eyewear...", "Step 2 of 4", 45), 4500);
+            int delay = 2500 + (i * 2000);
+            int progress = 25 + (int)(((float)i / totalSteps) * 60);
 
-        handler.postDelayed(() -> showProgress(true, "Synthesizing Jewelry...", "Step 3 of 4", 65), 6500);
+            handler.postDelayed(() -> {
+                showProgress(true, "Synthesizing " + catName + "...", "Step " + (index + 1) + " of " + totalSteps, progress);
+            }, delay);
+        }
 
-        handler.postDelayed(() -> showProgress(true, "Synthesizing Handwear...", "Step 4 of 4", 85), 8500);
-
+        int finalDelay = 2500 + (testItems.size() * 2000);
         handler.postDelayed(() -> {
             showProgress(false, null, null, 100);
             
@@ -1325,9 +1374,8 @@ public class AiActivity extends AppCompatActivity {
                 }
             }
 
-
             setResultMode(true);
-        }, 10500);
+        }, finalDelay);
     }
 
     private void showProgress(boolean show, String message, String step, int progress) {
@@ -1639,8 +1687,20 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void setResultMode(boolean isResultMode) {
+        this.isInResultMode = isResultMode;
+        if (previewAdapter != null) {
+            previewAdapter.setResultMode(isResultMode);
+        }
+        updatePreview();
+
         if (isResultMode) {
             showStylingCompleteDialog();
+
+            // Hide UI elements that shouldn't be seen in result mode
+            if (btnClearAll != null) btnClearAll.setVisibility(View.GONE);
+            if (btnTogglePreview != null) btnTogglePreview.setVisibility(View.GONE);
+            if (ivPreviewToggleIcon != null) ivPreviewToggleIcon.setVisibility(View.GONE);
+            findViewById(R.id.cv_item_counter).setVisibility(View.GONE);
 
             // Hide Selection Sheet
             selectionBehavior.setHideable(true);
@@ -1681,6 +1741,10 @@ public class AiActivity extends AppCompatActivity {
 
             // Show Selection Sheet
             selectionBehavior.setHideable(false);
+            
+            // Re-show preview controls if needed (updatePreview will handle specific logic)
+            if (btnTogglePreview != null) btnTogglePreview.setVisibility(View.VISIBLE);
+            if (ivPreviewToggleIcon != null) ivPreviewToggleIcon.setVisibility(View.VISIBLE);
             
             if (btnGenerateExpanded != null) {
                 btnGenerateExpanded.setText(R.string.generate_outfit_btn);
@@ -2152,7 +2216,8 @@ public class AiActivity extends AppCompatActivity {
         String id = eventsRef.push().getKey();
         if (id == null) return;
 
-        E_Calendar_Event event = new E_Calendar_Event(id, title, date, time, imageUrl, reminder, System.currentTimeMillis());
+        List<ClothingItem> items = new ArrayList<>(selectedItems);
+        E_Calendar_Event event = new E_Calendar_Event(id, title, date, time, imageUrl, reminder, System.currentTimeMillis(), items);
         eventsRef.child(id).setValue(event)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Saved to Calendar!", Toast.LENGTH_SHORT).show();

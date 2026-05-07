@@ -2,11 +2,14 @@ package com.example.project;
 
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,6 +19,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.FirebaseDatabase;
+
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.List;
 
@@ -58,9 +63,18 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
         setImage(holder.eventImage, event.getImageUrl(), R.drawable.dress);
         checkAndAutoDelete(event, holder.getAdapterPosition(), holder.itemView.getContext());
 
-        View.OnClickListener showDialogListener = v -> showEventDialog(v.getContext(), holder, event);
-        holder.eventMore.setOnClickListener(showDialogListener);
-        holder.itemView.setOnClickListener(showDialogListener);
+        View.OnClickListener showDetailsListener = v -> {
+            Context context = v.getContext();
+            Intent intent = new Intent(context, OutfitDetailsActivity.class);
+            intent.putExtra(OutfitDetailsActivity.EXTRA_EVENT_ID, event.getId());
+            intent.putExtra(OutfitDetailsActivity.EXTRA_EVENT_TITLE, event.getTitle());
+            intent.putExtra(OutfitDetailsActivity.EXTRA_EVENT_DATE, event.getDate());
+            intent.putExtra(OutfitDetailsActivity.EXTRA_EVENT_TIME, event.getTime());
+            intent.putExtra(OutfitDetailsActivity.EXTRA_EVENT_REMINDER, event.getReminder());
+            intent.putExtra(OutfitDetailsActivity.EXTRA_EVENT_IMAGE_URL, event.getImageUrl());
+            context.startActivity(intent);
+        };
+        holder.itemView.setOnClickListener(showDetailsListener);
     }
 
     private void checkAndAutoDelete(E_Calendar_Event event, int position, Context context) {
@@ -113,35 +127,7 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
         }
     }
 
-    private void showEventDialog(Context context, EventViewHolder holder, E_Calendar_Event event) {
-        Dialog dialog = new Dialog(context);
-        View dialogView = LayoutInflater.from(context).inflate(R.layout.e4_calendar_popup_event_info, null);
-        dialog.setContentView(dialogView);
-
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        }
-
-        ImageView popupImage = dialogView.findViewById(R.id.popupImage);
-        TextView popupTitle = dialogView.findViewById(R.id.popupTitle);
-        TextView popupTime = dialogView.findViewById(R.id.popupTime);
-        TextView popupReminder = dialogView.findViewById(R.id.popupReminder);
-        Button closeButton = dialogView.findViewById(R.id.closeButton);
-        Button deleteButton = dialogView.findViewById(R.id.deleteButton);
-
-        popupTitle.setText("Name: " + event.getTitle());
-        popupTime.setText("Time: " + event.getTime());
-        popupReminder.setText("Reminder: " + event.getReminder());
-        setImage(popupImage, event.getImageUrl(), R.drawable.image3);
-
-        closeButton.setOnClickListener(v -> dialog.dismiss());
-        deleteButton.setOnClickListener(v -> performDeleteEvent(event, holder.getAdapterPosition(), context, dialog));
-
-        dialog.show();
-    }
-
-    private void performDeleteEvent(E_Calendar_Event event, int position, Context context, Dialog dialogToClose) {
+    public void performDeleteEvent(E_Calendar_Event event, int position, Context context, Dialog dialogToClose) {
         if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
 
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -181,7 +167,7 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
 
     public static class EventViewHolder extends RecyclerView.ViewHolder {
         TextView eventTitle, eventTime, eventReminder;
-        ImageView eventImage, eventMore;
+        ImageView eventImage;
         View reminderLayout;
 
         public EventViewHolder(@NonNull View itemView) {
@@ -190,7 +176,6 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
             eventTime = itemView.findViewById(R.id.eventTime);
             eventReminder = itemView.findViewById(R.id.eventReminder);
             reminderLayout = itemView.findViewById(R.id.reminderLayout);
-            eventMore = itemView.findViewById(R.id.eventMore);
             eventImage = itemView.findViewById(R.id.eventImage);
         }
     }
