@@ -45,7 +45,17 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
         E_Calendar_Event event = calendarEventList.get(position);
         holder.eventTitle.setText(event.getTitle());
-        setImage(holder.eventImage, event.getImageUrl(), R.drawable.image1);
+        holder.eventTime.setText(event.getTime());
+        
+        String reminder = event.getReminder();
+        if (reminder != null && !reminder.equals("None")) {
+            holder.reminderLayout.setVisibility(View.VISIBLE);
+            holder.eventReminder.setText(reminder);
+        } else {
+            holder.reminderLayout.setVisibility(View.GONE);
+        }
+
+        setImage(holder.eventImage, event.getImageUrl(), R.drawable.dress);
         checkAndAutoDelete(event, holder.getAdapterPosition(), holder.itemView.getContext());
 
         View.OnClickListener showDialogListener = v -> showEventDialog(v.getContext(), holder, event);
@@ -83,16 +93,23 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
     private void setImage(ImageView imageView, String path, int placeholderRes) {
         if (path != null && !path.isEmpty()) {
             try {
+                // Remove any tint for actual photos
+                imageView.setImageTintList(null);
                 Glide.with(imageView.getContext())
                         .load(path)
                         .placeholder(placeholderRes)
                         .error(placeholderRes)
+                        .centerCrop()
                         .into(imageView);
             } catch (Exception e) {
                 imageView.setImageResource(placeholderRes);
             }
         } else {
+            // Apply tint for placeholder icon
             imageView.setImageResource(placeholderRes);
+            Context context = imageView.getContext();
+            int color = androidx.core.content.ContextCompat.getColor(context, R.color.ai_accent);
+            imageView.setImageTintList(android.content.res.ColorStateList.valueOf(color));
         }
     }
 
@@ -163,12 +180,16 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
     }
 
     public static class EventViewHolder extends RecyclerView.ViewHolder {
-        TextView eventTitle, eventMore;
-        ImageView eventImage;
+        TextView eventTitle, eventTime, eventReminder;
+        ImageView eventImage, eventMore;
+        View reminderLayout;
 
         public EventViewHolder(@NonNull View itemView) {
             super(itemView);
             eventTitle = itemView.findViewById(R.id.eventTitle);
+            eventTime = itemView.findViewById(R.id.eventTime);
+            eventReminder = itemView.findViewById(R.id.eventReminder);
+            reminderLayout = itemView.findViewById(R.id.reminderLayout);
             eventMore = itemView.findViewById(R.id.eventMore);
             eventImage = itemView.findViewById(R.id.eventImage);
         }

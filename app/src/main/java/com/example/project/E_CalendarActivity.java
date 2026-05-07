@@ -104,7 +104,7 @@ public class E_CalendarActivity extends AppCompatActivity {
 
         eventRecyclerView = findViewById(R.id.eventRecyclerView);
         eventRecyclerView.setLayoutManager(
-                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+                new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
 
         calendarEventAdapter = new E_Calendar_EventAdapter(calendarEventList, (event, position) -> {
             if (event.getId() != null) {

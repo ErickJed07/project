@@ -88,4 +88,18 @@
     <string name="ai_result_ready_desc">Your AI-styled outfit is complete.</string>
     <string name="styling_complete_desc">Your personalized look has been crafted. Save it to your collection or continue exploring.</string>
     <string name="got_it">CONTINUE</string>
+    <string name="save_to_calendar">Schedule AI Outfit</string>
+    <string name="event_name_label">Occasion</string>
+    <string name="event_name_hint">e.g. Birthday Party</string>
+    <string name="date">Date to Wear</string>
+    <string name="time">Time</string>
+    <string name="reminder">REMINDER</string>
+    <string name="save_event">Schedule Outfit</string>
+    <string name="date_hint">Oct 24, 2023</string>
+    <string name="time_hint">10:00 AM</string>
+    <string name="dropdown_arrow">dropdown arrow</string>
+    <string name="calendar_icon">calendar icon</string>
+    <string name="time_icon">time icon</string>
+    <string name="default_event_title">Date Night Outfit</string>
+    <string name="default_event_time">7:00 PM - 11:00 PM</string>
 </resources>

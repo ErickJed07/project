@@ -2,9 +2,10 @@
 <resources>
     <string-array name="reminder_options">
         <item>None</item>
-        <item>15 min before</item>
-        <item>30 min before</item>
-        <item>45 min before</item>
+        <item>10 minutes before</item>
+        <item>15 minutes before</item>
+        <item>30 minutes before</item>
+        <item>45 minutes before</item>
         <item>1 hour before</item>
     </string-array>
 </resources>

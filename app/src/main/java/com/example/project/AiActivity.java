@@ -1,6 +1,9 @@
 package com.example.project;
 
 import android.Manifest;
+import android.app.DatePickerDialog;
+import android.app.Dialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
@@ -19,9 +22,14 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -71,6 +79,7 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -229,7 +238,18 @@ public class AiActivity extends AppCompatActivity {
         bottomSheetGrabber = findViewById(R.id.bottom_sheet_grabber);
 
         btnTryAgain.setOnClickListener(v -> resetToSelectionMode());
-        btnSaveResult.setOnClickListener(v -> performVirtualTryOn());
+        btnSaveResult.setOnClickListener(v -> {
+            if (lastAiResultUrl != null) {
+                showSaveToCalendarDialog(lastAiResultUrl);
+            } else if (lastAiResultRaw != null) {
+                // If it's a resource (like during testing/simulation), use a placeholder or handle it
+                String placeholderUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
+                // Alternatively, if lastAiResultRaw is a local resource ID, we might need a different strategy for the calendar which expects URLs
+                showSaveToCalendarDialog(placeholderUrl);
+            } else {
+                Toast.makeText(this, "Please generate a look first", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         View cvResultPreview = findViewById(R.id.cv_result_preview_container);
         if (cvResultPreview != null) {
@@ -2060,6 +2080,85 @@ public class AiActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void showSaveToCalendarDialog(String resultImageUrl) {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_save_to_calendar);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        EditText etTitle = dialog.findViewById(R.id.et_event_title);
+        EditText etDate = dialog.findViewById(R.id.et_event_date);
+        EditText etTime = dialog.findViewById(R.id.et_event_time);
+        Spinner spinnerReminder = dialog.findViewById(R.id.spinner_reminder);
+        Button btnSave = dialog.findViewById(R.id.btn_save_calendar);
+        Button btnCancel = dialog.findViewById(R.id.btn_cancel_calendar);
+
+        // Set default date to today
+        Calendar calendar = Calendar.getInstance();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        etDate.setText(dateFormat.format(calendar.getTime()));
+
+        etDate.setOnClickListener(v -> {
+            Calendar c = Calendar.getInstance();
+            try {
+                Date d = dateFormat.parse(etDate.getText().toString());
+                if (d != null) c.setTime(d);
+            } catch (Exception ignored) {}
+
+            new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+                Calendar selected = Calendar.getInstance();
+                selected.set(year, month, dayOfMonth);
+                etDate.setText(dateFormat.format(selected.getTime()));
+            }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
+        });
+
+        etTime.setOnClickListener(v -> {
+            Calendar c = Calendar.getInstance();
+            new TimePickerDialog(this, (view, hourOfDay, minute) -> {
+                String time = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute);
+                etTime.setText(time);
+            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show();
+        });
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        btnSave.setOnClickListener(v -> {
+            String title = etTitle.getText().toString().trim();
+            String date = etDate.getText().toString().trim();
+            String time = etTime.getText().toString().trim();
+            String reminder = spinnerReminder.getSelectedItem().toString();
+
+            if (title.isEmpty() || date.isEmpty() || time.isEmpty()) {
+                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            saveAiEventToCalendar(title, date, time, reminder, resultImageUrl);
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+    private void saveAiEventToCalendar(String title, String date, String time, String reminder, String imageUrl) {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+        DatabaseReference eventsRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("Events");
+        
+        String id = eventsRef.push().getKey();
+        if (id == null) return;
+
+        E_Calendar_Event event = new E_Calendar_Event(id, title, date, time, imageUrl, reminder, System.currentTimeMillis());
+        eventsRef.child(id).setValue(event)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Saved to Calendar!", Toast.LENGTH_SHORT).show();
+                    E_Calendar_ReminderUtils.scheduleReminder(this, event);
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to save to calendar", Toast.LENGTH_SHORT).show());
     }
 
     private void handleAiFailure(String message) {

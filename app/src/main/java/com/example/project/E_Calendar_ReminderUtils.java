@@ -51,14 +51,21 @@ public class E_Calendar_ReminderUtils {
             case "1 hour before":
                 triggerAt -= 60 * 60 * 1000;
                 break;
+            case "45 minutes before":
             case "45 min before":
                 triggerAt -= 45 * 60 * 1000;
                 break;
+            case "30 minutes before":
             case "30 min before":
                 triggerAt -= 30 * 60 * 1000;
                 break;
+            case "15 minutes before":
             case "15 min before":
                 triggerAt -= 15 * 60 * 1000;
+                break;
+            case "10 minutes before":
+            case "10 min before":
+                triggerAt -= 10 * 60 * 1000;
                 break;
         }
 
