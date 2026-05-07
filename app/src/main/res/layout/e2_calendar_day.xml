@@ -1,34 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center">
+    android:padding="2dp">
 
-    <!-- Background circle (behind day number) -->
-    <View
-        android:id="@+id/event_background"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:background="@drawable/calendar_day_event"
-        android:visibility="gone" />
-
-    <View
+    <!-- Selection Highlight -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/selection_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:background="@drawable/calendar_day_selected"
-        android:visibility="gone" />
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/pure_color"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp" />
 
-    <!-- Selection highlight (on top when active) -->
-    <TextView
-        android:id="@+id/day_number"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/calendar_day_default"
         android:gravity="center"
-        android:textColor="@color/black"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/day_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <!-- Event Indicator Dot -->
+        <View
+            android:id="@+id/event_background"
+            android:layout_width="4dp"
+            android:layout_height="4dp"
+            android:layout_marginTop="2dp"
+            android:background="@drawable/calendar_day_event"
+            android:visibility="gone" />
+    </LinearLayout>
 
 </FrameLayout>

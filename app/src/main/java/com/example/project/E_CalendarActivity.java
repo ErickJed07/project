@@ -1,14 +1,22 @@
 package com.example.project;
 
 import android.Manifest;
+import android.app.DatePickerDialog;
+import android.app.Dialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.GridLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -51,6 +60,7 @@ public class E_CalendarActivity extends AppCompatActivity {
     private String userId;
 
     private GestureDetector gestureDetector;
+    private FloatingActionButton fabAddEvent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +95,12 @@ public class E_CalendarActivity extends AppCompatActivity {
         monthLabel = findViewById(R.id.month_label);
         yearLabel = findViewById(R.id.year_label);
         selectedDayLabel = findViewById(R.id.selected_day_label);
+        fabAddEvent = findViewById(R.id.fab_add_event);
+
+        fabAddEvent.setOnClickListener(v -> {
+            android.util.Log.d("CalendarActivity", "FAB clicked");
+            showAddEventDialog();
+        });
 
         eventRecyclerView = findViewById(R.id.eventRecyclerView);
         eventRecyclerView.setLayoutManager(
@@ -185,7 +201,7 @@ public class E_CalendarActivity extends AppCompatActivity {
         yearLabel.setText(yearFormat.format(calendar.getTime()));
 
         Calendar todayCalendar = Calendar.getInstance();
-        int today = todayCalendar.get(Calendar.DAY_OF_MONTH);
+        int todayDay = todayCalendar.get(Calendar.DAY_OF_MONTH);
         boolean isCurrentMonth = todayCalendar.get(Calendar.MONTH) == calendar.get(Calendar.MONTH)
                 && todayCalendar.get(Calendar.YEAR) == calendar.get(Calendar.YEAR);
 
@@ -212,46 +228,60 @@ public class E_CalendarActivity extends AppCompatActivity {
                 String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(tempDate.getTime());
                 dayCell.setTag(dateKey);
 
-                if (eventMap.containsKey(dateKey) && !eventMap.get(dateKey).isEmpty()) {
-                    eventBg.setVisibility(View.VISIBLE);
-                    dayNumber.setTextColor(getResources().getColor(android.R.color.white));
-                } else {
-                    eventBg.setVisibility(View.GONE);
-                    dayNumber.setTextColor(getResources().getColor(android.R.color.black));
-                }
+                boolean hasEvents = eventMap.containsKey(dateKey) && !eventMap.get(dateKey).isEmpty();
+                eventBg.setVisibility(hasEvents ? View.VISIBLE : View.GONE);
 
-                if (dateKey.equals(selectedDateString) || (isCurrentMonth && day == today && selectedDayView == null)) {
+                if (dateKey.equals(selectedDateString) || (isCurrentMonth && day == todayDay && selectedDayView == null)) {
                     selectionBg.setVisibility(View.VISIBLE);
                     selectedDayView = dayNumber;
                     selectedDateString = dateKey;
-                    selectedDayLabel.setText(getFullDateString(tempDate));
+                    if (selectedDayLabel != null) {
+                        selectedDayLabel.setText(getFullDateString(tempDate));
+                    }
+                    dayNumber.setTextColor(Color.WHITE);
                 } else {
                     selectionBg.setVisibility(View.GONE);
+                    dayNumber.setTextColor(Color.BLACK);
                 }
 
                 dayCell.setOnClickListener(v -> {
                     if (selectedDayView != null) {
-                        View oldSelectionBg = ((View) selectedDayView.getParent())
-                                .findViewById(R.id.selection_background);
-                        oldSelectionBg.setVisibility(View.GONE);
+                        selectedDayView.setTextColor(Color.BLACK);
+                        try {
+                            // Find the FrameLayout (root of e2_calendar_day)
+                            View parent = (View) selectedDayView.getParent();
+                            if (parent != null) {
+                                View grandParent = (View) parent.getParent();
+                                if (grandParent != null) {
+                                    View oldSelectionBg = grandParent.findViewById(R.id.selection_background);
+                                    if (oldSelectionBg != null) oldSelectionBg.setVisibility(View.GONE);
+                                }
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
                     selectionBg.setVisibility(View.VISIBLE);
                     selectedDayView = dayNumber;
+                    dayNumber.setTextColor(Color.WHITE);
                     selectedDateString = dateKey;
                     loadEventsForSelectedDate();
-                    selectedDayLabel.setText(getFullDateString(tempDate));
+                    if (selectedDayLabel != null) {
+                        selectedDayLabel.setText(getFullDateString(tempDate));
+                    }
                 });
 
             } else {
                 dayNumber.setText(getAdjacentDay(i, firstDayOfWeek, daysInMonth));
                 dayNumber.setTextColor(getResources().getColor(R.color.gray));
+                selectionBg.setVisibility(View.GONE);
             }
             calendarGrid.addView(dayCell);
         }
     }
 
     private View createDayView() {
-        View view = getLayoutInflater().inflate(R.layout.e_calendar, calendarGrid, false);
+        View view = getLayoutInflater().inflate(R.layout.e2_calendar_day, calendarGrid, false);
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
         params.height = 0;
@@ -329,6 +359,81 @@ public class E_CalendarActivity extends AppCompatActivity {
         calendarEventAdapter.notifyDataSetChanged();
     }
 
+    private void showAddEventDialog() {
+        android.util.Log.d("CalendarActivity", "showAddEventDialog called");
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_add_event);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        EditText etTitle = dialog.findViewById(R.id.et_event_title);
+        EditText etDate = dialog.findViewById(R.id.et_event_date);
+        EditText etTime = dialog.findViewById(R.id.et_event_time);
+        Spinner spinnerReminder = dialog.findViewById(R.id.spinner_reminder);
+        Button btnSave = dialog.findViewById(R.id.btn_save_event);
+        Button btnCancel = dialog.findViewById(R.id.btn_cancel_event);
+
+        etDate.setText(selectedDateString);
+
+        etDate.setOnClickListener(v -> {
+            Calendar c = Calendar.getInstance();
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                c.setTime(sdf.parse(etDate.getText().toString()));
+            } catch (Exception ignored) {}
+
+            new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+                Calendar selected = Calendar.getInstance();
+                selected.set(year, month, dayOfMonth);
+                etDate.setText(new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(selected.getTime()));
+            }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
+        });
+
+        etTime.setOnClickListener(v -> {
+            Calendar c = Calendar.getInstance();
+            new TimePickerDialog(this, (view, hourOfDay, minute) -> {
+                String time = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute);
+                etTime.setText(time);
+            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show();
+        });
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        btnSave.setOnClickListener(v -> {
+            String title = etTitle.getText().toString().trim();
+            String date = etDate.getText().toString().trim();
+            String time = etTime.getText().toString().trim();
+            String reminder = spinnerReminder.getSelectedItem().toString();
+
+            if (title.isEmpty() || date.isEmpty() || time.isEmpty()) {
+                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            saveEventToFirebase(title, date, time, reminder);
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+    private void saveEventToFirebase(String title, String date, String time, String reminder) {
+        if (eventsRef == null) return;
+
+        String id = eventsRef.push().getKey();
+        if (id == null) return;
+
+        E_Calendar_Event event = new E_Calendar_Event(id, title, date, time, "", reminder, System.currentTimeMillis());
+        eventsRef.child(id).setValue(event)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Event Saved", Toast.LENGTH_SHORT).show();
+                    E_Calendar_ReminderUtils.scheduleReminder(this, event);
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to save", Toast.LENGTH_SHORT).show());
+    }
+
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
@@ -343,6 +448,10 @@ public class E_CalendarActivity extends AppCompatActivity {
             intent = new Intent(this, G1_ClosetActivity.class);
         } else if (viewId == R.id.profile_menu) {
             intent = new Intent(this, I_ProfileActivity.class);
+        } else if (viewId == R.id.wardrobe_menu) {
+            intent = new Intent(this, WardrobeActivity.class);
+        } else if (viewId == R.id.ai_menu) {
+            intent = new Intent(this, AiActivity.class);
         }
 
         if (intent != null) {

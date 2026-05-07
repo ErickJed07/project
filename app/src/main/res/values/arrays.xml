@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="reminder_options">
+        <item>None</item>
+        <item>15 min before</item>
+        <item>30 min before</item>
+        <item>45 min before</item>
+        <item>1 hour before</item>
+    </string-array>
+</resources>

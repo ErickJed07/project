@@ -1,70 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="180dp"
-    android:layout_height="240dp"
-    android:layout_gravity="center"
-    android:layout_marginEnd="10dp"
-    android:orientation="vertical">
-
+    android:layout_width="160dp"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="12dp"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="169dp"
-        android:background="@drawable/calendar_inside_roundcorner"
-        android:orientation="vertical"
-        android:paddingTop="0.5dp">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
         <ImageView
             android:id="@+id/eventImage"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:adjustViewBounds="true"
-            android:background="@drawable/calendar_inside_roundcorner"
-            android:clipToOutline="true"
-            android:contentDescription="Event image"
+            android:layout_height="120dp"
             android:scaleType="centerCrop"
-            app:srcCompat="@drawable/image3" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/calendar_outside_roundcorner"
-        android:orientation="vertical">
+            android:src="@drawable/image1" />
 
         <LinearLayout
-            android:layout_width="150dp"
-            android:layout_height="60dp"
-            android:layout_gravity="center_horizontal"
-            android:orientation="vertical">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
 
             <TextView
                 android:id="@+id/eventTitle"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:text="Ninoy Aquino Day"
+                android:text="Event Title"
                 android:textColor="@color/black"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/eventMore"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:text="More"
+                android:layout_marginTop="4dp"
+                android:text="Details"
                 android:textColor="@color/pure_color"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

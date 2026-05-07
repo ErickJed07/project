@@ -58,7 +58,7 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
             String dateString = event.getDate() + " " + event.getTime();
             if (dateString == null || dateString.trim().isEmpty()) return;
 
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault());
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault());
             java.util.Date eventDate = sdf.parse(dateString);
             java.util.Calendar now = java.util.Calendar.getInstance();
 
