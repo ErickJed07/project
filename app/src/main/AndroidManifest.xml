@@ -14,12 +14,23 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Permissions for accessing images -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" android:required="true"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+
+
 
     <application
         android:allowBackup="true"
@@ -28,9 +39,7 @@
         android:icon="@drawable/ic_placeholder_2"
         android:label="Phindee"
         android:roundIcon="@drawable/ic_placeholder_round"
-        android:theme="@style/Theme.Project"
-        android:targetSdkVersion="33"
-        tools:targetApi="33">
+        android:theme="@style/Theme.Project">
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -42,10 +51,19 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <!-- 📌 Reminder BroadcastReceiver -->
-        <receiver
-            android:name=".E_Calendar_ReminderBroadcastReceiver"
-            android:exported="true" />
+
+
+
+
+
+
+
+        <!-- 🆕 COUNTDOWN SERVICE FOR DEBUGGING -->
+        <service
+            android:name=".ReminderCountdownService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false">
+        </service>
 
         <!-- 📌 Activities -->
         <activity android:name=".E_CalendarActivity" android:exported="true" />
@@ -58,12 +76,15 @@
         <activity android:name=".C_SignInActivity" android:exported="true" />
         <activity android:name=".G4_Closet_Category_PhotoViewerActivity" android:exported="true" />
         <activity android:name=".G1_ClosetActivity"/>
-        <activity android:name=".G7_NewOutfitActivity" android:exported="true" />
         <activity android:name=".OutfitDetailsActivity" android:exported="false" />
+        <activity android:name=".I_Profile_AddModels" android:exported="true" />
+        <activity android:name=".I_UserProfileActivity" android:exported="true" />
 
         <!-- Combined Viewer Activity -->
         <activity android:name=".I_ProfilePostActivity" android:exported="true" />
-        
+
+        <receiver android:name=".NotificationReceiver" android:exported="false" />
+
         <activity android:name=".I_ProfileAddActivity" android:exported="true" />
         <activity android:name=".I_ProfileSocialActivity" android:exported="true" />
         <activity android:name=".C_SignInProfilePhoto" />

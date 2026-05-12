@@ -46,6 +46,8 @@ public class WardrobeCategoryHorizontalAdapter extends RecyclerView.Adapter<Ward
             colorRes = fixed.colorRes;
         } else if ("all_clothes".equals(category.id)) {
             colorRes = R.color.wardrobe_accent_teal;
+        } else if ("used_clothes".equals(category.id)) {
+            colorRes = R.color.cat_green_bg;
         }
         holder.cardView.setCardBackgroundColor(context.getColor(colorRes));
 

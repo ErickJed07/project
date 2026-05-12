@@ -66,28 +66,6 @@ public class A_HomeActivity extends AppCompatActivity {
                 startActivity(intent); // Open the Sign In page
             }
         });
-
-        Button adminButton = findViewById(R.id.btn_admin_bypass);
-
-        // 3. Set the click listener
-        adminButton.setOnClickListener(v -> {
-            adminClickCount++;
-
-            // Optional: Reset count if user stops clicking (logic omitted for simplicity)
-
-            // Check if clicked 10 times
-            if (adminClickCount >= 10) {
-                // Reset counter
-                adminClickCount = 0;
-
-                Toast.makeText(this, "Developer Bypass Activated", Toast.LENGTH_SHORT).show();
-
-                // Navigate directly to Feed Activity
-                // Make sure D_FeedActivity matches your actual Feed Activity class name
-                Intent intent = new Intent(A_HomeActivity.this, D_FeedActivity.class);
-                startActivity(intent);
-
-            }
-        });
+        
     }
 }

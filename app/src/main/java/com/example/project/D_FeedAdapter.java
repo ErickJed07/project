@@ -73,6 +73,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         if (postAuthorId != null && !postAuthorId.isEmpty()) {
             FirebaseDatabase.getInstance().getReference("Users").child(postAuthorId).child("profilePhoto").addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    if (!isValidContextForGlide(context)) return;
                     if (snapshot.exists()) {
                         String url = snapshot.getValue(String.class);
                         Glide.with(context).load(url != null && !url.isEmpty() && !url.equals("default") ? url : R.drawable.ic_placeholder_2).circleCrop().into(holder.profilePic);
@@ -85,19 +86,21 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         if (postEvent.getImageUrls() != null && !postEvent.getImageUrls().isEmpty()) {
             String firstImageUrl = postEvent.getImageUrls().get(0);
             holder.viewPager2.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
-            Glide.with(context).asBitmap().load(firstImageUrl).into(new CustomTarget<Bitmap>() {
-                @Override public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                    int w = resource.getWidth();
-                    int h = resource.getHeight();
-                    if (w > 0) {
-                        float aspect = (float) h / w;
-                        int vpW = holder.viewPager2.getWidth() == 0 ? context.getResources().getDisplayMetrics().widthPixels : holder.viewPager2.getWidth();
-                        holder.viewPager2.getLayoutParams().height = (int) (vpW * aspect);
-                        holder.viewPager2.requestLayout();
+            if (isValidContextForGlide(context)) {
+                Glide.with(context).asBitmap().load(firstImageUrl).into(new CustomTarget<Bitmap>() {
+                    @Override public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                        int w = resource.getWidth();
+                        int h = resource.getHeight();
+                        if (w > 0) {
+                            float aspect = (float) h / w;
+                            int vpW = holder.viewPager2.getWidth() == 0 ? context.getResources().getDisplayMetrics().widthPixels : holder.viewPager2.getWidth();
+                            holder.viewPager2.getLayoutParams().height = (int) (vpW * aspect);
+                            holder.viewPager2.requestLayout();
+                        }
                     }
-                }
-                @Override public void onLoadCleared(@Nullable Drawable p) {}
-            });
+                    @Override public void onLoadCleared(@Nullable Drawable p) {}
+                });
+            }
 
             D_Feed_ImageViewAdapter imageAdapter = new D_Feed_ImageViewAdapter(context, postEvent.getImageUrls());
             holder.viewPager2.setAdapter(imageAdapter);
@@ -115,7 +118,25 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         updateFavIcon(holder.favButton, postEvent.getFavList(), currentUserId);
         holder.favNumTextView.setText(String.valueOf(postEvent.getFavList() != null ? postEvent.getFavList().size() : 0));
 
-        holder.profilePic.setOnClickListener(v -> { if (postAuthorId != null) context.startActivity(new Intent(context, I_ProfileActivity.class).putExtra("USER_ID", postAuthorId)); });
+        holder.profilePic.setOnClickListener(v -> {
+            if (postAuthorId != null) {
+                if (postAuthorId.equals(finalCurrentUserId)) {
+                    context.startActivity(new Intent(context, I_ProfileActivity.class));
+                } else {
+                    context.startActivity(new Intent(context, I_UserProfileActivity.class).putExtra(I_UserProfileActivity.EXTRA_USER_ID, postAuthorId));
+                }
+            }
+        });
+
+        holder.userNameTextView.setOnClickListener(v -> {
+            if (postAuthorId != null) {
+                if (postAuthorId.equals(finalCurrentUserId)) {
+                    context.startActivity(new Intent(context, I_ProfileActivity.class));
+                } else {
+                    context.startActivity(new Intent(context, I_UserProfileActivity.class).putExtra(I_UserProfileActivity.EXTRA_USER_ID, postAuthorId));
+                }
+            }
+        });
 
         holder.heartButton.setOnClickListener(v -> {
             if (postId == null || finalCurrentUserId.isEmpty()) return;
@@ -196,13 +217,22 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
     private void updateCount(String uid, String field, int inc) {
         DatabaseReference r = FirebaseDatabase.getInstance().getReference("Users").child(uid).child(field);
-        r.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override public void onDataChange(@NonNull DataSnapshot s) {
-                long c = 0;
-                try { if (s.exists()) c = Long.parseLong(s.getValue().toString()); } catch (Exception e) {}
-                r.setValue(Math.max(0, c + inc));
+        r.runTransaction(new com.google.firebase.database.Transaction.Handler() {
+            @NonNull
+            @Override
+            public com.google.firebase.database.Transaction.Result doTransaction(@NonNull com.google.firebase.database.MutableData mutableData) {
+                Long count = mutableData.getValue(Long.class);
+                if (count == null) {
+                    mutableData.setValue(Math.max(0L, (long) inc));
+                } else {
+                    mutableData.setValue(Math.max(0L, count + inc));
+                }
+                return com.google.firebase.database.Transaction.success(mutableData);
             }
-            @Override public void onCancelled(@NonNull DatabaseError e) {}
+
+            @Override
+            public void onComplete(@androidx.annotation.Nullable DatabaseError databaseError, boolean committed, @androidx.annotation.Nullable DataSnapshot dataSnapshot) {
+            }
         });
     }
 
@@ -219,6 +249,15 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
     private void checkReportCount(String id) {
         DatabaseReference r = FirebaseDatabase.getInstance().getReference("PostEvents").child(id).child("reports");
         r.get().addOnCompleteListener(t -> { if (t.isSuccessful() && t.getResult().getChildrenCount() >= 10) FirebaseDatabase.getInstance().getReference("PostEvents").child(id).removeValue(); });
+    }
+
+    private boolean isValidContextForGlide(Context context) {
+        if (context == null) return false;
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            return !activity.isDestroyed() && !activity.isFinishing();
+        }
+        return true;
     }
 
     private void updateHeartIcon(ImageView b, Map<String, Boolean> m, String u) { b.setImageResource(m != null && m.containsKey(u) ? R.drawable.heart2 : R.drawable.heart); }

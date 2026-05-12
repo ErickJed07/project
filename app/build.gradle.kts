@@ -74,7 +74,7 @@ dependencies {
 
 // AndroidX + UI Libraries
     implementation(libs.appcompat)
-    implementation(libs.material)
+    implementation(libs.material.v1120)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.gridlayout)
@@ -82,7 +82,6 @@ dependencies {
     implementation(libs.viewpager2)
     implementation(libs.cardview)
     implementation(libs.exifinterface)
-    implementation(libs.material.v1120)
     implementation(libs.leanback.grid)
     implementation(libs.volley)
     implementation ("com.squareup.okhttp3:okhttp:4.10.0")
@@ -94,6 +93,7 @@ dependencies {
     // Firebase (using BoM to sync versions)
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-messaging")
     implementation(libs.google.firebase.auth)
     implementation(libs.google.firebase.database)
     implementation("com.google.firebase:firebase-storage")

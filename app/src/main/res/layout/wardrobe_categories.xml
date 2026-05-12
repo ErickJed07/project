@@ -39,36 +39,15 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <LinearLayout
-            android:id="@+id/ll_gender_toggle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_pill"
-            android:orientation="horizontal"
-            android:padding="2dp"
+        <ImageView
+            android:id="@+id/iv_gender_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <ImageView
-                android:id="@+id/iv_woman"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="@drawable/bg_pill"
-                android:backgroundTint="@color/ai_accent"
-                android:padding="6dp"
-                android:src="@drawable/ic_female"
-                app:tint="@color/white" />
-
-            <ImageView
-                android:id="@+id/iv_man"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:padding="6dp"
-                android:src="@drawable/ic_male"
-                app:tint="@color/ai_chip_unselected_text" />
-
-        </LinearLayout>
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/pure_color"
+            tools:src="@drawable/ic_female" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

@@ -76,11 +76,33 @@ public class CategorySelectionBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void loadCategories() {
-        categoryList.clear();
-        for (CategoryManager.CategoryItem item : CategoryManager.getCategories()) {
-            categoryList.add(new CategoryAdapter.CategoryItem(item.id, item.name, item.iconRes));
-        }
-        adapter.setSelectedCategory(currentCategory);
-        adapter.notifyDataSetChanged();
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        FirebaseDatabase.getInstance().getReference("Users").child(uid).child("gender")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    String gender = snapshot.getValue(String.class);
+                    boolean isWoman = !"man".equals(gender);
+                    
+                    categoryList.clear();
+                    for (CategoryManager.CategoryItem item : CategoryManager.getCategories(isWoman)) {
+                        categoryList.add(new CategoryAdapter.CategoryItem(item.id, item.name, item.iconRes));
+                    }
+                    adapter.setSelectedCategory(currentCategory);
+                    adapter.notifyDataSetChanged();
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    // Fallback to default
+                    categoryList.clear();
+                    for (CategoryManager.CategoryItem item : CategoryManager.getCategories()) {
+                        categoryList.add(new CategoryAdapter.CategoryItem(item.id, item.name, item.iconRes));
+                    }
+                    adapter.notifyDataSetChanged();
+                }
+            });
     }
 }

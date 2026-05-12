@@ -15,6 +15,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class OutfitDetailsActivity extends AppCompatActivity {
 
@@ -68,6 +69,11 @@ public class OutfitDetailsActivity extends AppCompatActivity {
 
         // Load items from Firebase
         loadEventItems();
+
+        // If this is a past event, ensure items are marked as used/archived
+        if (isPastEvent()) {
+            archiveItemsAsUsed();
+        }
 
         // Listeners
         btnBack.setOnClickListener(v -> finish());
@@ -344,4 +350,89 @@ public class OutfitDetailsActivity extends AppCompatActivity {
             rvSelectedItems.setVisibility(android.view.View.VISIBLE);
         }
     }
+
+    private boolean isPastEvent() {
+        if (date == null) return false;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date eventDate = sdf.parse(date);
+            Calendar today = Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
+
+            return eventDate != null && eventDate.before(today.getTime());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void archiveItemsAsUsed() {
+        String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (uid == null || eventId == null) return;
+
+        com.google.firebase.database.DatabaseReference eventItemsRef = com.google.firebase.database.FirebaseDatabase.getInstance()
+                .getReference("Users").child(uid).child("Events").child(eventId).child("items");
+
+        eventItemsRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(@androidx.annotation.NonNull com.google.firebase.database.DataSnapshot snapshot) {
+                for (com.google.firebase.database.DataSnapshot itemSnap : snapshot.getChildren()) {
+                    ClothingItem item = itemSnap.getValue(ClothingItem.class);
+                    if (item != null && item.getCategoryId() != null && !item.getCategoryId().equals("used_clothes")) {
+                        moveItemToUsed(uid, item, itemSnap.getRef());
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@androidx.annotation.NonNull com.google.firebase.database.DatabaseError error) {}
+        });
+    }
+
+    private void moveItemToUsed(String uid, ClothingItem item, com.google.firebase.database.DatabaseReference eventItemRef) {
+        com.google.firebase.database.DatabaseReference oldCatRef = com.google.firebase.database.FirebaseDatabase.getInstance()
+                .getReference("Users").child(uid).child("categories").child(item.getCategoryId()).child("photos");
+
+        com.google.firebase.database.DatabaseReference usedCatRef = com.google.firebase.database.FirebaseDatabase.getInstance()
+                .getReference("Users").child(uid).child("categories").child("used_clothes").child("photos");
+
+        oldCatRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(@androidx.annotation.NonNull com.google.firebase.database.DataSnapshot snapshot) {
+                for (com.google.firebase.database.DataSnapshot photoSnap : snapshot.getChildren()) {
+                    String url = photoSnap.child("imageUrl").getValue(String.class);
+                    if (url == null) url = photoSnap.child("url").getValue(String.class);
+
+                    if (url != null && url.equals(item.getImageUrl())) {
+                        Object data = photoSnap.getValue();
+                        
+                        String itemKey = photoSnap.getKey();
+                        if (itemKey == null) continue;
+
+                        // Preserve original category when moving to used archive
+                        if (data instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> dataMap = (Map<String, Object>) data;
+                            dataMap.put("originalCategory", item.getCategoryId());
+                            dataMap.put("movedToUsedAt", System.currentTimeMillis());
+                            dataMap.put("categoryId", "used_clothes");
+                        }
+
+                        usedCatRef.child(itemKey).setValue(data).addOnSuccessListener(aVoid -> {
+                            photoSnap.getRef().removeValue();
+                            // Update item category in event to avoid repeated moves
+                            eventItemRef.child("categoryId").setValue("used_clothes");
+                        });
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@androidx.annotation.NonNull com.google.firebase.database.DatabaseError error) {}
+        });
+    }
+
 }

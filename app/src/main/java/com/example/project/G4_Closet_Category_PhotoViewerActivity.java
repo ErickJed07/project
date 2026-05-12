@@ -315,6 +315,12 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
             showEditItemSheet();
         });
 
+        sheetView.findViewById(R.id.menuMarkUsed).setOnClickListener(view -> {
+            int currentPos = viewPager.getCurrentItem();
+            transferItem(currentPos, "used_clothes");
+            bottomSheetDialog.dismiss();
+        });
+
         sheetView.findViewById(R.id.menuDelete).setOnClickListener(view -> {
             deleteCurrentImage();
             bottomSheetDialog.dismiss();
@@ -482,27 +488,40 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
                 for (DataSnapshot child : snapshot.getChildren()) {
                     if (isMatch(child, urlToMove)) {
                         Object itemData = child.getValue();
-                        newRef.push().setValue(itemData).addOnSuccessListener(aVoid -> {
-                            child.getRef().removeValue();
-                            Toast.makeText(G4_Closet_Category_PhotoViewerActivity.this,
-                                    "Moved to " + newCategoryId, Toast.LENGTH_SHORT).show();
+                        
+                        // If moving to used_clothes, ensure we preserve the original category name
+                        if ("used_clothes".equals(newCategoryId) && itemData instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> dataMap = (Map<String, Object>) itemData;
+                            dataMap.put("originalCategory", originalCategoryForItem);
+                            dataMap.put("movedToUsedAt", System.currentTimeMillis());
+                            dataMap.put("categoryId", "used_clothes");
+                        }
 
-                            // If we are in a specific category view (not all_clothes),
-                            // we should remove it from the list
-                            if (!"all_clothes".equals(categoryId)) {
-                                imageUrls.remove(position);
-                                adapter.notifyDataSetChanged();
-                                if (imageUrls.isEmpty()) {
-                                    finishWithAnimation();
+                        String itemKey = child.getKey();
+                        if (itemKey != null) {
+                            newRef.child(itemKey).setValue(itemData).addOnSuccessListener(aVoid -> {
+                                child.getRef().removeValue();
+                                Toast.makeText(G4_Closet_Category_PhotoViewerActivity.this,
+                                        "Moved to " + newCategoryId, Toast.LENGTH_SHORT).show();
+
+                                // If we are in a specific category view (not all_clothes),
+                                // we should remove it from the list
+                                if (!"all_clothes".equals(categoryId)) {
+                                    imageUrls.remove(position);
+                                    adapter.notifyDataSetChanged();
+                                    if (imageUrls.isEmpty()) {
+                                        finishWithAnimation();
+                                    } else {
+                                        int newPos = Math.min(position, imageUrls.size() - 1);
+                                        viewPager.setCurrentItem(newPos, false);
+                                    }
                                 } else {
-                                    int newPos = Math.min(position, imageUrls.size() - 1);
-                                    viewPager.setCurrentItem(newPos, false);
+                                    // If all_clothes, just refresh the UI for the current item
+                                    updateItemDetails(position);
                                 }
-                            } else {
-                                // If all_clothes, just refresh the UI for the current item
-                                updateItemDetails(position);
-                            }
-                        });
+                            });
+                        }
                         return;
                     }
                 }
@@ -615,8 +634,20 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
             category = categoryId; // Fallback to categoryId from intent
         }
         originalCategoryForItem = category;
+
         if (tvCategoryName != null) {
-            tvCategoryName.setText(category != null ? category : "Unknown");
+            String displayCategory = category != null ? category : "Unknown";
+            
+            // If we are in the Used category view, append " Used" to the original category name
+            if ("used_clothes".equals(categoryId)) {
+                if (!displayCategory.equalsIgnoreCase("Used") && !displayCategory.toLowerCase().endsWith(" used")) {
+                    displayCategory = displayCategory + " Used";
+                } else if (displayCategory.equalsIgnoreCase("used_clothes")) {
+                    displayCategory = "Used";
+                }
+            }
+            
+            tvCategoryName.setText(displayCategory);
         }
 
         // Size

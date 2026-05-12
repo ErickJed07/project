@@ -29,6 +29,9 @@ public class B_LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Apply saved theme before onCreate
+        ThemeHelper.applyTheme(ThemeHelper.getSavedTheme(this));
+
         super.onCreate(savedInstanceState);
         // Show the design called "login"
         setContentView(R.layout.b_login);
@@ -46,6 +49,10 @@ public class B_LoginActivity extends AppCompatActivity {
 
         // Connect the login button
         Button loginButton = findViewById(R.id.btn_login);
+        TextView signupAction = findViewById(R.id.tv_signup_action);
+
+        // Navigate to Sign In screen
+        signupAction.setOnClickListener(v -> startActivity(new Intent(B_LoginActivity.this, C_SignInActivity.class)));
 
         // What happens when someone clicks Login
         loginButton.setOnClickListener(v -> {
@@ -86,9 +93,9 @@ public class B_LoginActivity extends AppCompatActivity {
         });
     }
 
-    // Make labels black again (reset colors)
+    // Make labels white again (reset colors)
     private void resetColors() {
-        emailLabel.setTextColor(Color.BLACK);
-        passwordLabel.setTextColor(Color.BLACK);
+        emailLabel.setTextColor(Color.WHITE);
+        passwordLabel.setTextColor(Color.WHITE);
     }
 }

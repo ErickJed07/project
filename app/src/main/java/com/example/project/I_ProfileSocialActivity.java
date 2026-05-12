@@ -84,8 +84,8 @@ public class I_ProfileSocialActivity extends AppCompatActivity {
         FirebaseDatabase.getInstance().getReference("Users").child(profileid).addValueEventListener(new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    long models = getCountFrom(snapshot, "Models", "ModelsList");
-                    long fans = getCountFrom(snapshot, "Fans", "FansList");
+                    long models = snapshot.child("ModelsList").getChildrenCount();
+                    long fans = snapshot.child("FansList").getChildrenCount();
                     if (tabLayout.getTabCount() >= 2) {
                         if (tabLayout.getTabAt(0) != null) tabLayout.getTabAt(0).setText("Models (" + models + ")");
                         if (tabLayout.getTabAt(1) != null) tabLayout.getTabAt(1).setText("Fans (" + fans + ")");
@@ -94,14 +94,6 @@ public class I_ProfileSocialActivity extends AppCompatActivity {
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
-    }
-
-    private long getCountFrom(DataSnapshot snapshot, String keyInt, String keyList) {
-        if (snapshot.hasChild(keyInt)) {
-            Object val = snapshot.child(keyInt).getValue();
-            return val instanceof Long ? (Long) val : Long.parseLong(val.toString());
-        }
-        return snapshot.hasChild(keyList) ? snapshot.child(keyList).getChildrenCount() : 0;
     }
 
     static class ViewPagerAdapter extends FragmentStateAdapter {

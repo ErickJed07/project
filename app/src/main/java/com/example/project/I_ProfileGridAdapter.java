@@ -57,8 +57,8 @@ public class I_ProfileGridAdapter extends RecyclerView.Adapter<RecyclerView.View
             AddViewHolder addHolder = (AddViewHolder) holder;
             addHolder.imageView.setImageResource(R.drawable.plus_upload);
             addHolder.imageView.setScaleType(ImageView.ScaleType.CENTER);
-            addHolder.imageView.setBackgroundColor(Color.LTGRAY);
-            addHolder.itemView.setOnClickListener(v -> {
+            addHolder.imageView.setBackgroundColor(Color.parseColor("#F5F5F5"));
+            addHolder.imageView.setOnClickListener(v -> {
                 if (listener != null) listener.onAddClick();
             });
         } else {
@@ -71,14 +71,16 @@ public class I_ProfileGridAdapter extends RecyclerView.Adapter<RecyclerView.View
                 coverUrl = currentPost.getImageUrls().get(0);
             }
 
-            Glide.with(context)
-                    .load(coverUrl)
-                    .apply(new RequestOptions().centerCrop())
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .placeholder(R.drawable.ic_placeholder)
-                    .into(imageHolder.imageView);
+            if (isValidContextForGlide(context)) {
+                Glide.with(context)
+                        .load(coverUrl)
+                        .apply(new RequestOptions().centerCrop())
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .placeholder(R.drawable.ic_placeholder)
+                        .into(imageHolder.imageView);
+            }
 
-            imageHolder.itemView.setOnClickListener(v -> {
+            imageHolder.imageView.setOnClickListener(v -> {
                 if (listener != null) listener.onImageClick(currentPost, realPosition);
             });
         }
@@ -88,6 +90,15 @@ public class I_ProfileGridAdapter extends RecyclerView.Adapter<RecyclerView.View
     public int getItemCount() {
         int count = (postList != null) ? postList.size() : 0;
         return showAddButton ? count + 1 : count;
+    }
+
+    private boolean isValidContextForGlide(Context context) {
+        if (context == null) return false;
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            return !activity.isDestroyed() && !activity.isFinishing();
+        }
+        return true;
     }
 
     public static class ImageViewHolder extends RecyclerView.ViewHolder {

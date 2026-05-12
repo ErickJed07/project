@@ -25,8 +25,11 @@ public class C_SignInActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Apply saved theme before onCreate
+        ThemeHelper.applyTheme(ThemeHelper.getSavedTheme(this));
+
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.c_signin); // Ensure this XML has the ImageView removed or ignored
+        setContentView(R.layout.c_signin);
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -41,6 +44,10 @@ public class C_SignInActivity extends AppCompatActivity {
         confirmPasswordLabel = findViewById(R.id.tv_confirm_password_label);
 
         Button signinButton = findViewById(R.id.btn_sign_in);
+        TextView loginAction = findViewById(R.id.tv_login_action);
+
+        // Navigate back to Login screen
+        loginAction.setOnClickListener(v -> finish());
 
         signinButton.setOnClickListener(v -> {
             String email = emailInput.getText().toString().trim();
@@ -92,9 +99,9 @@ public class C_SignInActivity extends AppCompatActivity {
 
 
     private void resetColors() {
-        emailLabel.setTextColor(Color.BLACK);
-        usernameLabel.setTextColor(Color.BLACK);
-        passwordLabel.setTextColor(Color.BLACK);
-        confirmPasswordLabel.setTextColor(Color.BLACK);
+        emailLabel.setTextColor(Color.WHITE);
+        usernameLabel.setTextColor(Color.WHITE);
+        passwordLabel.setTextColor(Color.WHITE);
+        confirmPasswordLabel.setTextColor(Color.WHITE);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.project;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,9 +45,10 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
         holder.btn_follow.setVisibility(userid.equals(firebaseUser.getUid()) ? View.GONE : View.VISIBLE);
 
         DatabaseReference reference = FirebaseDatabase.getInstance().getReference("Users").child(userid);
-        reference.addValueEventListener(new ValueEventListener() {
+        reference.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!isValidContextForGlide(mContext)) return;
                 if (snapshot.exists()) {
                     holder.username.setText(snapshot.child("username").getValue(String.class));
                     String profilePhotoUrl = snapshot.child("profilePhoto").getValue(String.class);
@@ -64,7 +66,7 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
 
         holder.btn_follow.setOnClickListener(v -> {
             DatabaseReference db = FirebaseDatabase.getInstance().getReference().child("Users");
-            if (holder.btn_follow.getText().toString().equalsIgnoreCase("Follow Model")) {
+            if (holder.btn_follow.getText().toString().equalsIgnoreCase("Follow")) {
                 db.child(firebaseUser.getUid()).child("ModelsList").child(userid).setValue(true);
                 db.child(userid).child("FansList").child(firebaseUser.getUid()).setValue(true);
                 updateCount(firebaseUser.getUid(), "Models", 1);
@@ -76,6 +78,20 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
                 updateCount(userid, "Fans", -1);
             }
         });
+
+        View.OnClickListener profileClick = v -> {
+            if (userid.equals(firebaseUser.getUid())) {
+                mContext.startActivity(new Intent(mContext, I_ProfileActivity.class));
+            } else {
+                Intent intent = new Intent(mContext, I_UserProfileActivity.class);
+                intent.putExtra(I_UserProfileActivity.EXTRA_USER_ID, userid);
+                mContext.startActivity(intent);
+            }
+        };
+
+        holder.itemView.setOnClickListener(profileClick);
+        holder.username.setOnClickListener(profileClick);
+        holder.img_profile.setOnClickListener(profileClick);
     }
 
     @Override
@@ -98,24 +114,54 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
         reference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                button.setText(snapshot.child(userid).exists() ? "Following" : "Follow Model");
+                if (!isValidContextForGlide(mContext)) return;
+                if (snapshot.child(userid).exists()) {
+                    button.setText("Following");
+                    if (button instanceof com.google.android.material.button.MaterialButton) {
+                        ((com.google.android.material.button.MaterialButton) button).setBackgroundTintList(
+                                android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#E0E0E0")));
+                        button.setTextColor(android.graphics.Color.BLACK);
+                    }
+                } else {
+                    button.setText("Follow");
+                    if (button instanceof com.google.android.material.button.MaterialButton) {
+                        ((com.google.android.material.button.MaterialButton) button).setBackgroundTintList(
+                                android.content.res.ColorStateList.valueOf(mContext.getResources().getColor(R.color.pure_color, null)));
+                        button.setTextColor(android.graphics.Color.WHITE);
+                    }
+                }
             }
             @Override public void onCancelled(@NonNull DatabaseError error) { }
         });
     }
 
+    private boolean isValidContextForGlide(Context context) {
+        if (context == null) return false;
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            if (activity.isDestroyed() || activity.isFinishing()) return false;
+        }
+        return true;
+    }
+
     private void updateCount(String userId, String field, int increment) {
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(userId).child(field);
-        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+        ref.runTransaction(new com.google.firebase.database.Transaction.Handler() {
+            @NonNull
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                long currentCount = 0;
-                if (snapshot.exists()) {
-                    try { currentCount = Long.parseLong(snapshot.getValue().toString()); } catch (Exception e) {}
+            public com.google.firebase.database.Transaction.Result doTransaction(@NonNull com.google.firebase.database.MutableData mutableData) {
+                Long count = mutableData.getValue(Long.class);
+                if (count == null) {
+                    mutableData.setValue(Math.max(0L, (long) increment));
+                } else {
+                    mutableData.setValue(Math.max(0L, count + increment));
                 }
-                ref.setValue(Math.max(0, currentCount + increment));
+                return com.google.firebase.database.Transaction.success(mutableData);
             }
-            @Override public void onCancelled(@NonNull DatabaseError error) { }
+
+            @Override
+            public void onComplete(@androidx.annotation.Nullable DatabaseError databaseError, boolean committed, @androidx.annotation.Nullable DataSnapshot dataSnapshot) {
+            }
         });
     }
 }

@@ -68,13 +68,6 @@ public class G1_ClosetActivity extends AppCompatActivity {
         gridLayout = findViewById(R.id.galleryGrid);
         gridLayout.setColumnCount(3);
 
-        // addButtonView = findViewById(R.id.AddCategory);
-        // addButtonView.setVisibility(View.GONE);
-
-        findViewById(R.id.newoutfit).setOnClickListener(v -> {
-            Intent intent = new Intent(G1_ClosetActivity.this, G7_NewOutfitActivity.class);
-            startActivity(intent);
-        });
 
         initializeFixedCategories();
         loadCategoriesFromFirebase();
@@ -219,11 +212,17 @@ public class G1_ClosetActivity extends AppCompatActivity {
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
-        if (viewId == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
-        else if (viewId == R.id.calendar_menu) intent = new Intent(this, E_CalendarActivity.class);
-        else if (viewId == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
-        else if (viewId == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
-        else if (viewId == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);
+        if (viewId == R.id.home_menu) {
+            intent = new Intent(this, D_FeedActivity.class);
+        } else if (viewId == R.id.wardrobe_menu) {
+            intent = new Intent(this, WardrobeActivity.class);
+        } else if (viewId == R.id.calendar_menu) {
+            intent = new Intent(this, E_CalendarActivity.class);
+        } else if (viewId == R.id.ai_menu) {
+            intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.profile_menu) {
+            intent = new Intent(this, I_ProfileActivity.class);
+        }
 
         if (intent != null) {
             startActivity(intent);

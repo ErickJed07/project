@@ -61,7 +61,6 @@ public class D_FeedActivity extends AppCompatActivity {
             @Override
             public void handleOnBackPressed() {
                 finishAffinity();
-                System.exit(0);
             }
         });
 
@@ -171,14 +170,23 @@ public class D_FeedActivity extends AppCompatActivity {
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
-        if (viewId == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
-        else if (viewId == R.id.calendar_menu) intent = new Intent(this, E_CalendarActivity.class);
-        else if (viewId == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
-        else if (viewId == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
-        else if (viewId == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);
-        else if (viewId == R.id.wardrobe_menu) intent = new Intent(this, WardrobeActivity.class);
-        else if (viewId == R.id.ai_menu) intent = new Intent(this, AiActivity.class);
-        if (intent != null) { startActivity(intent); finish(); }
+        if (viewId == R.id.home_menu) {
+            // Already here
+            return;
+        } else if (viewId == R.id.wardrobe_menu) {
+            intent = new Intent(this, WardrobeActivity.class);
+        } else if (viewId == R.id.calendar_menu) {
+            intent = new Intent(this, E_CalendarActivity.class);
+        } else if (viewId == R.id.ai_menu) {
+            intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.profile_menu) {
+            intent = new Intent(this, I_ProfileActivity.class);
+        }
+        
+        if (intent != null) {
+            startActivity(intent);
+            finish();
+        }
     }
 }
 //ereefe

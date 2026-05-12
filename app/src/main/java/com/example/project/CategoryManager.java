@@ -33,7 +33,9 @@ public class CategoryManager {
                 isWoman ? "Pants, skirts, shorts" : "Pants, shorts", 
                 isWoman ? R.drawable.bottomwoman : R.drawable.bottom_man, R.color.cat_pink_bg));
         
-        categories.add(new CategoryItem("Dresses", "Dresses", "Dresses, jumpsuits", R.drawable.dress, R.color.cat_teal_bg));
+        if (isWoman) {
+            categories.add(new CategoryItem("Dresses", "Dresses", "Dresses, jumpsuits", R.drawable.dress, R.color.cat_teal_bg));
+        }
         
         categories.add(new CategoryItem("Outerwear", "Outerwear", "Jackets, coats, blazers", 
                 isWoman ? R.drawable.outerwoman : R.drawable.outer_man, R.color.cat_green_bg));
@@ -75,6 +77,10 @@ public class CategoryManager {
         categories.add(new CategoryItem("Bags", "Bags", "Handbags, backpacks",
                 isWoman ? R.drawable.bagwoman : R.drawable.bag_man, R.color.cat_purple_bg));
 
+        // Archive / Special Categories
+        categories.add(new CategoryItem("used_clothes", "Used", "Archive for used items",
+                R.drawable.ic_check_badge, R.color.cat_green_bg));
+
         return categories;
     }
 
@@ -93,6 +99,10 @@ public class CategoryManager {
     }
     
     public static CategoryItem getCategoryById(String id) {
-        return getCategoryById(id, true);
+        CategoryItem item = getCategoryById(id, true);
+        if (item == null) {
+            item = getCategoryById(id, false);
+        }
+        return item;
     }
 }

@@ -1,8 +1,12 @@
 package com.example.project;
 
+import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.SpannableString;
@@ -93,9 +97,16 @@ public class I_ProfileActivity extends AppCompatActivity {
         }).attach();
 
         findViewById(R.id.menubutton).setOnClickListener(v -> showPopupMenu(v));
-        findViewById(R.id.add_following).setOnClickListener(v -> startActivity(new Intent(this, I_ProfileAddActivity.class)));
+        findViewById(R.id.add_following).setOnClickListener(v -> startActivity(new Intent(this, I_Profile_AddModels.class)));
         findViewById(R.id.modellist).setOnClickListener(v -> openSocialList(0));
         findViewById(R.id.fanslist).setOnClickListener(v -> openSocialList(1));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
+            }
+        }
+
 
         if (currentUser != null) {
             String uid = currentUser.getUid();
@@ -107,14 +118,14 @@ public class I_ProfileActivity extends AppCompatActivity {
                     if (snapshot.exists()) {
                         usernameText.setText(snapshot.child("username").getValue(String.class));
                         
-                        Long posts = snapshot.child("posts").getValue(Long.class);
-                        postsNumText.setText(String.valueOf(posts != null ? posts : 0L));
+                        Long postsVal = snapshot.child("posts").getValue(Long.class);
+                        postsNumText.setText(String.valueOf(postsVal != null ? postsVal : 0L));
 
-                        Long models = snapshot.child("Models").getValue(Long.class);
-                        followersNumText.setText(String.valueOf(models != null ? models : 0L));
+                        long modelsCount = snapshot.child("ModelsList").getChildrenCount();
+                        followersNumText.setText(String.valueOf(modelsCount));
 
-                        Long fans = snapshot.child("Fans").getValue(Long.class);
-                        followingNumText.setText(String.valueOf(fans != null ? fans : 0L));
+                        long fansCount = snapshot.child("FansList").getChildrenCount();
+                        followingNumText.setText(String.valueOf(fansCount));
                         
                         currentPhotoUrl = snapshot.child("profilePhoto").getValue(String.class);
                         if (currentPhotoUrl != null && !currentPhotoUrl.equals("default") && !currentPhotoUrl.isEmpty()) {
@@ -141,9 +152,44 @@ public class I_ProfileActivity extends AppCompatActivity {
         } catch (IllegalStateException e) { }
     }
 
+    private void sendTestForcedNotification() {
+        String channelId = "fcm_default_channel";
+        android.app.NotificationManager notificationManager =
+                (android.app.NotificationManager) getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            android.app.NotificationChannel channel = new android.app.NotificationChannel(channelId,
+                    "Urgent Notifications",
+                    android.app.NotificationManager.IMPORTANCE_HIGH);
+            channel.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+            channel.enableVibration(true);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        Intent intent = new Intent(this, I_ProfileActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(this, 0, intent,
+                android.app.PendingIntent.FLAG_ONE_SHOT | android.app.PendingIntent.FLAG_IMMUTABLE);
+
+        androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("Test Forced Notification")
+                .setContentText("This is how it looks even when the app is exited!")
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_MESSAGE)
+                .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
+                .setAutoCancel(true)
+                .setDefaults(android.app.Notification.DEFAULT_ALL)
+                .setColor(getResources().getColor(R.color.purple_primary, null))
+                .setContentIntent(pendingIntent);
+
+        notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+        Toast.makeText(this, "Notification sent! Exit the app to see the effect.", Toast.LENGTH_LONG).show();
+    }
+
     private void openSocialList(int startTab) {
         Intent intent = new Intent(this, I_ProfileSocialActivity.class);
-        intent.putExtra("START_TAB", startTab);
+        intent.putExtra("title", startTab == 0 ? "models" : "fans");
         startActivity(intent);
     }
 
@@ -266,12 +312,24 @@ public class I_ProfileActivity extends AppCompatActivity {
 
     public void onButtonClicked(View view) {
         Intent intent = null;
-        int id = view.getId();
-        if (id == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
-        else if (id == R.id.calendar_menu) intent = new Intent(this, E_CalendarActivity.class);
-        else if (id == R.id.add_menu) intent = new Intent(this, F1_CameraActivity.class);
-        else if (id == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
-        if (intent != null) { startActivity(intent); finish(); }
+        int viewId = view.getId();
+        if (viewId == R.id.home_menu) {
+            intent = new Intent(this, D_FeedActivity.class);
+        } else if (viewId == R.id.wardrobe_menu) {
+            intent = new Intent(this, WardrobeActivity.class);
+        } else if (viewId == R.id.calendar_menu) {
+            intent = new Intent(this, E_CalendarActivity.class);
+        } else if (viewId == R.id.ai_menu) {
+            intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.profile_menu) {
+            // Already here
+            return;
+        }
+        
+        if (intent != null) {
+            startActivity(intent);
+            finish();
+        }
     }
 
     private static class ProfilePagerAdapter extends FragmentStateAdapter {

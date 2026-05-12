@@ -1,6 +1,7 @@
 package com.example.project;
 
 import android.Manifest;
+import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -66,6 +67,8 @@ public class I_PostUploadActivity extends AppCompatActivity {
         captionEditText = findViewById(R.id.captionEditText);
         savePostButton = findViewById(R.id.Savepost);
 
+        findViewById(R.id.imageButton).setOnClickListener(v -> finish());
+
         imageUris = new ArrayList<>();
         galleryAdapter = new I_PostGalleryAdapter(imageUris, selectedImages, imageUri -> {
             if (isMultipleSelection) {
@@ -105,16 +108,23 @@ public class I_PostUploadActivity extends AppCompatActivity {
     }
 
     private void getImagesFromDevice() {
-        Uri imageUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        String[] projection = {MediaStore.Images.Media.DATA};
+        Uri collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        String[] projection = {MediaStore.Images.Media._ID};
         String sortOrder = MediaStore.Images.Media.DATE_ADDED + " DESC";
-        Cursor cursor = getContentResolver().query(imageUri, projection, null, null, sortOrder);
-        if (cursor != null) {
-            while (cursor.moveToNext()) {
-                imageUris.add("file://" + cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA)));
+
+        try (Cursor cursor = getContentResolver().query(collection, projection, null, null, sortOrder)) {
+            if (cursor != null) {
+                int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+                while (cursor.moveToNext()) {
+                    long id = cursor.getLong(idColumn);
+                    Uri contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+                    imageUris.add(contentUri.toString());
+                }
+                galleryAdapter.notifyDataSetChanged();
             }
-            cursor.close();
-            galleryAdapter.notifyDataSetChanged();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error loading images", Toast.LENGTH_SHORT).show();
         }
     }
 

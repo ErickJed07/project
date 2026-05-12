@@ -99,6 +99,7 @@
         app:backgroundTint="@color/pure_color"
         app:cornerRadius="28dp" />
 
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_cancel_event"
         style="@style/Widget.MaterialComponents.Button.TextButton"

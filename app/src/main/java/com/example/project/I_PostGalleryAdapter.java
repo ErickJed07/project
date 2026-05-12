@@ -3,8 +3,8 @@ package com.example.project;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -61,7 +61,7 @@ public class I_PostGalleryAdapter extends RecyclerView.Adapter<I_PostGalleryAdap
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView galleryImageView;
         View overlay;
-        RelativeLayout circleIndicator;
+        FrameLayout circleIndicator;
         TextView numberText;
 
         public ViewHolder(View itemView) {

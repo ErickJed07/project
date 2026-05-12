@@ -239,18 +239,7 @@ public class AiActivity extends AppCompatActivity {
         bottomSheetGrabber = findViewById(R.id.bottom_sheet_grabber);
 
         btnTryAgain.setOnClickListener(v -> resetToSelectionMode());
-        btnSaveResult.setOnClickListener(v -> {
-            if (lastAiResultUrl != null) {
-                showSaveToCalendarDialog(lastAiResultUrl);
-            } else if (lastAiResultRaw != null) {
-                // If it's a resource (like during testing/simulation), use a placeholder or handle it
-                String placeholderUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
-                // Alternatively, if lastAiResultRaw is a local resource ID, we might need a different strategy for the calendar which expects URLs
-                showSaveToCalendarDialog(placeholderUrl);
-            } else {
-                Toast.makeText(this, "Please generate a look first", Toast.LENGTH_SHORT).show();
-            }
-        });
+        btnSaveResult.setOnClickListener(v -> handleSaveResultClick());
 
         View cvResultPreview = findViewById(R.id.cv_result_preview_container);
         if (cvResultPreview != null) {
@@ -309,7 +298,6 @@ public class AiActivity extends AppCompatActivity {
         btnAddAvatar.setAlpha(0f);
 
         findViewById(R.id.btn_back_ai).setOnClickListener(v -> finish());
-        findViewById(R.id.btn_test_progress).setOnClickListener(v -> simulateProgressSequence());
 
         View mainContent = findViewById(R.id.cl_main_content);
         ViewCompat.setOnApplyWindowInsetsListener(mainContent, (v, insets) -> {
@@ -337,9 +325,28 @@ public class AiActivity extends AppCompatActivity {
 
         setupRecyclerViews();
         setupBottomSheet();
-        loadCategories();
+        loadUserGenderAndCategories();
         updatePreview();
         loadUserModels();
+    }
+
+    private void loadUserGenderAndCategories() {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+
+        dbRef.child(uid).child("gender").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                String gender = snapshot.getValue(String.class);
+                isWomanSelected = !"man".equals(gender);
+                loadCategories();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                loadCategories();
+            }
+        });
     }
 
     private void loadUserModels() {
@@ -587,11 +594,11 @@ public class AiActivity extends AppCompatActivity {
             selectionBehavior.setPeekHeight(peekHeight);
             selectionBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
 
-            // Initial visibility: Only header, hide categories and items
+            // Initial visibility: Only header, show items but hide categories
             rvCategories.setVisibility(View.GONE);
             rvCategories.setAlpha(0f);
-            flItemsContainer.setVisibility(View.GONE);
-            flItemsContainer.setAlpha(0f);
+            flItemsContainer.setVisibility(View.VISIBLE);
+            flItemsContainer.setAlpha(1f);
 
             updateMainModelHeight(selectionBehavior.getPeekHeight());
             updateBottomSheetLockedState();
@@ -609,9 +616,9 @@ public class AiActivity extends AppCompatActivity {
                     flItemsContainer.setVisibility(View.VISIBLE);
                 } else if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
                     rvItems.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(AiActivity.this, RecyclerView.HORIZONTAL, false));
-                    // Ensure they are hidden when collapsed
+                    // Keep items visible but hide categories when collapsed
                     rvCategories.setVisibility(View.GONE);
-                    flItemsContainer.setVisibility(View.GONE);
+                    flItemsContainer.setVisibility(View.VISIBLE);
                 }
             }
 
@@ -627,14 +634,14 @@ public class AiActivity extends AppCompatActivity {
                 btnGenerateExpanded.setAlpha(slideOffset);
 
                 rvCategories.setAlpha(slideOffset);
-                flItemsContainer.setAlpha(slideOffset);
+                // flItemsContainer alpha logic removed to keep it visible
 
                 if (slideOffset <= 0.05f) {
                     btnFilter.setVisibility(View.GONE);
                     btnGenerateExpanded.setVisibility(View.GONE);
                     btnGenerateCollapsed.setVisibility(View.VISIBLE);
                     rvCategories.setVisibility(View.GONE);
-                    flItemsContainer.setVisibility(View.GONE);
+                    flItemsContainer.setVisibility(View.VISIBLE);
                 } else if (slideOffset >= 0.95f) {
                     btnFilter.setVisibility(View.VISIBLE);
                     btnGenerateExpanded.setVisibility(View.VISIBLE);
@@ -892,19 +899,16 @@ public class AiActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 decrementLoading();
                 categoryList.clear();
-                int totalItems = 0;
 
                 for (CategoryManager.CategoryItem fixedItem : CategoryManager.getCategories(isWomanSelected)) {
+                    if ("used_clothes".equals(fixedItem.id)) continue; // Hide Used category from Pick Clothes
                     long itemCount = 0;
                     DataSnapshot categorySnapshot = snapshot.child(fixedItem.id);
                     if (categorySnapshot.exists() && categorySnapshot.hasChild("photos")) {
                         itemCount = categorySnapshot.child("photos").getChildrenCount();
-                        totalItems += itemCount;
                     }
                     categoryList.add(new ViewCategoriesActivity.CategoryModel(fixedItem.id, fixedItem.name, fixedItem.iconRes, (int) itemCount));
                 }
-
-                categoryList.add(0, new ViewCategoriesActivity.CategoryModel("all_clothes", "All Clothes", R.drawable.hanger, totalItems));
 
                 categoryAdapter.updateList(new ArrayList<>(categoryList));
 
@@ -947,6 +951,9 @@ public class AiActivity extends AppCompatActivity {
             // Special handling for All Clothes - we need to fetch from all categories
             loadAllItems();
             return;
+        } else if (categoryId.equals("used_clothes")) {
+            loadUsedItems();
+            return;
         } else {
             photosRef = dbRef.child(uid).child("categories").child(categoryId).child("photos");
         }
@@ -972,6 +979,49 @@ public class AiActivity extends AppCompatActivity {
             public void onCancelled(@NonNull DatabaseError error) {
                 decrementLoading();
                 Toast.makeText(AiActivity.this, "Failed to load items", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void loadUsedItems() {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+        DatabaseReference eventsRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("Events");
+
+        incrementLoading();
+        eventsRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                decrementLoading();
+                itemList.clear();
+                originalItemList.clear();
+
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+                String todayStr = sdf.format(cal.getTime());
+
+                java.util.Set<String> uniqueUrls = new java.util.HashSet<>();
+
+                for (DataSnapshot eventSnap : snapshot.getChildren()) {
+                    E_Calendar_Event event = eventSnap.getValue(E_Calendar_Event.class);
+                    if (event != null && event.getDate() != null && event.getDate().compareTo(todayStr) < 0) {
+                        if (event.getItems() != null) {
+                            for (ClothingItem item : event.getItems()) {
+                                if (item.getImageUrl() != null && uniqueUrls.add(item.getImageUrl())) {
+                                    itemList.add(item);
+                                    originalItemList.add(item);
+                                }
+                            }
+                        }
+                    }
+                }
+                updateItemsUI();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                decrementLoading();
+                Toast.makeText(AiActivity.this, "Failed to load used items", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -1178,12 +1228,8 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void updateBottomSheetLockedState() {
-        boolean isLocked = (selectedModelUrl == null && selectedModelUri == null);
-        View bottomSheet = findViewById(R.id.bottom_sheet_selection);
-        if (bottomSheet != null && clSelectionState != null) {
-            // Block all clicks to children when locked, but keep original appearance
-            enableViewAndChildren(clSelectionState, !isLocked);
-        }
+        // No longer blocking interactions if no model is selected.
+        // Users can browse clothes. performVirtualTryOn() handles missing model validation.
     }
 
     private void enableViewAndChildren(View view, boolean enabled) {
@@ -1763,9 +1809,28 @@ public class AiActivity extends AppCompatActivity {
         }
     }
 
+    private void handleSaveResultClick() {
+        if (lastAiResultUrl != null) {
+            showSaveToCalendarDialog(lastAiResultUrl);
+        } else if (lastAiResultRaw != null) {
+            String placeholderUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
+            showSaveToCalendarDialog(placeholderUrl);
+        } else {
+            Toast.makeText(this, "Please generate a look first", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void resetToSelectionMode() {
         setResultMode(false);
-        if (btnSaveResult != null) btnSaveResult.setEnabled(true);
+        if (btnGenerateCollapsed != null) btnGenerateCollapsed.setEnabled(true);
+        if (btnGenerateExpanded != null) btnGenerateExpanded.setEnabled(true);
+
+        if (btnSaveResult != null) {
+            btnSaveResult.setEnabled(true);
+            btnSaveResult.setText(R.string.save_result);
+            btnSaveResult.setIconResource(R.drawable.bg_circle_white);
+            btnSaveResult.setOnClickListener(v -> handleSaveResultClick());
+        }
         
         updatePreview();
         updateBottomSheetLockedState();
@@ -1785,17 +1850,6 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void performVirtualTryOn() {
-        if (clResultState != null && clResultState.getVisibility() == View.VISIBLE) {
-            // Save logic
-            if (lastAiResultUrl != null) {
-                if (btnSaveResult != null) btnSaveResult.setEnabled(false);
-                saveModelToFirebase(lastAiResultUrl);
-            } else {
-                Toast.makeText(this, "No result to save", Toast.LENGTH_SHORT).show();
-            }
-            return;
-        }
-
         if (selectedItems.isEmpty()) {
             Toast.makeText(this, "Please select at least one garment", Toast.LENGTH_SHORT).show();
             return;
@@ -2222,6 +2276,16 @@ public class AiActivity extends AppCompatActivity {
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Saved to Calendar!", Toast.LENGTH_SHORT).show();
                     E_Calendar_ReminderUtils.scheduleReminder(this, event);
+                    
+                    // Change button to "Go to Calendar"
+                    if (btnSaveResult != null) {
+                        btnSaveResult.setText(R.string.go_to_calendar);
+                        btnSaveResult.setIconResource(R.drawable.calendar);
+                        btnSaveResult.setOnClickListener(v -> {
+                            Intent intent = new Intent(this, E_CalendarActivity.class);
+                            startActivity(intent);
+                        });
+                    }
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to save to calendar", Toast.LENGTH_SHORT).show());
     }
@@ -2236,16 +2300,26 @@ public class AiActivity extends AppCompatActivity {
         });
     }
 
+
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
-        if (viewId == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
-        else if (viewId == R.id.calendar_menu) intent = new Intent(this, E_CalendarActivity.class);
-        else if (viewId == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
-        else if (viewId == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
-        else if (viewId == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);
-        else if (viewId == R.id.wardrobe_menu) intent = new Intent(this, WardrobeActivity.class);
-        else if (viewId == R.id.ai_menu) intent = new Intent(this, AiActivity.class);
-        if (intent != null) { startActivity(intent); finish(); }
+        if (viewId == R.id.home_menu) {
+            intent = new Intent(this, D_FeedActivity.class);
+        } else if (viewId == R.id.wardrobe_menu) {
+            intent = new Intent(this, WardrobeActivity.class);
+        } else if (viewId == R.id.calendar_menu) {
+            intent = new Intent(this, E_CalendarActivity.class);
+        } else if (viewId == R.id.ai_menu) {
+            // Already here
+            return;
+        } else if (viewId == R.id.profile_menu) {
+            intent = new Intent(this, I_ProfileActivity.class);
+        }
+        
+        if (intent != null) {
+            startActivity(intent);
+            finish();
+        }
     }
 }

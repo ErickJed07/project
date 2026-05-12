@@ -133,6 +133,21 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         String eventId = event.getId();
 
+        // 1. Remove from local list immediately for a snappy feel
+        int index = -1;
+        for (int i = 0; i < calendarEventList.size(); i++) {
+            if (calendarEventList.get(i).getId().equals(eventId)) {
+                index = i;
+                break;
+            }
+        }
+        if (index != -1) {
+            calendarEventList.remove(index);
+            notifyItemRemoved(index);
+            notifyItemRangeChanged(index, calendarEventList.size());
+        }
+
+        // 2. Remove from Firebase (everything under this event ID including items)
         FirebaseDatabase.getInstance()
                 .getReference("Users")
                 .child(userId)
@@ -140,29 +155,18 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
                 .child(eventId)
                 .removeValue()
                 .addOnSuccessListener(unused -> {
+                    // 3. Notify listener to clean up reminders and local map
                     if (deleteListener != null) {
                         deleteListener.onEventDeleted(event, position);
-                    }
-                    int index = -1;
-                    for (int i = 0; i < calendarEventList.size(); i++) {
-                        if (calendarEventList.get(i).getId().equals(eventId)) {
-                            index = i;
-                            break;
-                        }
-                    }
-                    if (index != -1) {
-                        calendarEventList.remove(index);
-                        notifyItemRemoved(index);
-                        notifyItemRangeChanged(index, calendarEventList.size());
                     }
                     if (dialogToClose != null && dialogToClose.isShowing()) {
                         dialogToClose.dismiss();
                     }
-                    Toast.makeText(context, "Deleted: " + event.getTitle(), Toast.LENGTH_SHORT).show();
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(context, "Delete failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
+                .addOnFailureListener(e -> {
+                    Toast.makeText(context, "Delete failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    // Optional: You could add logic here to re-insert the item if the delete fails
+                });
     }
 
     public static class EventViewHolder extends RecyclerView.ViewHolder {

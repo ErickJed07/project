@@ -17,7 +17,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:padding="12dp">
+        android:padding="8dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/imageContainer"

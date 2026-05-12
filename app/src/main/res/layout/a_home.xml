@@ -5,113 +5,143 @@
     android:id="@+id/cl_home_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:fitsSystemWindows="true">
+    android:background="@color/black">
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cv_logo_container"
-        android:layout_width="140dp"
-        android:layout_height="135dp"
-        android:background="#181918"
-        app:cardBackgroundColor="#181918"
-        app:cardCornerRadius="90dp"
-        app:layout_constraintBottom_toTopOf="@+id/ll_header_container"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.85">
+    <!-- Hero Background Image -->
+    <ImageView
+        android:id="@+id/iv_hero_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/sign_in_bg"
+        android:alpha="0.8" />
 
-        <ImageView
-            android:id="@+id/iv_app_logo"
-            android:layout_width="match_parent"
-            android:layout_height="135dp"
-            app:srcCompat="@drawable/ic_placeholder_2" />
+    <!-- Subtle Color Overlay -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_ai_styling_gradient"
+        android:alpha="0.3" />
 
-    </androidx.cardview.widget.CardView>
+    <!-- Bottom Scrim for Text Readability -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="450dp"
+        android:background="@drawable/scrim_bottom_dark"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
+    <!-- Brand Header -->
     <LinearLayout
-        android:id="@+id/ll_header_container"
-        android:layout_width="0dp"
-        android:layout_height="95dp"
+        android:id="@+id/ll_brand_header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="64dp"
+        android:gravity="center"
         android:orientation="vertical"
-        app:layout_constraintBottom_toTopOf="@+id/ll_button_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.84000003">
+        app:layout_constraintTop_toTopOf="parent">
+
+        <FrameLayout
+            android:layout_width="130dp"
+            android:layout_height="130dp">
+
+            <!-- Decorative Outer Ring -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0.3"
+                android:background="@drawable/dashed_circle_border" />
+
+            <!-- Logo Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="90dp"
+                android:layout_height="90dp"
+                android:layout_gravity="center"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="45dp"
+                app:cardElevation="16dp"
+                app:strokeColor="#F0F0F0"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/ic_placeholder_2" />
+            </com.google.android.material.card.MaterialCardView>
+
+        </FrameLayout>
 
         <TextView
             android:id="@+id/tv_app_name"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:fontFamily="@font/poppins"
-            android:gravity="center"
-            android:text="PHINDEE"
-            android:textSize="26sp"
+            android:letterSpacing="0.3"
+            android:shadowColor="#40000000"
+            android:shadowDx="0"
+            android:shadowDy="4"
+            android:shadowRadius="8"
+            android:text="@string/app_name"
+            android:textColor="@color/white"
+            android:textSize="32sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/tv_app_motto"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/poppins"
-            android:gravity="center"
-            android:text="Let's Find Your Style"
-            android:textSize="24sp"
-            android:textStyle="normal" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_hero_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginBottom="32dp"
+        android:fontFamily="@font/poppins"
+        android:text="@string/hero_text"
+        android:textColor="@color/white"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:lineSpacingMultiplier="0.85"
+        app:layout_constraintBottom_toTopOf="@+id/ll_button_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <LinearLayout
         android:id="@+id/ll_button_container"
-        android:layout_width="361dp"
-        android:layout_height="146dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.73">
+        android:paddingHorizontal="32dp"
+        android:paddingBottom="64dp"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <Button
-            android:id="@+id/btn_login"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:backgroundTint="#2B2D30"
-            android:text="LOGIN"
-            android:textColor="@color/pure_color"
-            android:textSize="20dp"
-            android:textStyle="bold"
-            app:cornerRadius="10dp" />
-
-        <TextView
-            android:id="@+id/tv_button_spacer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_sign_in"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:backgroundTint="@color/pure_color"
-            android:text="SIGN IN"
-            android:textColor="@color/white"
-            android:textSize="20dp"
+            android:layout_height="64dp"
+            android:backgroundTint="@color/white"
+            android:fontFamily="@font/poppins"
+            android:text="@string/btn_get_started"
+            android:textColor="@color/black"
+            android:textSize="16sp"
             android:textStyle="bold"
-            app:cornerRadius="10dp"
-            app:strokeColor="@color/pure_color"
-            app:strokeWidth="2dp" />
+            app:cornerRadius="16dp"
+            app:elevation="0dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_login"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:fontFamily="@font/poppins"
+            android:text="@string/btn_login_label"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
     </LinearLayout>
 
-    <Button
-        android:id="@+id/btn_admin_bypass"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:backgroundTint="@color/white"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
+    <!-- Invisible Admin Bypass -->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

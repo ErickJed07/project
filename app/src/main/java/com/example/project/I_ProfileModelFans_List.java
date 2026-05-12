@@ -113,8 +113,8 @@ public class I_ProfileModelFans_List extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    long modelsCount = getCountFromSnapshot(snapshot, "Models", "ModelsList");
-                    long fansCount = getCountFromSnapshot(snapshot, "Fans", "FansList");
+                    long modelsCount = snapshot.child("ModelsList").getChildrenCount();
+                    long fansCount = snapshot.child("FansList").getChildrenCount();
                     if (tabLayout.getTabCount() >= 2) {
                         if (tabLayout.getTabAt(0) != null) tabLayout.getTabAt(0).setText("Models (" + modelsCount + ")");
                         if (tabLayout.getTabAt(1) != null) tabLayout.getTabAt(1).setText("Fans (" + fansCount + ")");
@@ -124,18 +124,6 @@ public class I_ProfileModelFans_List extends AppCompatActivity {
             @Override
             public void onCancelled(@NonNull DatabaseError error) {}
         });
-    }
-
-    private long getCountFromSnapshot(DataSnapshot snapshot, String keyInt, String keyList) {
-        long count = 0;
-        if (snapshot.hasChild(keyInt)) {
-            Object val = snapshot.child(keyInt).getValue();
-            if (val instanceof Long) count = (Long) val;
-            else if (val instanceof String) count = Long.parseLong((String) val);
-        } else if (snapshot.hasChild(keyList)) {
-            count = snapshot.child(keyList).getChildrenCount();
-        }
-        return count;
     }
 
     static class ViewPagerAdapter extends FragmentStateAdapter {

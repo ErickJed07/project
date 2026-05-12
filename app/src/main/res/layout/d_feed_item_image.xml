@@ -4,16 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!--
-         scaleType="fitCenter" ensures the whole image is seen.
-         adjustViewBounds="true" allows the ImageView to calculate its bounds.
-    -->
     <ImageView
         android:id="@+id/FeedItemImageView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
+        android:scaleType="centerCrop"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

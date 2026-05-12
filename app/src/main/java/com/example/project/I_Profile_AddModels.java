@@ -1,5 +1,6 @@
 package com.example.project;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
@@ -218,37 +219,31 @@ public class I_Profile_AddModels extends AppCompatActivity {
 
             holder.username.setText(user.getUsername());
             holder.btn_follow.setVisibility(View.VISIBLE);
-            holder.btn_follow.setText("Follow Model");
+            holder.btn_follow.setText("Follow");
 
                 // --- NEW GLIDE LOGIC HERE ---
                 String profilePhotoUrl = user.getProfileImageUrl();
 
-                if (profilePhotoUrl != null && !profilePhotoUrl.isEmpty() && !profilePhotoUrl.equals("default")) {
-                    try {
+                if (isValidContextForGlide(mContext)) {
+                    if (profilePhotoUrl != null && !profilePhotoUrl.isEmpty() && !profilePhotoUrl.equals("default")) {
+                        try {
+                            Glide.with(mContext)
+                                    .load(profilePhotoUrl)
+                                    .placeholder(R.drawable.ic_placeholder_2) // Ensure you have this drawable or use R.drawable.profile
+                                    .error(R.drawable.ic_placeholder_2)
+                                    .circleCrop() // This makes the image round
+                                    .into(holder.image_profile);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        // Load default image if URL is missing or "default"
                         Glide.with(mContext)
-                                .load(profilePhotoUrl)
-                                .placeholder(R.drawable.ic_placeholder_2) // Ensure you have this drawable or use R.drawable.profile
-                                .error(R.drawable.ic_placeholder_2)
-                                .circleCrop() // This makes the image round
+                                .load(R.drawable.ic_placeholder_2)
+                                .circleCrop()
                                 .into(holder.image_profile);
-                    } catch (Exception e) {
-                        e.printStackTrace();
                     }
-                } else {
-                    // Load default image if URL is missing or "default"
-                    Glide.with(mContext)
-                            .load(R.drawable.ic_placeholder_2)
-                            .circleCrop()
-                            .into(holder.image_profile);
                 }
-
-                // --- Post Previews Logic ---
-                checkPostsAndLoadPreviews(user.getId(), holder);
-
-                // ... (Rest of your follow button logic) ...
-
-
-
 
             // Handle Follow Button Click
             holder.btn_follow.setOnClickListener(view -> {
@@ -268,85 +263,40 @@ public class I_Profile_AddModels extends AppCompatActivity {
 
                 Toast.makeText(mContext, "You are now following " + user.getUsername(), Toast.LENGTH_SHORT).show();
             });
-        }
 
-        private void checkPostsAndLoadPreviews(String userId, ViewHolder holder) {
-            // 1. Change reference to "PostEvents"
-            DatabaseReference reference = FirebaseDatabase.getInstance().getReference("PostEvents");
-
-            reference.addListenerForSingleValueEvent(new ValueEventListener() { // Use SingleValueEvent for lists to avoid constant reloading
-                @Override
-                public void onDataChange(@androidx.annotation.NonNull DataSnapshot snapshot) {
-                    List<String> postImages = new ArrayList<>();
-
-                    // 2. Loop through all posts in PostEvents
-                    for (DataSnapshot postSnap : snapshot.getChildren()) {
-
-                        // 3. Get the userId of the poster
-                        String publisherId = postSnap.child("userId").getValue(String.class);
-
-                        // 4. Check if this post belongs to the user we are looking at
-                        if (publisherId != null && publisherId.equals(userId)) {
-
-                            // 5. Handle "imageUrls" - get the first image available for this post
-                            DataSnapshot imagesSnap = postSnap.child("imageUrls");
-                            if (imagesSnap.exists()) {
-                                // Loop through the images (it's a list/map) and take the first one
-                                for (DataSnapshot imgSnap : imagesSnap.getChildren()) {
-                                    String imgUrl = imgSnap.getValue(String.class);
-                                    if (imgUrl != null && !imgUrl.isEmpty()) {
-                                        postImages.add(imgUrl);
-                                        break; // Found the thumbnail for this post, move to next post
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // 6. Check count: Show preview only if 4 or more posts exist
-                    if (postImages.size() >= 4) {
-                        // UPDATED: Visibility is now controlled on the CardView
-                        holder.card_post_previews.setVisibility(View.VISIBLE);
-
-                        // Reverse list to show latest posts first
-                        Collections.reverse(postImages);
-
-                        if (postImages.size() >= 1) loadImage(holder.post_img_1, postImages.get(0));
-                        if (postImages.size() >= 2) loadImage(holder.post_img_2, postImages.get(1));
-                        if (postImages.size() >= 3) loadImage(holder.post_img_3, postImages.get(2));
-                        if (postImages.size() >= 4) loadImage(holder.post_img_4, postImages.get(3));
-                    } else {
-                        // UPDATED: Hide the CardView
-                        holder.card_post_previews.setVisibility(View.GONE);
-                    }
-
+            View.OnClickListener profileClick = v -> {
+                if (user.getId().equals(firebaseUser.getUid())) {
+                    mContext.startActivity(new Intent(mContext, I_ProfileActivity.class));
+                } else {
+                    Intent intent = new Intent(mContext, I_UserProfileActivity.class);
+                    intent.putExtra(I_UserProfileActivity.EXTRA_USER_ID, user.getId());
+                    mContext.startActivity(intent);
                 }
+            };
 
-                @Override
-                public void onCancelled(@androidx.annotation.NonNull DatabaseError error) { }
-            });
+            holder.itemView.setOnClickListener(profileClick);
+            holder.username.setOnClickListener(profileClick);
+            holder.image_profile.setOnClickListener(profileClick);
         }
 
-        private void loadImage(ImageView imageView, String url) {
-            Glide.with(mContext).load(url).into(imageView);
-        }
-
-        // Helper to safely increment counts
         private void updateCount(String userId, String field, int increment) {
             DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(userId).child(field);
-            ref.addListenerForSingleValueEvent(new ValueEventListener() {
+            ref.runTransaction(new com.google.firebase.database.Transaction.Handler() {
+                @androidx.annotation.NonNull
                 @Override
-                public void onDataChange(@androidx.annotation.NonNull DataSnapshot snapshot) {
-                    long currentCount = 0;
-                    if (snapshot.exists()) {
-                        try {
-                            currentCount = Long.parseLong(snapshot.getValue().toString());
-                        } catch (Exception e) { currentCount = 0; }
+                public com.google.firebase.database.Transaction.Result doTransaction(@androidx.annotation.NonNull com.google.firebase.database.MutableData mutableData) {
+                    Long count = mutableData.getValue(Long.class);
+                    if (count == null) {
+                        mutableData.setValue(Math.max(0L, (long) increment));
+                    } else {
+                        mutableData.setValue(Math.max(0L, count + increment));
                     }
-                    ref.setValue(Math.max(0, currentCount + increment));
+                    return com.google.firebase.database.Transaction.success(mutableData);
                 }
+
                 @Override
-                public void onCancelled(@androidx.annotation.NonNull DatabaseError error) { }
+                public void onComplete(@androidx.annotation.Nullable com.google.firebase.database.DatabaseError databaseError, boolean committed, @androidx.annotation.Nullable com.google.firebase.database.DataSnapshot dataSnapshot) {
+                }
             });
         }
 
@@ -355,29 +305,26 @@ public class I_Profile_AddModels extends AppCompatActivity {
             return mUsers.size();
         }
 
+        private boolean isValidContextForGlide(android.content.Context context) {
+            if (context == null) return false;
+            if (context instanceof android.app.Activity) {
+                android.app.Activity activity = (android.app.Activity) context;
+                return !activity.isDestroyed() && !activity.isFinishing();
+            }
+            return true;
+        }
+
         public static class ViewHolder extends RecyclerView.ViewHolder {
 
             public TextView username;
             public android.widget.Button btn_follow;
-
-            // CHANGED: Now referencing the CardView wrapper
-            public com.google.android.material.card.MaterialCardView card_post_previews;
-
-            public ImageView post_img_1, post_img_2, post_img_3, post_img_4,image_profile;
+            public ImageView image_profile;
 
             public ViewHolder(@androidx.annotation.NonNull android.view.View itemView) {
                 super(itemView);
                 username = itemView.findViewById(R.id.username);
                 image_profile = itemView.findViewById(R.id.img_profile);
                 btn_follow = itemView.findViewById(R.id.btn_follow);
-
-                // CHANGED: Find the CardView by its new ID
-                card_post_previews = itemView.findViewById(R.id.card_post_previews);
-
-                post_img_1 = itemView.findViewById(R.id.post_img_1);
-                post_img_2 = itemView.findViewById(R.id.post_img_2);
-                post_img_3 = itemView.findViewById(R.id.post_img_3);
-                post_img_4 = itemView.findViewById(R.id.post_img_4);
             }
         }
 

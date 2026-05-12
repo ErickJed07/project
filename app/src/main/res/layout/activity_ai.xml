@@ -177,19 +177,6 @@
                 app:tint="@color/white" />
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Test UI Button (Temporary) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_test_progress"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/test_ui"
-            android:textSize="12sp"
-            app:layout_constraintStart_toStartOf="@+id/btn_back_ai"
-            app:layout_constraintTop_toBottomOf="@+id/btn_back_ai" />
-
-
         <!-- Avatar Section (Upgraded) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cv_avatar_container"

@@ -31,32 +31,23 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
     private RecyclerView galleryRecyclerView;
     private G3_Closet_CategoryAdapter adapter;
 
-    // CHANGED: Now storing URLs (Strings) instead of Files
     private final List<String> imageUrlList = new ArrayList<>();
-
-    // CHANGED: Map to link URL -> Firebase Key (needed for deletion)
     private final Map<String, String> urlToKeyMap = new HashMap<>();
-
-    // NEW: Map to link URL -> Category ID (needed for deletion in All Clothes)
     private final Map<String, String> urlToCategoryMap = new HashMap<>();
-
-    // CHANGED: Selection set now stores URLs
     private final Set<String> selectedUrls = new HashSet<>();
 
     private boolean isMultiSelectMode = false;
     private FloatingActionButton deleteFab;
     private String categoryName;
-    private String categoryId; // New: We need ID to query Firebase
+    private String categoryId;
 
     private FirebaseAuth mAuth;
-    private DatabaseReference categoryRef; // Points to specific category
+    private DatabaseReference categoryRef;
     private String uid;
 
-    // NEW: Track sort order (Default: true = Latest/Newest first)
     private boolean isLatestFirst = true;
     private boolean isFavoriteFilterActive = false;
     private final Map<String, Boolean> urlToFavoriteMap = new HashMap<>();
-
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -64,27 +55,19 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.g2_closet_gallery);
 
-
-        // --- NEW CODE: Sort Button ---
         View sortBtn = findViewById(R.id.sortButton);
         if (sortBtn != null) {
             sortBtn.setOnClickListener(v -> {
-                isLatestFirst = !isLatestFirst; // Toggle the boolean
-                sortImages(); // Apply sort
+                isLatestFirst = !isLatestFirst;
+                sortImages();
             });
         }
-        // -----------------------------
 
-
-        // --- NEW CODE: Handle Back Arrow Click ---
         findViewById(R.id.btnbackcloset).setOnClickListener(v -> {
-            // Triggers the same logic as the hardware back button (goes to Feed)
             getOnBackPressedDispatcher().onBackPressed();
         });
-        // -----------------------------------------
 
-        // --- NEW CODE: Favorite Filter Button ---
-        View favoriteFilterBtn = findViewById(R.id.btnLatest); // btnLatest is labeled "FAVORITE" in layout
+        View favoriteFilterBtn = findViewById(R.id.btnLatest);
         if (favoriteFilterBtn != null) {
             favoriteFilterBtn.setOnClickListener(v -> {
                 isFavoriteFilterActive = !isFavoriteFilterActive;
@@ -94,9 +77,7 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                 sortImages();
             });
         }
-        // -----------------------------------------
 
-        // 1. Get Data from Intent
         categoryName = getIntent().getStringExtra("CATEGORY_NAME");
         categoryId = getIntent().getStringExtra("CATEGORY_ID");
 
@@ -112,40 +93,15 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             return;
         }
 
-        // ---------------------------------------------------------
-        // UPDATE: Path excludes "closetData"
-        // NEW: Users -> uid -> categories -> [id]
-        // ---------------------------------------------------------
-        if (categoryId != null) {
-            if ("all_clothes".equals(categoryId)) {
-                categoryRef = FirebaseDatabase.getInstance().getReference("Users")
-                        .child(uid)
-                        .child("categories");
-            } else {
-                categoryRef = FirebaseDatabase.getInstance().getReference("Users")
-                        .child(uid)
-                        .child("categories") // Looks inside the specific user's categories
-                        .child(categoryId);  // Looks inside the specific category (e.g., "Tops")
-            }
-        } else {
-            Toast.makeText(this, "Error: Category ID missing", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
         deleteFab = findViewById(R.id.fabDelete);
         deleteFab.hide();
 
         galleryRecyclerView = findViewById(R.id.galleryRecyclerView);
+        galleryRecyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 2));
 
-        androidx.recyclerview.widget.GridLayoutManager layoutManager =
-                new androidx.recyclerview.widget.GridLayoutManager(this, 2); // Changed from 3 to 2 columns
-        galleryRecyclerView.setLayoutManager(layoutManager);
-
-        // 3. Initialize Adapter
         adapter = new G3_Closet_CategoryAdapter(
                 this,
-                imageUrlList, // Passing Strings now
+                imageUrlList,
                 this::onImageClicked,
                 this::onImageLongClicked,
                 this::isUrlSelected,
@@ -153,19 +109,21 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
                 this::onFavoriteClicked,
                 this::isUrlFavorite
         );
-
         galleryRecyclerView.setAdapter(adapter);
-        // 4. Load Images from Firebase
-        if ("all_clothes".equals(categoryId)) {
-            loadAllImagesFromFirebase();
-        } else {
-            loadImagesFromFirebase();
+
+        if (categoryId != null) {
+            if ("all_clothes".equals(categoryId)) {
+                categoryRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories");
+                loadAllImagesFromFirebase();
+            } else if ("used_clothes".equals(categoryId)) {
+                loadUsedImagesFromFirebase();
+            } else {
+                categoryRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories").child(categoryId);
+                loadImagesFromFirebase();
+            }
         }
 
-        // 5. Delete Logic
-        deleteFab.setOnClickListener(v -> {
-            deleteSelectedImages();
-        });
+        deleteFab.setOnClickListener(v -> deleteSelectedImages());
     }
 
     private void updateItemsFoundCount() {
@@ -186,33 +144,23 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
                 for (DataSnapshot photoSnap : snapshot.getChildren()) {
                     String key = photoSnap.getKey();
-                    String url = null;
-
-                    if (photoSnap.hasChild("imageUrl")) {
-                        url = photoSnap.child("imageUrl").getValue(String.class);
-                    } else if (photoSnap.hasChild("url")) {
-                        url = photoSnap.child("url").getValue(String.class);
-                    }
+                    String url = photoSnap.child("imageUrl").getValue(String.class);
+                    if (url == null) url = photoSnap.child("url").getValue(String.class);
 
                     if (url != null && !url.isEmpty()) {
                         imageUrlList.add(url);
                         urlToKeyMap.put(url, key);
                         urlToCategoryMap.put(url, categoryId);
-
                         Boolean isFav = photoSnap.child("favorite").getValue(Boolean.class);
                         urlToFavoriteMap.put(url, isFav != null && isFav);
                     }
                 }
-
-                // --- NEW: Apply Sort immediately after loading ---
                 sortImages();
                 updateItemsFoundCount();
-                // Note: sortImages calls notifyDataSetChanged, so we don't need to call it twice
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-            }
+            public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
@@ -227,25 +175,20 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
 
                 for (DataSnapshot categorySnap : snapshot.getChildren()) {
                     String catId = categorySnap.getKey();
-                    if (categorySnap.hasChild("photos")) {
-                        for (DataSnapshot photoSnap : categorySnap.child("photos").getChildren()) {
-                            String key = photoSnap.getKey();
-                            String url = null;
+                    // Exclude "Used" clothes from the "All Clothes" view
+                    if ("used_clothes".equals(catId)) continue;
 
-                            if (photoSnap.hasChild("imageUrl")) {
-                                url = photoSnap.child("imageUrl").getValue(String.class);
-                            } else if (photoSnap.hasChild("url")) {
-                                url = photoSnap.child("url").getValue(String.class);
-                            }
+                    for (DataSnapshot photoSnap : categorySnap.child("photos").getChildren()) {
+                        String key = photoSnap.getKey();
+                        String url = photoSnap.child("imageUrl").getValue(String.class);
+                        if (url == null) url = photoSnap.child("url").getValue(String.class);
 
-                            if (url != null && !url.isEmpty()) {
-                                imageUrlList.add(url);
-                                urlToKeyMap.put(url, key);
-                                urlToCategoryMap.put(url, catId);
-
-                                Boolean isFav = photoSnap.child("favorite").getValue(Boolean.class);
-                                urlToFavoriteMap.put(url, isFav != null && isFav);
-                            }
+                        if (url != null && !url.isEmpty()) {
+                            imageUrlList.add(url);
+                            urlToKeyMap.put(url, key);
+                            urlToCategoryMap.put(url, catId);
+                            Boolean isFav = photoSnap.child("favorite").getValue(Boolean.class);
+                            urlToFavoriteMap.put(url, isFav != null && isFav);
                         }
                     }
                 }
@@ -254,28 +197,86 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-            }
+            public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    // ---------------------------------------------------------
-    // INTERACTION LOGIC (Updated for URLs)
-    // ---------------------------------------------------------
+    private void loadUsedImagesFromFirebase() {
+        if (uid == null) return;
+        DatabaseReference eventsRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("Events");
+        DatabaseReference archiveRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories").child("used_clothes").child("photos");
+        
+        // Listen to archive first
+        archiveRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot archiveSnapshot) {
+                imageUrlList.clear();
+                urlToKeyMap.clear();
+                urlToCategoryMap.clear();
+                urlToFavoriteMap.clear();
+
+                // 1. Load manually archived items
+                for (DataSnapshot photoSnap : archiveSnapshot.getChildren()) {
+                    String key = photoSnap.getKey();
+                    String url = photoSnap.child("imageUrl").getValue(String.class);
+                    if (url == null) url = photoSnap.child("url").getValue(String.class);
+
+                    if (url != null && !url.isEmpty() && !urlToKeyMap.containsKey(url)) {
+                        imageUrlList.add(url);
+                        urlToKeyMap.put(url, key);
+                        urlToCategoryMap.put(url, "used_clothes");
+                        Boolean isFav = photoSnap.child("favorite").getValue(Boolean.class);
+                        urlToFavoriteMap.put(url, isFav != null && isFav);
+                    }
+                }
+
+                // 2. Load items from past events
+                eventsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot eventSnapshot) {
+                        java.util.Calendar cal = java.util.Calendar.getInstance();
+                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+                        String todayStr = sdf.format(cal.getTime());
+
+                        for (DataSnapshot eventSnap : eventSnapshot.getChildren()) {
+                            E_Calendar_Event event = eventSnap.getValue(E_Calendar_Event.class);
+                            if (event != null && event.getDate() != null && event.getDate().compareTo(todayStr) < 0) {
+                                if (event.getItems() != null) {
+                                    for (ClothingItem item : event.getItems()) {
+                                        String url = item.getImageUrl();
+                                        if (url != null && !url.isEmpty() && !urlToKeyMap.containsKey(url)) {
+                                            imageUrlList.add(url);
+                                            urlToKeyMap.put(url, item.getId());
+                                            urlToCategoryMap.put(url, item.getCategoryId());
+                                            urlToFavoriteMap.put(url, item.isFavorite());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        sortImages();
+                        updateItemsFoundCount();
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
     private void onImageClicked(String url) {
         if (isMultiSelectMode) {
             toggleSelection(url);
         } else {
-            // Pass list of URLs to the viewer
             Intent intent = new Intent(this, G4_Closet_Category_PhotoViewerActivity.class);
-            intent.putStringArrayListExtra("IMAGES", (ArrayList<String>) imageUrlList);
+            intent.putStringArrayListExtra("IMAGES", new ArrayList<>(imageUrlList));
             intent.putExtra("CATEGORY_ID", categoryId);
             intent.putExtra("UID", uid);
-
-            // Find index of clicked URL
-            int index = imageUrlList.indexOf(url);
-            intent.putExtra("START_INDEX", index);
-
+            intent.putExtra("START_INDEX", imageUrlList.indexOf(url));
             startActivity(intent);
         }
     }
@@ -292,15 +293,10 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
     }
 
     private void toggleSelection(String url) {
-        if (selectedUrls.contains(url)) {
-            selectedUrls.remove(url);
-        } else {
-            selectedUrls.add(url);
-        }
+        if (selectedUrls.contains(url)) selectedUrls.remove(url);
+        else selectedUrls.add(url);
 
-        if (selectedUrls.isEmpty()) {
-            exitMultiSelectMode();
-        }
+        if (selectedUrls.isEmpty()) exitMultiSelectMode();
         adapter.notifyDataSetChanged();
     }
 
@@ -311,14 +307,8 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         deleteFab.hide();
     }
 
-    private boolean isUrlSelected(String url) {
-        return selectedUrls.contains(url);
-    }
-
-    private boolean isMultiSelectMode() {
-        return isMultiSelectMode;
-    }
-
+    private boolean isUrlSelected(String url) { return selectedUrls.contains(url); }
+    private boolean isMultiSelectMode() { return isMultiSelectMode; }
     private boolean isUrlFavorite(String url) {
         Boolean isFav = urlToFavoriteMap.get(url);
         return isFav != null && isFav;
@@ -327,15 +317,8 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
     private void onFavoriteClicked(String url, boolean isFavorite) {
         String key = urlToKeyMap.get(url);
         String catId = urlToCategoryMap.get(url);
-
         if (key != null && catId != null && uid != null) {
-            FirebaseDatabase.getInstance().getReference("Users")
-                    .child(uid)
-                    .child("categories")
-                    .child(catId)
-                    .child("photos")
-                    .child(key)
-                    .child("favorite").setValue(isFavorite)
+            FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories").child(catId).child("photos").child(key).child("favorite").setValue(isFavorite)
                     .addOnSuccessListener(aVoid -> {
                         urlToFavoriteMap.put(url, isFavorite);
                         sortImages();
@@ -343,136 +326,70 @@ public class G2_Closet_CategoryActivity extends AppCompatActivity {
         }
     }
 
-    // ---------------------------------------------------------
-    // DELETION LOGIC (Firebase)
-    // ---------------------------------------------------------
-    // ---------------------------------------------------------
-    // DELETION LOGIC (Firebase + Cloudinary)
-    // ---------------------------------------------------------
     private void deleteSelectedImages() {
         if (selectedUrls.isEmpty()) return;
-
-        // Create a copy of the set to iterate over safely
         Set<String> urlsToDelete = new HashSet<>(selectedUrls);
-
         for (String url : urlsToDelete) {
             String key = urlToKeyMap.get(url);
             String catId = urlToCategoryMap.get(url);
-
-            // 1. DELETE FROM FIREBASE
             if (key != null && catId != null) {
-                FirebaseDatabase.getInstance().getReference("Users")
-                        .child(uid)
-                        .child("categories")
-                        .child(catId)
-                        .child("photos")
-                        .child(key).removeValue();
+                FirebaseDatabase.getInstance().getReference("Users").child(uid).child("categories").child(catId).child("photos").child(key).removeValue();
             }
-
-            // 2. DELETE FROM CLOUDINARY (Run in background thread)
             new Thread(() -> {
                 try {
                     String publicId = extractPublicId(url);
                     if (publicId != null) {
-                        // This requires MediaManager to be initialized with api_secret
-                        com.cloudinary.android.MediaManager.get().getCloudinary()
-                                .uploader().destroy(publicId, com.cloudinary.utils.ObjectUtils.emptyMap());
-
-                        android.util.Log.d("Delete", "Deleted from Cloudinary: " + publicId);
+                        com.cloudinary.android.MediaManager.get().getCloudinary().uploader().destroy(publicId, com.cloudinary.utils.ObjectUtils.emptyMap());
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    android.util.Log.e("Delete", "Cloudinary delete failed (Check API Secret): " + e.getMessage());
-                }
+                } catch (Exception e) { e.printStackTrace(); }
             }).start();
         }
-
         selectedUrls.clear();
         exitMultiSelectMode();
         Toast.makeText(this, "Images deleted", Toast.LENGTH_SHORT).show();
     }
 
-    // HELPER: Extract the 'public_id' from a Cloudinary URL
     private String extractPublicId(String url) {
         try {
-            // URL format example: .../upload/v12345/CategoriesPhotos/image_name.png
             if (url.contains("/upload/")) {
                 String[] parts = url.split("/upload/");
                 if (parts.length > 1) {
                     String temp = parts[1];
-
-                    // Remove version number (e.g., v16789/) if present
-                    if (temp.matches("^v\\d+/.*")) {
-                        temp = temp.substring(temp.indexOf("/") + 1);
-                    }
-
-                    // Remove file extension (e.g., .png)
-                    if (temp.contains(".")) {
-                        temp = temp.substring(0, temp.lastIndexOf("."));
-                    }
-                    return temp; // Returns "CategoriesPhotos/image_name"
+                    if (temp.matches("^v\\d+/.*")) temp = temp.substring(temp.indexOf("/") + 1);
+                    if (temp.contains(".")) temp = temp.substring(0, temp.lastIndexOf("."));
+                    return temp;
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         return null;
     }
 
-
     private void sortImages() {
         if (imageUrlList.isEmpty()) return;
-
         java.util.Collections.sort(imageUrlList, (url1, url2) -> {
             if (isFavoriteFilterActive) {
                 boolean fav1 = isUrlFavorite(url1);
                 boolean fav2 = isUrlFavorite(url2);
-                if (fav1 != fav2) {
-                    return fav1 ? -1 : 1;
-                }
+                if (fav1 != fav2) return fav1 ? -1 : 1;
             }
-
             String key1 = urlToKeyMap.get(url1);
             String key2 = urlToKeyMap.get(url2);
-
             if (key1 == null || key2 == null) return 0;
-
-            // Firebase Keys are time-based.
-            if (isLatestFirst) {
-                return key2.compareTo(key1); // Descending (Newest first)
-            } else {
-                return key1.compareTo(key2); // Ascending (Oldest first)
-            }
+            return isLatestFirst ? key2.compareTo(key1) : key1.compareTo(key2);
         });
-
         adapter.notifyDataSetChanged();
-
-        String sortMsg = isLatestFirst ? "Latest" : "Oldest";
-        String filterMsg = isFavoriteFilterActive ? " (Favorites First)" : "";
-        Toast.makeText(this, "Sorted by " + sortMsg + filterMsg, Toast.LENGTH_SHORT).show();
     }
 
-
-    // ---------------------------------------------------------
-    // NAVIGATION
-    // ---------------------------------------------------------
-    public void onCloset_backClicked(View view) {
-        finish();
-    }
+    public void onCloset_backClicked(View view) { finish(); }
 
     public void onButtonClicked(View view) {
         Intent intent = null;
         int id = view.getId();
-
         if (id == R.id.home_menu) intent = new Intent(this, D_FeedActivity.class);
         else if (id == R.id.calendar_menu) intent = new Intent(this, E_CalendarActivity.class);
         else if (id == R.id.camera_menu) intent = new Intent(this, F1_CameraActivity.class);
         else if (id == R.id.closet_menu) intent = new Intent(this, G1_ClosetActivity.class);
         else if (id == R.id.profile_menu) intent = new Intent(this, I_ProfileActivity.class);
-
-        if (intent != null) {
-            startActivity(intent);
-            finish();
-        }
+        if (intent != null) { startActivity(intent); finish(); }
     }
 }

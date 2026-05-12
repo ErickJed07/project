@@ -1,6 +1,7 @@
 package com.example.project;
 
 import android.Manifest;
+import android.app.AlarmManager;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
@@ -9,6 +10,9 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.net.Uri;
+import android.os.PowerManager;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -61,11 +65,14 @@ public class E_CalendarActivity extends AppCompatActivity {
 
     private GestureDetector gestureDetector;
     private FloatingActionButton fabAddEvent;
+    private View emptyStateView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.e_calendar);
+
+        emptyStateView = findViewById(R.id.empty_state_view);
 
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
@@ -91,6 +98,26 @@ public class E_CalendarActivity extends AppCompatActivity {
             }
         }
 
+        // 🔑 THE FIX: Request "Alarms & Reminders" permission for Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+            if (alarmManager != null && !alarmManager.canScheduleExactAlarms()) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+                Toast.makeText(this, "Please enable 'Alarms & Reminders' for reliable notifications", Toast.LENGTH_LONG).show();
+            }
+        }
+
+        // 🔑 THE FINAL PIECE: Request "Display over other apps" for Full Screen Intents
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+                Toast.makeText(this, "Please enable 'Display over other apps' for real-time reminders", Toast.LENGTH_LONG).show();
+            }
+        }
+
         calendarGrid = findViewById(R.id.calendar_grid);
         monthLabel = findViewById(R.id.month_label);
         yearLabel = findViewById(R.id.year_label);
@@ -108,14 +135,34 @@ public class E_CalendarActivity extends AppCompatActivity {
 
         calendarEventAdapter = new E_Calendar_EventAdapter(calendarEventList, (event, position) -> {
             if (event.getId() != null) {
+                // 1. Cancel the reminder
                 E_Calendar_ReminderUtils.cancelReminder(E_CalendarActivity.this, event);
-                eventsRef.child(event.getId()).removeValue()
-                        .addOnSuccessListener(aVoid ->
-                                Toast.makeText(E_CalendarActivity.this, "Event Deleted", Toast.LENGTH_SHORT).show()
-                        )
-                        .addOnFailureListener(e ->
-                                Toast.makeText(E_CalendarActivity.this, "Delete Failed", Toast.LENGTH_SHORT).show()
-                        );
+
+                // 2. Update local eventMap to remove the dot from calendar immediately
+                String dateKey = event.getDate();
+                if (eventMap.containsKey(dateKey)) {
+                    List<E_Calendar_Event> events = eventMap.get(dateKey);
+                    if (events != null) {
+                        for (int i = 0; i < events.size(); i++) {
+                            if (events.get(i).getId().equals(event.getId())) {
+                                events.remove(i);
+                                break;
+                            }
+                        }
+                        if (events.isEmpty()) {
+                            eventMap.remove(dateKey);
+                        }
+                    }
+                }
+                
+                // 3. Refresh calendar grid to reflect the change
+                updateCalendar();
+                
+                // Check if empty state should be shown
+                if (emptyStateView != null) {
+                    emptyStateView.setVisibility(calendarEventList.isEmpty() ? View.VISIBLE : View.GONE);
+                    eventRecyclerView.setVisibility(calendarEventList.isEmpty() ? View.GONE : View.VISIBLE);
+                }
             }
         });
         eventRecyclerView.setAdapter(calendarEventAdapter);
@@ -132,26 +179,20 @@ public class E_CalendarActivity extends AppCompatActivity {
                 int position = viewHolder.getBindingAdapterPosition();
                 E_Calendar_Event event = calendarEventList.get(position);
                 
-                // Haptic feedback for the trigger
+                // Haptic feedback
                 viewHolder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
                 
-                // Best Practice: Show confirmation dialog to prevent accidental deletion
-                new androidx.appcompat.app.AlertDialog.Builder(E_CalendarActivity.this)
-                    .setTitle("Delete Schedule")
-                    .setMessage("Are you sure you want to remove this outfit from your calendar?")
-                    .setPositiveButton("Delete", (dialog, which) -> {
-                        calendarEventAdapter.performDeleteEvent(event, position, E_CalendarActivity.this, null);
-                        com.google.android.material.snackbar.Snackbar.make(eventRecyclerView, "Event deleted", com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show();
-                    })
-                    .setNegativeButton("Cancel", (dialog, which) -> {
-                        // Crucial: Refresh the adapter to slide the item back into place
-                        calendarEventAdapter.notifyItemChanged(position);
-                    })
-                    .setOnCancelListener(dialog -> {
-                        // Also refresh if they tap outside the dialog
-                        calendarEventAdapter.notifyItemChanged(position);
-                    })
-                    .show();
+                // Delete everything (App state, Firebase, Reminders)
+                calendarEventAdapter.performDeleteEvent(event, position, E_CalendarActivity.this, null);
+                
+                // Show feedback with Undo option - anchored above the bottom bar so it's visible
+                com.google.android.material.snackbar.Snackbar snackbar = com.google.android.material.snackbar.Snackbar.make(
+                        findViewById(R.id.calendarLayout), "Schedule removed", com.google.android.material.snackbar.Snackbar.LENGTH_LONG);
+                
+                snackbar.setAction("Undo", v -> restoreEventToFirebase(event));
+                snackbar.setAnchorView(findViewById(R.id.bottomBar));
+                snackbar.setActionTextColor(android.graphics.Color.BLACK);
+                snackbar.show();
             }
 
             @Override
@@ -240,12 +281,12 @@ public class E_CalendarActivity extends AppCompatActivity {
 
     private String getFullDateString(Calendar selectedDate) {
         Calendar today = Calendar.getInstance();
-        SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, MMM d", Locale.getDefault());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE  MMM d", Locale.getDefault());
 
         if (selectedDate.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
                 selectedDate.get(Calendar.MONTH) == today.get(Calendar.MONTH) &&
                 selectedDate.get(Calendar.DAY_OF_MONTH) == today.get(Calendar.DAY_OF_MONTH)) {
-            return dateFormat.format(selectedDate.getTime()) + ", Today";
+            return dateFormat.format(selectedDate.getTime()) + " , Today";
         }
 
         Calendar todayDate = (Calendar) today.clone();
@@ -305,6 +346,7 @@ public class E_CalendarActivity extends AppCompatActivity {
             TextView dayNumber = dayCell.findViewById(R.id.day_number);
             View eventBg = dayCell.findViewById(R.id.event_background);
             View selectionBg = dayCell.findViewById(R.id.selection_background);
+            View todayLabel = dayCell.findViewById(R.id.today_label);
 
             if (i >= firstDayOfWeek && i < firstDayOfWeek + daysInMonth) {
                 int day = i - firstDayOfWeek + 1;
@@ -314,6 +356,11 @@ public class E_CalendarActivity extends AppCompatActivity {
                 tempDate.set(Calendar.DAY_OF_MONTH, day);
                 String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(tempDate.getTime());
                 dayCell.setTag(dateKey);
+
+                boolean isToday = isCurrentMonth && day == todayDay;
+                if (todayLabel != null) {
+                    todayLabel.setVisibility(isToday ? View.VISIBLE : View.GONE);
+                }
 
                 boolean hasEvents = eventMap.containsKey(dateKey) && !eventMap.get(dateKey).isEmpty();
                 eventBg.setVisibility(hasEvents ? View.VISIBLE : View.GONE);
@@ -326,9 +373,15 @@ public class E_CalendarActivity extends AppCompatActivity {
                         selectedDayLabel.setText(getFullDateString(tempDate));
                     }
                     dayNumber.setTextColor(Color.WHITE);
+                    if (todayLabel != null) {
+                        ((TextView) todayLabel).setTextColor(Color.WHITE);
+                    }
                 } else {
                     selectionBg.setVisibility(View.GONE);
                     dayNumber.setTextColor(Color.BLACK);
+                    if (todayLabel != null) {
+                        ((TextView) todayLabel).setTextColor(Color.parseColor("#B200FF"));
+                    }
                 }
 
                 dayCell.setOnClickListener(v -> {
@@ -342,6 +395,11 @@ public class E_CalendarActivity extends AppCompatActivity {
                                 if (grandParent != null) {
                                     View oldSelectionBg = grandParent.findViewById(R.id.selection_background);
                                     if (oldSelectionBg != null) oldSelectionBg.setVisibility(View.GONE);
+
+                                    View oldTodayLabel = grandParent.findViewById(R.id.today_label);
+                                    if (oldTodayLabel != null) {
+                                        ((TextView) oldTodayLabel).setTextColor(Color.parseColor("#B200FF"));
+                                    }
                                 }
                             }
                         } catch (Exception e) {
@@ -351,6 +409,9 @@ public class E_CalendarActivity extends AppCompatActivity {
                     selectionBg.setVisibility(View.VISIBLE);
                     selectedDayView = dayNumber;
                     dayNumber.setTextColor(Color.WHITE);
+                    if (todayLabel != null) {
+                        ((TextView) todayLabel).setTextColor(Color.WHITE);
+                    }
                     selectedDateString = dateKey;
                     loadEventsForSelectedDate();
                     if (selectedDayLabel != null) {
@@ -444,6 +505,11 @@ public class E_CalendarActivity extends AppCompatActivity {
         calendarEventList.clear();
         calendarEventList.addAll(selectedCalendarEvents);
         calendarEventAdapter.notifyDataSetChanged();
+
+        if (emptyStateView != null) {
+            emptyStateView.setVisibility(calendarEventList.isEmpty() ? View.VISIBLE : View.GONE);
+            eventRecyclerView.setVisibility(calendarEventList.isEmpty() ? View.GONE : View.VISIBLE);
+        }
     }
 
     private void showAddEventDialog() {
@@ -461,8 +527,6 @@ public class E_CalendarActivity extends AppCompatActivity {
         Spinner spinnerReminder = dialog.findViewById(R.id.spinner_reminder);
         Button btnSave = dialog.findViewById(R.id.btn_save_event);
         Button btnCancel = dialog.findViewById(R.id.btn_cancel_event);
-
-        etDate.setText(selectedDateString);
 
         etDate.setOnClickListener(v -> {
             Calendar c = Calendar.getInstance();
@@ -521,24 +585,31 @@ public class E_CalendarActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to save", Toast.LENGTH_SHORT).show());
     }
 
+    private void restoreEventToFirebase(E_Calendar_Event event) {
+        if (eventsRef == null || event.getId() == null) return;
+
+        eventsRef.child(event.getId()).setValue(event)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Schedule Restored", Toast.LENGTH_SHORT).show();
+                    // Firebase listener will automatically refresh the UI and dots
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to restore", Toast.LENGTH_SHORT).show());
+    }
+
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
 
         if (viewId == R.id.home_menu) {
             intent = new Intent(this, D_FeedActivity.class);
-        } else if (viewId == R.id.calendar_menu) {
-            return;
-        } else if (viewId == R.id.camera_menu) {
-            intent = new Intent(this, F1_CameraActivity.class);
-        } else if (viewId == R.id.closet_menu) {
-            intent = new Intent(this, G1_ClosetActivity.class);
-        } else if (viewId == R.id.profile_menu) {
-            intent = new Intent(this, I_ProfileActivity.class);
         } else if (viewId == R.id.wardrobe_menu) {
             intent = new Intent(this, WardrobeActivity.class);
+        } else if (viewId == R.id.calendar_menu) {
+            return;
         } else if (viewId == R.id.ai_menu) {
             intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.profile_menu) {
+            intent = new Intent(this, I_ProfileActivity.class);
         }
 
         if (intent != null) {
@@ -560,4 +631,5 @@ public class E_CalendarActivity extends AppCompatActivity {
             return String.valueOf(day);
         }
     }
+
 }

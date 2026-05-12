@@ -25,20 +25,26 @@ import java.util.Map;
 public class I_ProfileContentFragment extends Fragment {
 
     private static final String ARG_TYPE = "CONTENT_TYPE";
+    private static final String ARG_USER_ID = "USER_ID";
     public static final String TYPE_UPLOAD = "UPLOAD";
     public static final String TYPE_LIKED = "LIKED";
     public static final String TYPE_FAVORITE = "FAVORITE";
 
     private String contentType;
+    private String targetUserId;
     private RecyclerView recyclerView;
     private I_ProfileGridAdapter adapter;
     private List<I_PostEvent> postList = new ArrayList<>();
-    private FirebaseUser currentUser;
 
     public static I_ProfileContentFragment newInstance(String type) {
+        return newInstance(type, null);
+    }
+
+    public static I_ProfileContentFragment newInstance(String type, String userId) {
         I_ProfileContentFragment fragment = new I_ProfileContentFragment();
         Bundle args = new Bundle();
         args.putString(ARG_TYPE, type);
+        args.putString(ARG_USER_ID, userId);
         fragment.setArguments(args);
         return fragment;
     }
@@ -48,8 +54,8 @@ public class I_ProfileContentFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             contentType = getArguments().getString(ARG_TYPE);
+            targetUserId = getArguments().getString(ARG_USER_ID);
         }
-        currentUser = FirebaseAuth.getInstance().getCurrentUser();
     }
 
     @Nullable
@@ -59,7 +65,10 @@ public class I_ProfileContentFragment extends Fragment {
         recyclerView = view.findViewById(R.id.favcontentRecyclerView);
         recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));
 
-        boolean showAdd = TYPE_UPLOAD.equals(contentType);
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        boolean isMyProfile = (targetUserId == null || (currentUser != null && targetUserId.equals(currentUser.getUid())));
+        boolean showAdd = TYPE_UPLOAD.equals(contentType) && isMyProfile;
+
         adapter = new I_ProfileGridAdapter(getContext(), postList, showAdd, new I_ProfileGridAdapter.OnItemClickListener() {
             @Override
             public void onAddClick() {
@@ -81,8 +90,8 @@ public class I_ProfileContentFragment extends Fragment {
     }
 
     private void fetchData() {
-        if (currentUser == null) return;
-        String uid = currentUser.getUid();
+        String uid = targetUserId != null ? targetUserId : (FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : null);
+        if (uid == null) return;
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference("PostEvents");
 
         ref.addValueEventListener(new ValueEventListener() {
