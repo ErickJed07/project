@@ -20,4 +20,20 @@ public class NotificationHelper {
             notifRef.child(notifId).setValue(notification);
         }
     }
+
+    public static void broadcastNotification(String title, String message, String fromUserId) {
+        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("Users");
+        usersRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot snapshot) {
+                for (com.google.firebase.database.DataSnapshot userSnap : snapshot.getChildren()) {
+                    String userId = userSnap.getKey();
+                    if (userId != null) {
+                        sendNotification(userId, title, message, fromUserId);
+                    }
+                }
+            }
+            @Override public void onCancelled(com.google.firebase.database.DatabaseError error) {}
+        });
+    }
 }

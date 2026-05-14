@@ -87,7 +87,6 @@ public class D_FeedActivity extends AppCompatActivity {
             checkUnreadNotifications();
         }
 
-        /* 
         updateBanner = findViewById(R.id.updateBanner);
         Button btnUpdateNow = findViewById(R.id.btnUpdateNow);
         if (btnUpdateNow != null) {
@@ -103,7 +102,14 @@ public class D_FeedActivity extends AppCompatActivity {
                 checkForUpdates();
             });
         }
-        */
+
+        View updateIcon = findViewById(R.id.UpdateIcon);
+        if (updateIcon != null) {
+            updateIcon.setOnClickListener(v -> {
+                Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show();
+                checkForUpdates();
+            });
+        }
 
         StaggeredGridLayoutManager layoutManager = new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
@@ -117,7 +123,7 @@ public class D_FeedActivity extends AppCompatActivity {
         swipeRefreshLayout.setOnRefreshListener(() -> fetchPostsFromFirebase());
         swipeRefreshLayout.setDistanceToTriggerSync(300);
 
-        // checkForUpdates();
+        checkForUpdates();
         fetchPostsFromFirebase();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -145,31 +151,14 @@ public class D_FeedActivity extends AppCompatActivity {
     };
 
     private void checkForUpdates() {
-        String versionUrl = "https://raw.githubusercontent.com/ErickJed07/project/main/app-updates/version.json?t=" + System.currentTimeMillis();
-        RequestQueue queue = Volley.newRequestQueue(this);
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, versionUrl,
-                response -> {
-                    try {
-                        JSONObject jsonObject = new JSONObject(response);
-                        if (jsonObject.getInt("version_code") > BuildConfig.VERSION_CODE) {
-                            pendingApkUrl = jsonObject.getString("apk_url");
-                            if (updateBanner != null) updateBanner.setVisibility(View.VISIBLE);
-                            showUpdateDialog(pendingApkUrl);
-                        }
-                    } catch (JSONException e) { e.printStackTrace(); }
-                }, error -> {});
-        stringRequest.setShouldCache(false);
-        queue.add(stringRequest);
+        UpdateHelper.checkForUpdates(this, apkUrl -> {
+            pendingApkUrl = apkUrl;
+            if (updateBanner != null) updateBanner.setVisibility(View.VISIBLE);
+        });
     }
 
     private void showUpdateDialog(String apkUrl) {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Update Available")
-                .setMessage("A new version of the app is available. Do you want to update?")
-                .setPositiveButton("Yes", (dialog, which) -> downloadUpdate(apkUrl))
-                .setNegativeButton("No", null)
-                .setCancelable(false)
-                .show();
+        UpdateHelper.showForcedUpdateDialog(this, apkUrl);
     }
 
     private void downloadUpdate(String apkUrl) {

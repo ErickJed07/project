@@ -59,13 +59,13 @@
 
     <!-- AI Screen No Model State -->
     <string name="ai_no_model_title">AI Try-On</string>
-    <string name="ai_no_model_desc">Pick an avatar or upload a full photo of yourself to see how clothes look on you.</string>
+    <string name="ai_no_model_desc">Pick an avatar or upload a photo of yourself to see how clothes look on you.</string>
     <string name="ai_select_model">Select Model</string>
 
     <!-- AI Validation Errors -->
     <string name="error_puffy_clothes">Model is wearing bulky or puffy clothes. Please use form-fitting attire for accurate measurements.</string>
-    <string name="error_not_full_body">Error: Full body (head to toe) visibility is required.</string>
-    <string name="error_obscured_joints">Body joints are obscured or not fully visible. Please ensure a clear full-body shot.</string>
+    <string name="error_not_full_body">Error: A person must be detected in the photo.</string>
+    <string name="error_obscured_joints">Body is obscured or not fully visible. Please ensure a clear shot of yourself.</string>
     <string name="error_ai_validation_failed">AI Validation failed. Please try again with a clearer photo.</string>
     <string name="error_low_resolution">Image resolution is too low. Please use a higher quality photo (at least 720p).</string>
     <string name="error_no_face_detected">No face detected. Please ensure your face is clearly visible.</string>

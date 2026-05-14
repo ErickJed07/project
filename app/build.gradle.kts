@@ -35,8 +35,12 @@ android {
         applicationId = "com.example.project"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.1"
+        versionCode = 16
+        versionName = "1.16"
+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // 2. Inject Cloudinary credentials into BuildConfig
@@ -117,9 +121,9 @@ dependencies {
     // UI extras
     implementation(libs.dotsindicator)
     implementation ("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-    implementation ("com.google.mlkit:image-labeling:17.0.7")
+    implementation ("com.google.android.gms:play-services-mlkit-image-labeling:16.0.8")
     implementation ("com.google.mlkit:pose-detection:17.0.0")
-    implementation ("com.google.mlkit:face-detection:16.1.7")
+    implementation ("com.google.android.gms:play-services-mlkit-face-detection:17.1.0")
     implementation ("androidx.palette:palette:1.0.0")
 
     // Gemini API

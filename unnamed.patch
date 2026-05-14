@@ -1,0 +1,17 @@
+Index: DEV_INSTRUCTIONS.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/DEV_INSTRUCTIONS.md b/DEV_INSTRUCTIONS.md
+--- a/DEV_INSTRUCTIONS.md	(revision 9e46ea5e2d71654e4ec14990655e63b6c47936cd)
++++ b/DEV_INSTRUCTIONS.md	(revision bee6fa0eec7c48afba6e63ba88aab41c21cd152c)
+@@ -6,7 +6,7 @@
+ 2.  **Update** the `app-updates/version.json` file with the new `version_code` and `version_name`.
+ 3.  **Run Gradle Build**: Execute `./gradlew :app:assembleDebug`.
+ 4.  **Copy APK**: Move the newly built APK from `app/build/outputs/apk/debug/app-debug.apk` to `app-updates/app-debug.apk`.
+-5.  **Git Commit**: Stage **ONLY** `app/build.gradle.kts`, `app-updates/version.json`, and `app-updates/app-debug.apk`. 
++5.  **Git Commit**: Stage **ONLY** `app/build.gradle.kts`, `app-updates/version.json`, `app-updates/app-debug.apk`, and `DEV_INSTRUCTIONS.md`.
+     - **CRITICAL**: Never use `git add .` or include `.idea/` files (like `workspace.xml`) in automated commits.
+     - Commit message: "Update app to version X.X (build Y)".
+ 

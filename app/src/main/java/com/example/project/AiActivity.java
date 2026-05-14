@@ -164,8 +164,8 @@ public class AiActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
 
-    private PoseDetector poseDetector;
     private FaceDetector faceDetector;
+    private PoseDetector poseDetector;
     private OkHttpClient httpClient;
 
     private final ActivityResultLauncher<String> cameraPermissionLauncher = registerForActivityResult(
@@ -1334,15 +1334,11 @@ public class AiActivity extends AppCompatActivity {
             Toast.makeText(this, "Scanning for face...", Toast.LENGTH_SHORT).show();
             validateFace(uri, faceValid -> {
                 if (faceValid) {
-                    Toast.makeText(this, "Scanning for full body...", Toast.LENGTH_SHORT).show();
-                    validateFullBody(uri, validationResult -> {
-                        if (validationResult == null) {
-                            // Upload to Cloudinary then save to Firebase
-                            uploadModelToCloudinary(uri);
-                        } else {
-                            // SHOW THE SPECIFIC ERROR REASON HERE
-                            Toast.makeText(this, validationResult, Toast.LENGTH_LONG).show();
-                        }
+                    Toast.makeText(this, "Validating pose...", Toast.LENGTH_SHORT).show();
+                    validatePose(uri, validationResult -> {
+                        // Always proceed to upload, ignoring pose validation failures
+                        // to allow non-full-body photos as requested.
+                        uploadModelToCloudinary(uri);
                     });
                 } else {
                     Toast.makeText(this, getString(R.string.error_no_face_detected), Toast.LENGTH_LONG).show();
@@ -1556,16 +1552,15 @@ public class AiActivity extends AppCompatActivity {
         }
     }
 
-    private void validateFullBody(Uri uri, Consumer<String> callback) {
+    private void validatePose(Uri uri, Consumer<String> callback) {
         try {
             InputImage image = InputImage.fromFilePath(this, uri);
             poseDetector.process(image)
                     .addOnSuccessListener(pose -> {
-                        if (checkPoseForFullBody(pose)) {
-                            // Local pose check passed, accepted immediately (GPT validation removed)
+                        if (checkPoseDetected(pose)) {
                             callback.accept(null);
                         } else {
-                            Log.d("AiActivity", "Pose detection failed: Not full body");
+                            Log.d("AiActivity", "Pose detection failed: No person detected");
                             callback.accept(getString(R.string.error_not_full_body));
                         }
                     })
@@ -1579,18 +1574,14 @@ public class AiActivity extends AppCompatActivity {
         }
     }
 
-
-    private boolean checkPoseForFullBody(Pose pose) {
-        // Required landmarks for a full body (head to toe)
+    private boolean checkPoseDetected(Pose pose) {
+        // Minimal requirement: Just ensure we detect the core upper body to confirm a person is present
         int[] requiredLandmarks = {
-                PoseLandmark.NOSE,
-                PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER,
-                PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP
+                PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER
         };
 
         for (int landmarkType : requiredLandmarks) {
             PoseLandmark landmark = pose.getPoseLandmark(landmarkType);
-            // Relaxed check for blurry images: lower likelihood threshold
             if (landmark == null || landmark.getInFrameLikelihood() < 0.3f) {
                 return false;
             }

@@ -51,6 +51,10 @@ public class A_HomeActivity extends AppCompatActivity {
         loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                UpdateHelper.checkForUpdates(A_HomeActivity.this, apkUrl -> {
+                    // UpdateHelper will show the dialog if an update is found
+                });
+                
                 // Go to the Login page
                 Intent intent = new Intent(A_HomeActivity.this, B_LoginActivity.class);
                 startActivity(intent); // Open the Login page
@@ -61,11 +65,16 @@ public class A_HomeActivity extends AppCompatActivity {
         signInButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                UpdateHelper.checkForUpdates(A_HomeActivity.this, apkUrl -> {
+                    // UpdateHelper will show the dialog if an update is found
+                });
+
                 // Go to the Sign In page
                 Intent intent = new Intent(A_HomeActivity.this, C_SignInActivity.class);
                 startActivity(intent); // Open the Sign In page
             }
         });
         
+        UpdateHelper.checkForUpdates(this, null);
     }
 }
