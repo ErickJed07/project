@@ -24,19 +24,27 @@ public class UpdateHelper {
                     try {
                         JSONObject jsonObject = new JSONObject(response);
                         int latestVersion = jsonObject.getInt("version_code");
+                        
+                        // DEBUG LOG:
+                        android.util.Log.d("UpdateHelper", "Current: " + BuildConfig.VERSION_CODE + " | Latest: " + latestVersion);
+
                         if (latestVersion > BuildConfig.VERSION_CODE) {
                             String apkUrl = jsonObject.getString("apk_url");
                             showForcedUpdateDialog(activity, apkUrl);
                             if (callback != null) callback.onUpdateAvailable(apkUrl);
                         } else {
                             if (callback == null) {
-                                Toast.makeText(activity, "App is up to date!", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(activity, "App is up to date! (V" + BuildConfig.VERSION_CODE + ")", Toast.LENGTH_SHORT).show();
                             }
                         }
                     } catch (JSONException e) {
                         e.printStackTrace();
+                        Toast.makeText(activity, "Update check error: JSON Error", Toast.LENGTH_SHORT).show();
                     }
-                }, error -> {});
+                }, error -> {
+                    error.printStackTrace();
+                    Toast.makeText(activity, "Update check error: Network Failed", Toast.LENGTH_SHORT).show();
+                });
         stringRequest.setShouldCache(false);
         queue.add(stringRequest);
     }
