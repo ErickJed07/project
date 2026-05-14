@@ -78,7 +78,7 @@ public class CategoryManager {
                 isWoman ? R.drawable.bagwoman : R.drawable.bag_man, R.color.cat_purple_bg));
 
         // Archive / Special Categories
-        categories.add(new CategoryItem("used_clothes", "Used", "Archive for used items",
+        categories.add(new CategoryItem("used_clothes", "Wash", "Items to be washed",
                 R.drawable.ic_check_badge, R.color.cat_green_bg));
 
         return categories;

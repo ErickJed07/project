@@ -52,6 +52,27 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
         holder.eventTitle.setText(event.getTitle());
         holder.eventTime.setText(event.getTime());
         
+        if (holder.eventDateLabel != null) {
+            String date = event.getDate();
+            if (date != null) {
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+                String today = sdf.format(cal.getTime());
+                cal.add(java.util.Calendar.DAY_OF_YEAR, 1);
+                String tomorrow = sdf.format(cal.getTime());
+                cal.add(java.util.Calendar.DAY_OF_YEAR, -2);
+                String yesterday = sdf.format(cal.getTime());
+                
+                holder.eventDateLabel.setVisibility(View.VISIBLE);
+                if (date.equals(today)) holder.eventDateLabel.setText("Today");
+                else if (date.equals(tomorrow)) holder.eventDateLabel.setText("Tomorrow");
+                else if (date.equals(yesterday)) holder.eventDateLabel.setText("Yesterday");
+                else holder.eventDateLabel.setText(date);
+            } else {
+                holder.eventDateLabel.setVisibility(View.GONE);
+            }
+        }
+        
         String reminder = event.getReminder();
         if (reminder != null && !reminder.equals("None")) {
             holder.reminderLayout.setVisibility(View.VISIBLE);
@@ -170,7 +191,7 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
     }
 
     public static class EventViewHolder extends RecyclerView.ViewHolder {
-        TextView eventTitle, eventTime, eventReminder;
+        TextView eventTitle, eventTime, eventReminder, eventDateLabel;
         ImageView eventImage;
         View reminderLayout;
 
@@ -181,6 +202,7 @@ public class E_Calendar_EventAdapter extends RecyclerView.Adapter<E_Calendar_Eve
             eventReminder = itemView.findViewById(R.id.eventReminder);
             reminderLayout = itemView.findViewById(R.id.reminderLayout);
             eventImage = itemView.findViewById(R.id.eventImage);
+            eventDateLabel = itemView.findViewById(R.id.tv_event_date_label);
         }
     }
 }

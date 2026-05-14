@@ -392,42 +392,68 @@ public class OutfitDetailsActivity extends AppCompatActivity {
     }
 
     private void moveItemToUsed(String uid, ClothingItem item, com.google.firebase.database.DatabaseReference eventItemRef) {
-        com.google.firebase.database.DatabaseReference oldCatRef = com.google.firebase.database.FirebaseDatabase.getInstance()
-                .getReference("Users").child(uid).child("categories").child(item.getCategoryId()).child("photos");
+        com.google.firebase.database.DatabaseReference usedRootRef = com.google.firebase.database.FirebaseDatabase.getInstance()
+                .getReference("Users").child(uid).child("categories").child("used_clothes");
 
-        com.google.firebase.database.DatabaseReference usedCatRef = com.google.firebase.database.FirebaseDatabase.getInstance()
-                .getReference("Users").child(uid).child("categories").child("used_clothes").child("photos");
-
-        oldCatRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+        usedRootRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
             @Override
             public void onDataChange(@androidx.annotation.NonNull com.google.firebase.database.DataSnapshot snapshot) {
-                for (com.google.firebase.database.DataSnapshot photoSnap : snapshot.getChildren()) {
+                // 1. Check if already in used_clothes (anywhere under it)
+                boolean alreadyInUsed = false;
+                com.google.firebase.database.DataSnapshot photosNode = snapshot.hasChild("photos") ? snapshot.child("photos") : snapshot;
+                for (com.google.firebase.database.DataSnapshot photoSnap : photosNode.getChildren()) {
+                    if ("photos".equals(photoSnap.getKey())) continue;
                     String url = photoSnap.child("imageUrl").getValue(String.class);
                     if (url == null) url = photoSnap.child("url").getValue(String.class);
-
                     if (url != null && url.equals(item.getImageUrl())) {
-                        Object data = photoSnap.getValue();
-                        
-                        String itemKey = photoSnap.getKey();
-                        if (itemKey == null) continue;
-
-                        // Preserve original category when moving to used archive
-                        if (data instanceof Map) {
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> dataMap = (Map<String, Object>) data;
-                            dataMap.put("originalCategory", item.getCategoryId());
-                            dataMap.put("movedToUsedAt", System.currentTimeMillis());
-                            dataMap.put("categoryId", "used_clothes");
-                        }
-
-                        usedCatRef.child(itemKey).setValue(data).addOnSuccessListener(aVoid -> {
-                            photoSnap.getRef().removeValue();
-                            // Update item category in event to avoid repeated moves
-                            eventItemRef.child("categoryId").setValue("used_clothes");
-                        });
-                        return;
+                        alreadyInUsed = true;
+                        break;
                     }
                 }
+
+                if (alreadyInUsed) {
+                    eventItemRef.child("categoryId").setValue("used_clothes");
+                    eventItemRef.child("originalCategory").setValue(item.getCategoryId());
+                    return;
+                }
+
+                // 2. Not in used_clothes, find it in its old category
+                com.google.firebase.database.DatabaseReference oldCatRef = com.google.firebase.database.FirebaseDatabase.getInstance()
+                        .getReference("Users").child(uid).child("categories").child(item.getCategoryId()).child("photos");
+
+                oldCatRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+                    @Override
+                    public void onDataChange(@androidx.annotation.NonNull com.google.firebase.database.DataSnapshot oldSnap) {
+                        for (com.google.firebase.database.DataSnapshot photoSnap : oldSnap.getChildren()) {
+                            String url = photoSnap.child("imageUrl").getValue(String.class);
+                            if (url == null) url = photoSnap.child("url").getValue(String.class);
+
+                            if (url != null && url.equals(item.getImageUrl())) {
+                                String itemKey = photoSnap.getKey();
+                                Object data = photoSnap.getValue();
+
+                                if (data instanceof Map && itemKey != null) {
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> dataMap = (Map<String, Object>) data;
+                                    dataMap.put("originalCategory", item.getCategoryId());
+                                    dataMap.put("movedToUsedAt", System.currentTimeMillis());
+                                    dataMap.put("categoryId", "used_clothes");
+
+                                    // Save to used_clothes/photos sub-node for consistency
+                                    usedRootRef.child("photos").child(itemKey).setValue(dataMap).addOnSuccessListener(aVoid -> {
+                                        photoSnap.getRef().removeValue();
+                                        eventItemRef.child("categoryId").setValue("used_clothes");
+                                        eventItemRef.child("originalCategory").setValue(item.getCategoryId());
+                                    });
+                                }
+                                return;
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@androidx.annotation.NonNull com.google.firebase.database.DatabaseError error) {}
+                });
             }
 
             @Override

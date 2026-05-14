@@ -14,6 +14,9 @@ public class ClothingItem {
     private List<String> occasions;
     private boolean favorite;
     private long timestamp;
+    private String originalCategory;
+    private String name;
+    private String status;
 
     public ClothingItem() {
         // Default constructor for Firebase
@@ -39,23 +42,46 @@ public class ClothingItem {
         this.timestamp = timestamp;
     }
 
+    public String getName() { return name; }
+    public void setName(Object name) { this.name = name != null ? name.toString() : null; }
+
+    public String getStatus() { return status; }
+    public void setStatus(Object status) { this.status = status != null ? status.toString() : null; }
+
+    public String getOriginalCategory() { return originalCategory; }
+    public void setOriginalCategory(Object originalCategory) { this.originalCategory = originalCategory != null ? originalCategory.toString() : null; }
+
     public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public void setId(Object id) { this.id = id != null ? id.toString() : null; }
 
     public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setImageUrl(Object imageUrl) { this.imageUrl = imageUrl != null ? imageUrl.toString() : null; }
 
     public String getCategoryId() { return categoryId; }
-    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+    public void setCategoryId(Object categoryId) { this.categoryId = categoryId != null ? categoryId.toString() : null; }
 
     public String getSize() { return size; }
-    public void setSize(String size) { this.size = size; }
+    public void setSize(Object size) { this.size = size != null ? size.toString() : null; }
 
     public String getSeason() { return season; }
-    public void setSeason(String season) { this.season = season; }
+    public void setSeason(Object season) {
+        if (season instanceof List) {
+            List<?> list = (List<?>) season;
+            this.season = !list.isEmpty() ? list.get(0).toString() : null;
+        } else {
+            this.season = season != null ? season.toString() : null;
+        }
+    }
 
     public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
+    public void setColor(Object color) {
+        if (color instanceof List) {
+            List<?> list = (List<?>) color;
+            this.color = !list.isEmpty() ? list.get(0).toString() : null;
+        } else {
+            this.color = color != null ? color.toString() : null;
+        }
+    }
 
     public List<String> getOccasions() { return occasions; }
     public void setOccasions(List<String> occasions) { this.occasions = occasions; }

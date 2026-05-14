@@ -15,8 +15,8 @@ import android.widget.Toast;
 
 import androidx.core.content.FileProvider;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.android.volley.Request;
@@ -68,7 +68,7 @@ public class D_FeedActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.feedrecyclerView);
         progressBar = findViewById(R.id.my_progress_bar);
 
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        StaggeredGridLayoutManager layoutManager = new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
 
         postList = new ArrayList<>();

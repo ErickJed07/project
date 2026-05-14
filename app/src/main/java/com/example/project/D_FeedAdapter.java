@@ -62,8 +62,8 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
         holder.menuOptions.setOnClickListener(v -> showPopupMenu(holder.menuOptions, postEvent));
         holder.userNameTextView.setText(postEvent.getUsername());
-        holder.captionTextView.setText(postEvent.getCaption());
-        holder.dateTextView.setText(getRelativeTime(postEvent.getDate()));
+        if (holder.captionTextView != null) holder.captionTextView.setText(postEvent.getCaption());
+        if (holder.dateTextView != null) holder.dateTextView.setText(getRelativeTime(postEvent.getDate()));
 
         String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
         final String finalCurrentUserId = currentUserId;
@@ -85,38 +85,27 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
         if (postEvent.getImageUrls() != null && !postEvent.getImageUrls().isEmpty()) {
             String firstImageUrl = postEvent.getImageUrls().get(0);
-            holder.viewPager2.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
-            if (isValidContextForGlide(context)) {
-                Glide.with(context).asBitmap().load(firstImageUrl).into(new CustomTarget<Bitmap>() {
-                    @Override public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                        int w = resource.getWidth();
-                        int h = resource.getHeight();
-                        if (w > 0) {
-                            float aspect = (float) h / w;
-                            int vpW = holder.viewPager2.getWidth() == 0 ? context.getResources().getDisplayMetrics().widthPixels : holder.viewPager2.getWidth();
-                            holder.viewPager2.getLayoutParams().height = (int) (vpW * aspect);
-                            holder.viewPager2.requestLayout();
-                        }
-                    }
-                    @Override public void onLoadCleared(@Nullable Drawable p) {}
-                });
+            
+            // Grid mode: use single ImageView
+            if (holder.postMainImage != null) {
+                Glide.with(context).load(firstImageUrl).centerCrop().into(holder.postMainImage);
             }
 
-            D_Feed_ImageViewAdapter imageAdapter = new D_Feed_ImageViewAdapter(context, postEvent.getImageUrls());
-            holder.viewPager2.setAdapter(imageAdapter);
-            holder.dotsIndicator.setViewPager2(holder.viewPager2);
-            holder.viewPager2.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-                @Override public void onPageSelected(int pos) { holder.photoIndicator.setText((pos + 1) + "/" + imageAdapter.getItemCount()); }
-            });
-            boolean multi = imageAdapter.getItemCount() > 1;
-            holder.dotsIndicator.setVisibility(multi ? View.VISIBLE : View.GONE);
-            holder.photoIndicator.setVisibility(multi ? View.VISIBLE : View.GONE);
-        } else holder.viewPager2.setVisibility(View.GONE);
+            // Compatibility with legacy viewpager if present
+            if (holder.viewPager2 != null && holder.viewPager2.getVisibility() == View.VISIBLE) {
+                D_Feed_ImageViewAdapter imageAdapter = new D_Feed_ImageViewAdapter(context, postEvent.getImageUrls());
+                holder.viewPager2.setAdapter(imageAdapter);
+                if (holder.dotsIndicator != null) holder.dotsIndicator.setViewPager2(holder.viewPager2);
+                holder.viewPager2.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                    @Override public void onPageSelected(int pos) { if (holder.photoIndicator != null) holder.photoIndicator.setText((pos + 1) + "/" + imageAdapter.getItemCount()); }
+                });
+            }
+        }
 
-        updateHeartIcon(holder.heartButton, postEvent.getHeartLiked(), currentUserId);
-        holder.heartNumTextView.setText(String.valueOf(postEvent.getHeartLiked() != null ? postEvent.getHeartLiked().size() : 0));
-        updateFavIcon(holder.favButton, postEvent.getFavList(), currentUserId);
-        holder.favNumTextView.setText(String.valueOf(postEvent.getFavList() != null ? postEvent.getFavList().size() : 0));
+        updateHeartIcon(holder.heartButton, holder.heartNumTextView, postEvent.getHeartLiked(), currentUserId);
+        holder.heartNumTextView.setText(formatCount(postEvent.getHeartLiked() != null ? postEvent.getHeartLiked().size() : 0));
+        updateFavIcon(holder.favButton, holder.favNumTextView, postEvent.getFavList(), currentUserId);
+        holder.favNumTextView.setText(formatCount(postEvent.getFavList() != null ? postEvent.getFavList().size() : 0));
 
         holder.profilePic.setOnClickListener(v -> {
             if (postAuthorId != null) {
@@ -148,8 +137,8 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                     Map<String, Boolean> likes = p.getHeartLiked() == null ? new HashMap<>() : p.getHeartLiked();
                     if (likes.containsKey(finalCurrentUserId)) likes.remove(finalCurrentUserId); else likes.put(finalCurrentUserId, true);
                     p.setHeartCount(likes.size()); p.setHeartLiked(likes); ref.setValue(p);
-                    holder.heartNumTextView.setText(String.valueOf(likes.size()));
-                    updateHeartIcon(holder.heartButton, likes, finalCurrentUserId);
+                    holder.heartNumTextView.setText(formatCount(likes.size()));
+                    updateHeartIcon(holder.heartButton, holder.heartNumTextView, likes, finalCurrentUserId);
                 }
                 @Override public void onCancelled(DatabaseError e) {}
             });
@@ -165,8 +154,8 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                     Map<String, Boolean> favs = p.getFavList() == null ? new HashMap<>() : p.getFavList();
                     if (favs.containsKey(finalCurrentUserId)) favs.remove(finalCurrentUserId); else favs.put(finalCurrentUserId, true);
                     p.setFavCount(favs.size()); p.setFavList(favs); ref.setValue(p);
-                    holder.favNumTextView.setText(String.valueOf(favs.size()));
-                    updateFavIcon(holder.favButton, favs, finalCurrentUserId);
+                    holder.favNumTextView.setText(formatCount(favs.size()));
+                    updateFavIcon(holder.favButton, holder.favNumTextView, favs, finalCurrentUserId);
                 }
                 @Override public void onCancelled(DatabaseError e) {}
             });
@@ -260,8 +249,29 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         return true;
     }
 
-    private void updateHeartIcon(ImageView b, Map<String, Boolean> m, String u) { b.setImageResource(m != null && m.containsKey(u) ? R.drawable.heart2 : R.drawable.heart); }
-    private void updateFavIcon(ImageView b, Map<String, Boolean> m, String u) { b.setImageResource(m != null && m.containsKey(u) ? R.drawable.fav2 : R.drawable.fav); }
+    private String formatCount(int count) {
+        if (count < 1000) return String.valueOf(count);
+        return String.format(Locale.US, "%.1fk", count / 1000.0);
+    }
+
+    private void updateHeartIcon(ImageView b, TextView t, Map<String, Boolean> m, String u) {
+        boolean liked = m != null && m.containsKey(u);
+        b.setImageResource(liked ? R.drawable.heart2 : R.drawable.heart);
+        if (liked) {
+            b.setColorFilter(android.graphics.Color.parseColor("#D946EF"));
+            if (t != null) t.setTextColor(android.graphics.Color.parseColor("#D946EF"));
+        } else {
+            b.setColorFilter(android.graphics.Color.BLACK);
+            if (t != null) t.setTextColor(android.graphics.Color.BLACK);
+        }
+    }
+
+    private void updateFavIcon(ImageView b, TextView t, Map<String, Boolean> m, String u) {
+        boolean faved = m != null && m.containsKey(u);
+        b.setImageResource(faved ? R.drawable.closet_2 : R.drawable.closet);
+        b.setColorFilter(android.graphics.Color.BLACK);
+        if (t != null) t.setTextColor(android.graphics.Color.BLACK);
+    }
 
     @Override public int getItemCount() { return postList.size(); }
 
@@ -279,7 +289,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
     }
 
     public static class PostViewHolder extends RecyclerView.ViewHolder {
-        ImageView profilePic, heartButton, favButton, shareButton, menuOptions;
+        ImageView profilePic, heartButton, favButton, shareButton, menuOptions, postMainImage;
         TextView userNameTextView, captionTextView, dateTextView, photoIndicator, favNumTextView, heartNumTextView;
         ViewPager2 viewPager2; WormDotsIndicator dotsIndicator;
         public PostViewHolder(View v) {
@@ -288,6 +298,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
             dateTextView = v.findViewById(R.id.postdate); viewPager2 = v.findViewById(R.id.post_Pic); photoIndicator = v.findViewById(R.id.photoIndicator);
             dotsIndicator = v.findViewById(R.id.dotsIndicator); heartButton = v.findViewById(R.id.heart_post); heartNumTextView = v.findViewById(R.id.heart_num);
             favButton = v.findViewById(R.id.fav_post); favNumTextView = v.findViewById(R.id.fav_num); shareButton = v.findViewById(R.id.share_post); menuOptions = v.findViewById(R.id.menu_options);
+            postMainImage = v.findViewById(R.id.post_main_image);
         }
     }
 }

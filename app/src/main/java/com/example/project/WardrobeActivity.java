@@ -35,7 +35,7 @@ public class WardrobeActivity extends AppCompatActivity {
     private final List<LaundryItem> laundryItemsList = new ArrayList<>();
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
-    private TextView tvTotalItems, tvUsedItems, tvScheduledLabel, tvLaundryLabel;
+    private TextView tvTotalItems, tvUsedItems, tvScheduledLabel, tvLaundryLabel, tvWashAll;
     private TextView tvLaundryVal;
     private View cvNoOutfits;
     private TextView tvNoOutfitsTitle, tvNoOutfitsDesc;
@@ -55,6 +55,7 @@ public class WardrobeActivity extends AppCompatActivity {
         tvLaundryVal = findViewById(R.id.tv_laundry_val);
         tvScheduledLabel = findViewById(R.id.tv_scheduled_label);
         tvLaundryLabel = findViewById(R.id.tv_laundry_label);
+        tvWashAll = findViewById(R.id.tv_wash_all);
         cvNoOutfits = findViewById(R.id.cv_no_outfits);
         tvNoOutfitsTitle = findViewById(R.id.tv_no_outfits_title);
         tvNoOutfitsDesc = findViewById(R.id.tv_no_outfits_desc);
@@ -75,7 +76,7 @@ public class WardrobeActivity extends AppCompatActivity {
 
         rvLaundryItems = findViewById(R.id.rv_laundry_items);
         rvLaundryItems.setLayoutManager(new LinearLayoutManager(this));
-        laundryAdapter = new LaundryAdapter(laundryItemsList, this::markAsCleaned);
+        laundryAdapter = new LaundryAdapter(laundryItemsList, this::unarchiveItem);
         rvLaundryItems.setAdapter(laundryAdapter);
 
         adapter = new WardrobeCategoryHorizontalAdapter(this, categoryList);
@@ -91,12 +92,120 @@ public class WardrobeActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        if (tvWashAll != null) {
+            tvWashAll.setOnClickListener(v -> washAllItems());
+        }
+
         fetchGenderAndLoadCategories();
         loadScheduledOutfits();
         loadLaundryStatus();
         loadLaundryItems();
         deduplicateUsedClothes();
         checkAndReturnUsedItems();
+        checkAndMovePastOutfitItems();
+    }
+
+    private void checkAndMovePastOutfitItems() {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+        DatabaseReference eventsRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("Events");
+
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+        String todayStr = sdf.format(cal.getTime());
+
+        eventsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot eventSnap : snapshot.getChildren()) {
+                    E_Calendar_Event event = eventSnap.getValue(E_Calendar_Event.class);
+                    if (event != null && event.getDate() != null && event.getDate().compareTo(todayStr) < 0) {
+                        DataSnapshot itemsSnap = eventSnap.child("items");
+                        if (itemsSnap.exists()) {
+                            for (DataSnapshot itemSnap : itemsSnap.getChildren()) {
+                                ClothingItem item = itemSnap.getValue(ClothingItem.class);
+                                if (item != null && item.getCategoryId() != null && !"used_clothes".equals(item.getCategoryId())) {
+                                    moveItemToUsed(uid, item, itemSnap.getRef());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
+    private void moveItemToUsed(String uid, ClothingItem item, DatabaseReference eventItemRef) {
+        DatabaseReference usedRootRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid).child("categories").child("used_clothes");
+
+        usedRootRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot usedSnapshot) {
+                // 1. Check if already in used_clothes (anywhere under it)
+                boolean alreadyInUsed = false;
+                DataSnapshot photosNode = usedSnapshot.hasChild("photos") ? usedSnapshot.child("photos") : usedSnapshot;
+                for (DataSnapshot photoSnap : photosNode.getChildren()) {
+                    if ("photos".equals(photoSnap.getKey())) continue;
+                    String url = photoSnap.child("imageUrl").getValue(String.class);
+                    if (url == null) url = photoSnap.child("url").getValue(String.class);
+                    if (url != null && url.equals(item.getImageUrl())) {
+                        alreadyInUsed = true;
+                        break;
+                    }
+                }
+
+                if (alreadyInUsed) {
+                    eventItemRef.child("categoryId").setValue("used_clothes");
+                    eventItemRef.child("originalCategory").setValue(item.getCategoryId());
+                    return;
+                }
+
+                // 2. Not in used_clothes, find it in its old category
+                DatabaseReference oldCatRef = FirebaseDatabase.getInstance().getReference("Users")
+                        .child(uid).child("categories").child(item.getCategoryId()).child("photos");
+
+                oldCatRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot oldSnap) {
+                        for (DataSnapshot photoSnap : oldSnap.getChildren()) {
+                            String url = photoSnap.child("imageUrl").getValue(String.class);
+                            if (url == null) url = photoSnap.child("url").getValue(String.class);
+
+                            if (url != null && url.equals(item.getImageUrl())) {
+                                String itemKey = photoSnap.getKey();
+                                Object data = photoSnap.getValue();
+
+                                if (data instanceof java.util.Map && itemKey != null) {
+                                    @SuppressWarnings("unchecked")
+                                    java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) data;
+                                    dataMap.put("originalCategory", item.getCategoryId());
+                                    dataMap.put("movedToUsedAt", System.currentTimeMillis());
+                                    dataMap.put("categoryId", "used_clothes");
+
+                                    // Save to used_clothes/photos sub-node for consistency
+                                    usedRootRef.child("photos").child(itemKey).setValue(dataMap).addOnSuccessListener(aVoid -> {
+                                        photoSnap.getRef().removeValue();
+                                        eventItemRef.child("categoryId").setValue("used_clothes");
+                                        eventItemRef.child("originalCategory").setValue(item.getCategoryId());
+                                    });
+                                }
+                                return;
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
 
     private void refreshData() {
@@ -106,7 +215,8 @@ public class WardrobeActivity extends AppCompatActivity {
         loadLaundryItems();
         deduplicateUsedClothes();
         checkAndReturnUsedItems();
-        
+        checkAndMovePastOutfitItems();
+
         // Hide refresh animation after a short delay or after data is loaded
         // For simplicity, we'll hide it after 1.5 seconds or when categories are loaded
         swipeRefreshLayout.postDelayed(() -> {
@@ -231,81 +341,51 @@ public class WardrobeActivity extends AppCompatActivity {
     private void loadLaundryItems() {
         if (mAuth.getCurrentUser() == null) return;
         String uid = mAuth.getCurrentUser().getUid();
-        DatabaseReference usedCatRef = dbRef.child(uid).child("categories").child("used_clothes").child("photos");
-        DatabaseReference eventsRef = dbRef.child(uid).child("Events");
+        DatabaseReference usedCatRef = dbRef.child(uid).child("categories").child("used_clothes");
 
-        // Use a ValueEventListener to listen to both sources for a complete "Used" list
+        // Source strictly from the used_clothes category in Firebase
         usedCatRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot usedSnapshot) {
                 final List<LaundryItem> combinedList = new ArrayList<>();
-                final java.util.Set<String> seenIds = new java.util.HashSet<>();
-
-                // 1. Load manually archived items from 'used_clothes'
-                for (DataSnapshot photoSnap : usedSnapshot.getChildren()) {
+                
+                DataSnapshot photosNode = usedSnapshot.hasChild("photos") ? usedSnapshot.child("photos") : usedSnapshot;
+                for (DataSnapshot photoSnap : photosNode.getChildren()) {
+                    String key = photoSnap.getKey();
+                    if ("photos".equals(key)) continue;
+                    
                     try {
                         LaundryItem item = photoSnap.getValue(LaundryItem.class);
-                        if (item == null) {
-                            java.util.Map<String, Object> map = (java.util.Map<String, Object>) photoSnap.getValue();
-                            if (map != null) item = parseLaundryItemManually(photoSnap.getKey(), map);
-                        } else {
-                            item.setId(photoSnap.getKey());
-                        }
-
-                        if (item != null && item.getId() != null) {
+                        if (item != null) {
+                            item.setId(key);
                             if (item.getImageUrl() == null) item.setImageUrl(photoSnap.child("url").getValue(String.class));
                             combinedList.add(item);
-                            seenIds.add(item.getId());
+                        } else {
+                            // Manual fallback if item is null
+                            java.util.Map<String, Object> map = (java.util.Map<String, Object>) photoSnap.getValue();
+                            if (map != null) combinedList.add(parseLaundryItemManually(key, map));
                         }
                     } catch (Exception e) {
-                        android.util.Log.e("WardrobeActivity", "Error parsing used folder item", e);
+                        android.util.Log.e("WardrobeActivity", "Error parsing laundry item: " + key, e);
                     }
                 }
+                
+                laundryItemsList.clear();
+                laundryItemsList.addAll(combinedList);
+                laundryAdapter.notifyDataSetChanged();
 
-                // 2. Load items from Today's and Past events (Virtual Used Clothes)
-                eventsRef.addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot eventSnapshot) {
-                        java.util.Calendar cal = java.util.Calendar.getInstance();
-                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
-                        String todayStr = sdf.format(cal.getTime());
+                if (tvUsedItems != null) {
+                    tvUsedItems.setText(String.valueOf(laundryItemsList.size()));
+                }
 
-                        for (DataSnapshot eventSnap : eventSnapshot.getChildren()) {
-                            E_Calendar_Event event = eventSnap.getValue(E_Calendar_Event.class);
-                            // Include Today's outfits AND Past outfits
-                            if (event != null && event.getDate() != null && event.getDate().compareTo(todayStr) <= 0) {
-                                if (event.getItems() != null) {
-                                    for (ClothingItem cItem : event.getItems()) {
-                                        if (cItem != null && cItem.getId() != null && !seenIds.contains(cItem.getId())) {
-                                            LaundryItem lItem = convertToLaundryItem(cItem);
-                                            if (lItem.getMovedToUsedAt() == 0) lItem.setMovedToUsedAt(event.getTimestamp());
-                                            combinedList.add(lItem);
-                                            seenIds.add(lItem.getId());
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        laundryItemsList.clear();
-                        laundryItemsList.addAll(combinedList);
-                        laundryAdapter.notifyDataSetChanged();
-
-                        if (tvUsedItems != null) {
-                            tvUsedItems.setText(String.valueOf(laundryItemsList.size()));
-                        }
-
-                        if (laundryItemsList.isEmpty()) {
-                            rvLaundryItems.setVisibility(View.GONE);
-                        } else {
-                            rvLaundryItems.setVisibility(View.VISIBLE);
-                        }
-                        updateScheduleEmptyState();
-                    }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {}
-                });
+                if (laundryItemsList.isEmpty()) {
+                    rvLaundryItems.setVisibility(View.GONE);
+                    if (tvWashAll != null) tvWashAll.setVisibility(View.GONE);
+                } else {
+                    rvLaundryItems.setVisibility(View.VISIBLE);
+                    if (tvWashAll != null) tvWashAll.setVisibility(View.VISIBLE);
+                }
+                updateScheduleEmptyState();
             }
 
             @Override
@@ -329,13 +409,7 @@ public class WardrobeActivity extends AppCompatActivity {
     }
 
     private void updateScheduleEmptyState() {
-        if (scheduledEventsList.isEmpty() && laundryItemsList.isEmpty()) {
-            cvNoOutfits.setVisibility(View.VISIBLE);
-            tvNoOutfitsTitle.setText(R.string.no_outfits_scheduled);
-            tvNoOutfitsDesc.setText(R.string.plan_your_looks);
-        } else {
-            cvNoOutfits.setVisibility(View.GONE);
-        }
+        // This is now handled inside loadScheduledOutfits and loadLaundryItems
     }
 
     private LaundryItem parseLaundryItemManually(String id, java.util.Map<String, Object> map) {
@@ -372,21 +446,44 @@ public class WardrobeActivity extends AppCompatActivity {
         return item;
     }
 
-    private void markAsCleaned(LaundryItem item) {
-        if (mAuth.getCurrentUser() == null || item.getId() == null || item.getOriginalCategory() == null) {
-            Toast.makeText(this, "Cannot mark as cleaned: missing info", Toast.LENGTH_SHORT).show();
+    private void washAllItems() {
+        if (laundryItemsList.isEmpty()) return;
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Wash All Clothes")
+                .setMessage("Are you sure you want to return all " + laundryItemsList.size() + " items to your wardrobe?")
+                .setPositiveButton("Wash All", (dialog, which) -> {
+                    List<LaundryItem> itemsToWash = new ArrayList<>(laundryItemsList);
+                    for (LaundryItem item : itemsToWash) {
+                        unarchiveItem(item);
+                    }
+                    Toast.makeText(this, "Washing process started", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void unarchiveItem(LaundryItem item) {
+        if (mAuth.getCurrentUser() == null || item.getId() == null) {
+            Toast.makeText(this, "Cannot wash item: missing ID", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        String targetCategory = item.getOriginalCategory();
+        if (targetCategory == null || targetCategory.isEmpty() || "used_clothes".equals(targetCategory)) {
+            // Fallback for older items without metadata
+            targetCategory = "Tops"; 
         }
 
         String uid = mAuth.getCurrentUser().getUid();
         DatabaseReference usedRef = dbRef.child(uid).child("categories").child("used_clothes").child("photos").child(item.getId());
-        DatabaseReference targetRef = dbRef.child(uid).child("categories").child(item.getOriginalCategory()).child("photos").child(item.getId());
+        DatabaseReference targetRef = dbRef.child(uid).child("categories").child(targetCategory).child("photos").child(item.getId());
 
-        // Copy back to original category
+        // Copy back to category
         java.util.Map<String, Object> cleanData = new java.util.HashMap<>();
         cleanData.put("id", item.getId());
         cleanData.put("imageUrl", item.getImageUrl());
-        cleanData.put("categoryId", item.getOriginalCategory());
+        cleanData.put("categoryId", targetCategory);
         cleanData.put("size", item.getSize());
         cleanData.put("season", item.getSeason());
         cleanData.put("color", item.getColor());
@@ -394,12 +491,16 @@ public class WardrobeActivity extends AppCompatActivity {
         cleanData.put("favorite", item.isFavorite());
         cleanData.put("timestamp", System.currentTimeMillis());
 
+        final String finalCategory = targetCategory;
         targetRef.setValue(cleanData).addOnSuccessListener(aVoid -> {
             usedRef.removeValue();
-            Toast.makeText(this, "Item marked as cleaned", Toast.LENGTH_SHORT).show();
+            // Also try to remove from parent if it was stored directly there
+            dbRef.child(uid).child("categories").child("used_clothes").child(item.getId()).removeValue();
+            
+            Toast.makeText(this, "Item returned to " + finalCategory, Toast.LENGTH_SHORT).show();
             dbRef.child(uid).child("lastLaundryAt").setValue(System.currentTimeMillis());
         }).addOnFailureListener(e -> {
-            Toast.makeText(this, "Failed to clean item", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Failed to wash item", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -439,42 +540,38 @@ public class WardrobeActivity extends AppCompatActivity {
                 java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
                 
                 String todayStr = sdf.format(cal.getTime());
-                cal.add(java.util.Calendar.DAY_OF_YEAR, 1);
-                String tomorrowStr = sdf.format(cal.getTime());
-                cal.add(java.util.Calendar.DAY_OF_YEAR, -2);
+                cal.add(java.util.Calendar.DAY_OF_YEAR, -1);
                 String yesterdayStr = sdf.format(cal.getTime());
+                // For future, we just look at anything > todayStr
 
                 List<E_Calendar_Event> todayEvents = new ArrayList<>();
-                List<E_Calendar_Event> tomorrowEvents = new ArrayList<>();
-                List<E_Calendar_Event> yesterdayEvents = new ArrayList<>();
+                List<E_Calendar_Event> otherEvents = new ArrayList<>();
 
                 for (DataSnapshot eventSnap : snapshot.getChildren()) {
                     try {
                         E_Calendar_Event event = eventSnap.getValue(E_Calendar_Event.class);
                         if (event != null) {
                             event.setId(eventSnap.getKey());
-                            if (todayStr.equals(event.getDate())) todayEvents.add(event);
-                            else if (tomorrowStr.equals(event.getDate())) tomorrowEvents.add(event);
-                            else if (yesterdayStr.equals(event.getDate())) yesterdayEvents.add(event);
+                            String date = event.getDate();
+                            if (todayStr.equals(date)) {
+                                todayEvents.add(event);
+                            } else if (date != null && (date.equals(yesterdayStr) || date.compareTo(todayStr) > 0)) {
+                                otherEvents.add(event);
+                            }
                         }
                     } catch (Exception e) {
                         android.util.Log.e("WardrobeActivity", "Error parsing event: " + eventSnap.getKey(), e);
                     }
                 }
 
+                // Sort other events by date
+                java.util.Collections.sort(otherEvents, (e1, e2) -> e1.getDate().compareTo(e2.getDate()));
+
                 scheduledEventsList.clear();
-                if (!todayEvents.isEmpty()) {
-                    tvScheduledLabel.setText(R.string.scheduled_today);
-                    scheduledEventsList.addAll(todayEvents);
-                } else if (!tomorrowEvents.isEmpty()) {
-                    tvScheduledLabel.setText(R.string.scheduled_tomorrow);
-                    scheduledEventsList.addAll(tomorrowEvents);
-                } else if (!yesterdayEvents.isEmpty()) {
-                    tvScheduledLabel.setText(R.string.scheduled_yesterday);
-                    scheduledEventsList.addAll(yesterdayEvents);
-                } else {
-                    tvScheduledLabel.setText(R.string.scheduled_outfits);
-                }
+                scheduledEventsList.addAll(todayEvents);
+                scheduledEventsList.addAll(otherEvents);
+
+                tvScheduledLabel.setText(R.string.scheduled_outfits);
 
                 if (scheduledEventsList.isEmpty()) {
                     rvScheduledEvents.setVisibility(View.GONE);
@@ -482,7 +579,15 @@ public class WardrobeActivity extends AppCompatActivity {
                     rvScheduledEvents.setVisibility(View.VISIBLE);
                     scheduledEventsAdapter.notifyDataSetChanged();
                 }
-                updateScheduleEmptyState();
+                
+                // Show "No Outfits Scheduled" if TODAY is empty
+                if (todayEvents.isEmpty()) {
+                    cvNoOutfits.setVisibility(View.VISIBLE);
+                    tvNoOutfitsTitle.setText("No Outfits Scheduled Today");
+                    tvNoOutfitsDesc.setText("Plan your look for today or check upcoming outfits below.");
+                } else {
+                    cvNoOutfits.setVisibility(View.GONE);
+                }
             }
 
             @Override
@@ -499,23 +604,44 @@ public class WardrobeActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 categoryList.clear();
                 int totalItems = 0;
-                
-                // Calculate total items and load categories
-                for (CategoryManager.CategoryItem fixedItem : CategoryManager.getCategories(isWoman)) {
-                    // Skip 'used_clothes' as it has its own dedicated section now
-                    if ("used_clothes".equals(fixedItem.id)) continue;
+                long usedItemsCount = 0;
 
+                for (CategoryManager.CategoryItem fixedItem : CategoryManager.getCategories(isWoman)) {
                     long itemCount = 0;
                     DataSnapshot categorySnapshot = snapshot.child(fixedItem.id);
-                    if (categorySnapshot.exists() && categorySnapshot.hasChild("photos")) {
-                        itemCount = categorySnapshot.child("photos").getChildrenCount();
+                    
+                    if (categorySnapshot.exists()) {
+                        // More robust counting: only count valid item objects
+                        DataSnapshot photosNode = categorySnapshot.hasChild("photos") ? 
+                                categorySnapshot.child("photos") : categorySnapshot;
+                        
+                        for (DataSnapshot child : photosNode.getChildren()) {
+                            if ("photos".equals(child.getKey())) continue;
+                            
+                            // Check if this node is an object containing item data
+                            if (child.getValue() instanceof java.util.Map) {
+                                java.util.Map<?, ?> map = (java.util.Map<?, ?>) child.getValue();
+                                if (map.containsKey("imageUrl") || map.containsKey("url")) {
+                                    itemCount++;
+                                }
+                            }
+                        }
+                    }
+
+                    if ("used_clothes".equals(fixedItem.id)) {
+                        usedItemsCount = itemCount;
+                    } else {
                         totalItems += itemCount;
                     }
+
                     categoryList.add(new ViewCategoriesActivity.CategoryModel(fixedItem.id, fixedItem.name, fixedItem.iconRes, (int) itemCount));
                 }
 
                 if (tvTotalItems != null) {
                     tvTotalItems.setText(String.valueOf(totalItems));
+                }
+                if (tvUsedItems != null) {
+                    tvUsedItems.setText(String.valueOf(usedItemsCount));
                 }
                 adapter.updateList(new ArrayList<>(categoryList));
             }

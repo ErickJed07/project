@@ -86,7 +86,7 @@ public class LaundryAdapter extends RecyclerView.Adapter<LaundryAdapter.LaundryV
             ivItemPhoto = itemView.findViewById(R.id.iv_item_photo);
             tvItemName = itemView.findViewById(R.id.tv_item_name);
             tvCleanTimer = itemView.findViewById(R.id.tv_clean_timer);
-            btnCleaned = itemView.findViewById(R.id.btn_cleaned);
+            btnCleaned = itemView.findViewById(R.id.btn_wash);
         }
     }
 }

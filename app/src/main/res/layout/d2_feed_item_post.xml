@@ -4,230 +4,144 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="12dp"
-    android:layout_marginTop="12dp"
-    android:layout_marginBottom="4dp"
+    android:layout_margin="4dp"
     app:cardBackgroundColor="@color/white"
-    app:cardCornerRadius="16dp"
+    app:cardCornerRadius="24dp"
     app:cardElevation="2dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="12dp">
+        android:layout_height="wrap_content">
 
-        <!-- Header -->
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/profile_pic"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="12dp"
+        <!-- Main Image -->
+        <ImageView
+            android:id="@+id/post_main_image"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:scaleType="centerCrop"
-            android:src="@drawable/profile"
-            app:layout_constraintStart_toStartOf="parent"
+            android:background="#F0F0F0"
+            app:layout_constraintDimensionRatio="3:4"
             app:layout_constraintTop_toTopOf="parent"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+            tools:src="@drawable/image1" />
 
-        <TextView
-            android:id="@+id/userName_post"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:fontFamily="@font/poppins"
-            android:text="Name"
-            android:textColor="@color/black"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toTopOf="@+id/postdate"
-            app:layout_constraintEnd_toStartOf="@+id/menu_options"
-            app:layout_constraintStart_toEndOf="@+id/profile_pic"
-            app:layout_constraintTop_toTopOf="@+id/profile_pic"
-            app:layout_constraintVertical_chainStyle="packed" />
+        <!-- User Info Overlay Pill -->
+        <LinearLayout
+            android:id="@+id/ll_user_overlay"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_margin="12dp"
+            android:background="@drawable/overlay_button_bg"
+            android:backgroundTint="#80000000"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/postdate"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/poppins"
-            android:text="date"
-            android:textColor="@color/text_label"
-            android:textSize="12sp"
-            app:layout_constraintBottom_toBottomOf="@+id/profile_pic"
-            app:layout_constraintEnd_toEndOf="@+id/userName_post"
-            app:layout_constraintStart_toStartOf="@+id/userName_post"
-            app:layout_constraintTop_toBottomOf="@+id/userName_post" />
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/profile_pic"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                tools:src="@drawable/profile" />
 
+            <TextView
+                android:id="@+id/userName_post"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/poppins"
+                android:maxLines="1"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="ezie pezi" />
+        </LinearLayout>
+
+        <!-- Menu Options (Hidden but useful for logic) -->
         <ImageView
             android:id="@+id/menu_options"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:layout_marginEnd="8dp"
-            android:padding="6dp"
-            android:src="@drawable/dots"
-            app:layout_constraintBottom_toBottomOf="@+id/profile_pic"
+            android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/profile_pic"
-            app:tint="@color/black" />
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Caption -->
-        <TextView
-            android:id="@+id/caption_post"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="12dp"
-            android:fontFamily="@font/poppins"
-            android:text="Caption goes here..."
-            android:textColor="@color/black"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/profile_pic" />
-
-        <!-- Media ViewPager Area -->
+        <!-- Bottom Actions Bar -->
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/cl_post_media_container"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginHorizontal="12dp"
-            android:layout_marginTop="12dp"
-            app:layout_constraintDimensionRatio="1:1"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/caption_post">
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
-
-                <androidx.viewpager2.widget.ViewPager2
-                    android:id="@+id/post_Pic"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:id="@+id/photoIndicator"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="12dp"
-                android:background="@drawable/overlay_button_bg"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                android:text="1/5"
-                android:textColor="@color/white"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <!-- Indicator -->
-        <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator
-            android:id="@+id/dotsIndicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:dotsColor="#E0E0E0"
-            app:dotsSize="6dp"
-            app:dotsSpacing="4dp"
-            app:selectedDotColor="@color/pure_color"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cl_post_media_container" />
-
-        <!-- Interaction Bar -->
-        <LinearLayout
-            android:id="@+id/ll_interactions"
+            android:id="@+id/cl_actions"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
+            android:layout_height="44dp"
             android:paddingHorizontal="12dp"
-            app:layout_constraintTop_toBottomOf="@+id/dotsIndicator">
+            app:layout_constraintTop_toBottomOf="@id/post_main_image">
 
             <ImageView
                 android:id="@+id/heart_post"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:padding="2dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/heart"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
                 app:tint="@color/black" />
 
             <TextView
                 android:id="@+id/heart_num"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="4dp"
                 android:fontFamily="@font/poppins"
-                android:text="0"
                 android:textColor="@color/black"
-                android:textSize="14sp" />
-
-            <Space
-                android:layout_width="16dp"
-                android:layout_height="match_parent" />
+                android:textSize="12sp"
+                app:layout_constraintBottom_toBottomOf="@id/heart_post"
+                app:layout_constraintStart_toEndOf="@id/heart_post"
+                app:layout_constraintTop_toTopOf="@id/heart_post"
+                tools:text="1.2k" />
 
             <ImageView
                 android:id="@+id/fav_post"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:padding="2dp"
-                android:src="@drawable/fav"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/closet"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/heart_num"
+                app:layout_constraintTop_toTopOf="parent"
                 app:tint="@color/black" />
 
             <TextView
                 android:id="@+id/fav_num"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="4dp"
                 android:fontFamily="@font/poppins"
-                android:text="0"
                 android:textColor="@color/black"
-                android:textSize="14sp" />
+                android:textSize="12sp"
+                app:layout_constraintBottom_toBottomOf="@id/fav_post"
+                app:layout_constraintStart_toEndOf="@id/fav_post"
+                app:layout_constraintTop_toTopOf="@id/fav_post"
+                tools:text="340" />
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+            <ImageView
+                android:id="@+id/share_post"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/share"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/black" />
 
-            <LinearLayout
-                android:id="@+id/sharebutton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp">
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <ImageView
-                    android:id="@+id/share_post"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:padding="2dp"
-                    android:src="@drawable/share"
-                    app:tint="@color/black" />
-
-                <TextView
-                    android:id="@+id/share_num"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:fontFamily="@font/poppins"
-                    android:text="Share"
-                    android:textColor="@color/black"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-        </LinearLayout>
+        <!-- Compatibility placeholders -->
+        <TextView android:id="@+id/postdate" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
+        <TextView android:id="@+id/caption_post" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
+        <androidx.viewpager2.widget.ViewPager2 android:id="@+id/post_Pic" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
+        <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator android:id="@+id/dotsIndicator" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
+        <TextView android:id="@+id/photoIndicator" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
 </com.google.android.material.card.MaterialCardView>

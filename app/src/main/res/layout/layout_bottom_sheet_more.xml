@@ -76,67 +76,6 @@
         android:layout_width="match_parent"
         android:layout_height="12dp" />
 
-    <!-- Mark as Used -->
-    <LinearLayout
-        android:id="@+id/menuMarkUsed"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingVertical="12dp">
-
-        <View
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_circle_white"
-            android:backgroundTint="#E8F5E9" />
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="-36dp"
-            android:contentDescription="@string/mark_as_used"
-            android:src="@drawable/ic_check_badge"
-            app:tint="#4CAF50" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/mark_as_used"
-                android:textColor="@color/black"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/mark_as_used_desc"
-                android:textColor="@color/text_label"
-                android:textSize="14sp" />
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:contentDescription="@null"
-            android:src="@drawable/arrowright"
-            app:tint="#CCCCCC" />
-    </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="12dp" />
-
     <!-- Delete Item -->
     <LinearLayout
         android:id="@+id/menuDelete"

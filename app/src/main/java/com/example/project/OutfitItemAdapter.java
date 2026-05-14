@@ -34,10 +34,15 @@ public class OutfitItemAdapter extends RecyclerView.Adapter<OutfitItemAdapter.Vi
         
         // Resolve category name
         String categoryId = item.getCategoryId();
-        String displayName = categoryId;
-        if (categoryId != null) {
-            CategoryManager.CategoryItem cat = CategoryManager.getCategoryById(categoryId, true);
-            if (cat == null) cat = CategoryManager.getCategoryById(categoryId, false);
+        String originalCategory = item.getOriginalCategory();
+        
+        // If archived, use original category for the label
+        String lookupId = ("used_clothes".equals(categoryId) && originalCategory != null) ? originalCategory : categoryId;
+        
+        String displayName = lookupId;
+        if (lookupId != null) {
+            CategoryManager.CategoryItem cat = CategoryManager.getCategoryById(lookupId, true);
+            if (cat == null) cat = CategoryManager.getCategoryById(lookupId, false);
             if (cat != null) displayName = cat.name;
         }
         

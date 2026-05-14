@@ -387,12 +387,29 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="32dp"
                     android:fontFamily="@font/poppins"
-                    android:text="Used Clothes"
+                    android:text="Laundry"
                     android:textColor="@color/black"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/fl_scheduled_container" />
+
+                <TextView
+                    android:id="@+id/tv_wash_all"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:fontFamily="@font/poppins"
+                    android:padding="4dp"
+                    android:text="Wash All"
+                    android:textColor="@color/pure_color"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    app:layout_constraintBottom_toBottomOf="@id/tv_laundry_label"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/tv_laundry_label" />
 
                 <FrameLayout
                     android:id="@+id/fl_laundry_container"

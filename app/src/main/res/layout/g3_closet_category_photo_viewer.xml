@@ -105,22 +105,38 @@
                 android:background="#DDDDDD" />
 
             <!-- Status -->
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="24dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/tvcategory"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="false"
-                    android:layout_centerVertical="true"
                     android:text="@string/used"
                     android:textColor="@color/purple_primary"
                     android:textSize="24sp"
                     android:textStyle="bold" />
-            </RelativeLayout>
+
+                <TextView
+                    android:id="@+id/tvUsedStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_pill"
+                    android:backgroundTint="#FFE5E5"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="4dp"
+                    android:text="Used"
+                    android:textColor="@color/red"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
 
             <!-- Attributes: Size and Color -->
             <LinearLayout

@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
@@ -36,6 +37,7 @@ import java.util.Map;
 public class ViewCategoriesActivity extends AppCompatActivity {
 
     private RecyclerView rvCategories;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private WardrobeCategoryAdapter adapter;
     private List<CategoryModel> categoryList = new ArrayList<>();
     private FirebaseAuth mAuth;
@@ -53,6 +55,11 @@ public class ViewCategoriesActivity extends AppCompatActivity {
 
         rvCategories = findViewById(R.id.rv_categories);
         rvCategories.setLayoutManager(new GridLayoutManager(this, 2));
+
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setOnRefreshListener(this::loadCategories);
+        }
 
         adapter = new WardrobeCategoryAdapter(this, categoryList);
         rvCategories.setAdapter(adapter);
@@ -124,8 +131,22 @@ public class ViewCategoriesActivity extends AppCompatActivity {
                 for (CategoryManager.CategoryItem fixedItem : CategoryManager.getCategories(isWomanSelected)) {
                     long itemCount = 0;
                     DataSnapshot categorySnapshot = snapshot.child(fixedItem.id);
-                    if (categorySnapshot.exists() && categorySnapshot.hasChild("photos")) {
-                        itemCount = categorySnapshot.child("photos").getChildrenCount();
+                    if (categorySnapshot.exists()) {
+                        // Source of truth: only count valid item objects
+                        DataSnapshot photosNode = categorySnapshot.hasChild("photos") ? 
+                                categorySnapshot.child("photos") : categorySnapshot;
+                        
+                        for (DataSnapshot child : photosNode.getChildren()) {
+                            if ("photos".equals(child.getKey())) continue;
+                            
+                            if (child.getValue() instanceof java.util.Map) {
+                                java.util.Map<?, ?> map = (java.util.Map<?, ?>) child.getValue();
+                                if (map.containsKey("imageUrl") || map.containsKey("url")) {
+                                    itemCount++;
+                                }
+                            }
+                        }
+
                         // Exclude "Used" category from "All Clothes" total count
                         if (!"used_clothes".equals(fixedItem.id)) {
                             totalItems += itemCount;
@@ -159,21 +180,42 @@ public class ViewCategoriesActivity extends AppCompatActivity {
     private void loadUsedItemCount() {
         if (mAuth.getCurrentUser() == null) return;
         String uid = mAuth.getCurrentUser().getUid();
-        DatabaseReference usedCatRef = dbRef.child(uid).child("categories").child("used_clothes").child("photos");
+        DatabaseReference usedCatRef = dbRef.child(uid).child("categories").child("used_clothes");
 
+        // Source count strictly from the used_clothes category node
         usedCatRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                long count = snapshot.getChildrenCount();
+                long count = 0;
+                DataSnapshot photosNode = snapshot.hasChild("photos") ? 
+                        snapshot.child("photos") : snapshot;
+                
+                for (DataSnapshot child : photosNode.getChildren()) {
+                    if ("photos".equals(child.getKey())) continue;
+                    
+                    if (child.getValue() instanceof java.util.Map) {
+                        java.util.Map<?, ?> map = (java.util.Map<?, ?>) child.getValue();
+                        if (map.containsKey("imageUrl") || map.containsKey("url")) {
+                            count++;
+                        }
+                    }
+                }
 
                 // Update the count for the "used_clothes" item in the existing list
+                boolean updated = false;
                 for (int i = 0; i < categoryList.size(); i++) {
                     if ("used_clothes".equals(categoryList.get(i).id)) {
                         categoryList.get(i).itemCount = (int) count;
+                        updated = true;
                         break;
                     }
                 }
-                adapter.updateList(new ArrayList<>(categoryList));
+                if (updated) {
+                    adapter.updateList(new ArrayList<>(categoryList));
+                }
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
             }
 
             @Override
@@ -217,24 +259,32 @@ public class ViewCategoriesActivity extends AppCompatActivity {
     }
 
     private void moveItemToUsed(String uid, ClothingItem item, DatabaseReference eventItemRef) {
-        DatabaseReference usedCatRef = FirebaseDatabase.getInstance().getReference("Users")
-                .child(uid).child("categories").child("used_clothes").child("photos");
+        DatabaseReference usedRootRef = FirebaseDatabase.getInstance().getReference("Users")
+                .child(uid).child("categories").child("used_clothes");
 
-        // FIRST: Check if already in used_clothes to avoid unnecessary work and duplicates
-        usedCatRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        usedRootRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot photoSnap : snapshot.getChildren()) {
+            public void onDataChange(@NonNull DataSnapshot usedSnapshot) {
+                // 1. Check if already in used_clothes (anywhere under it)
+                boolean alreadyInUsed = false;
+                DataSnapshot photosNode = usedSnapshot.hasChild("photos") ? usedSnapshot.child("photos") : usedSnapshot;
+                for (DataSnapshot photoSnap : photosNode.getChildren()) {
+                    if ("photos".equals(photoSnap.getKey())) continue;
                     String url = photoSnap.child("imageUrl").getValue(String.class);
                     if (url == null) url = photoSnap.child("url").getValue(String.class);
                     if (url != null && url.equals(item.getImageUrl())) {
-                        // Already in Used, just update the event record and stop
-                        eventItemRef.child("categoryId").setValue("used_clothes");
-                        return;
+                        alreadyInUsed = true;
+                        break;
                     }
                 }
 
-                // SECOND: Not in Used, so find it in its old category and move it
+                if (alreadyInUsed) {
+                    eventItemRef.child("categoryId").setValue("used_clothes");
+                    eventItemRef.child("originalCategory").setValue(item.getCategoryId());
+                    return;
+                }
+
+                // 2. Not in used_clothes, find it in its old category
                 DatabaseReference oldCatRef = FirebaseDatabase.getInstance().getReference("Users")
                         .child(uid).child("categories").child(item.getCategoryId()).child("photos");
 
@@ -254,10 +304,13 @@ public class ViewCategoriesActivity extends AppCompatActivity {
                                     Map<String, Object> dataMap = (Map<String, Object>) data;
                                     dataMap.put("originalCategory", item.getCategoryId());
                                     dataMap.put("movedToUsedAt", System.currentTimeMillis());
+                                    dataMap.put("categoryId", "used_clothes");
 
-                                    usedCatRef.child(itemKey).setValue(dataMap).addOnSuccessListener(aVoid -> {
+                                    // Save to used_clothes/photos sub-node for consistency
+                                    usedRootRef.child("photos").child(itemKey).setValue(dataMap).addOnSuccessListener(aVoid -> {
                                         photoSnap.getRef().removeValue();
                                         eventItemRef.child("categoryId").setValue("used_clothes");
+                                        eventItemRef.child("originalCategory").setValue(item.getCategoryId());
                                     });
                                 }
                                 return;

@@ -27,20 +27,22 @@
                 android:layout_width="36dp"
                 android:layout_height="36dp"
                 android:layout_marginStart="16dp"
+                app:cardBackgroundColor="@color/black"
                 app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#F0F0F0"
+                app:strokeWidth="0dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
-                <ImageView
-                    android:id="@+id/imageView3"
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    app:srcCompat="@drawable/ic_placeholder_2" />
+                    android:gravity="center"
+                    android:text="PH"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
@@ -51,27 +53,52 @@
                 android:fontFamily="@font/poppins"
                 android:text="@string/app_name"
                 android:textColor="@color/black"
-                android:textSize="22sp"
+                android:textSize="20sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.05"
+                android:letterSpacing="0.1"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toEndOf="@+id/logo_feed"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <ImageButton
                 android:id="@+id/SearchIcon"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
+                android:padding="10dp"
                 android:scaleType="fitCenter"
-                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/NotificationIcon"
                 app:layout_constraintTop_toTopOf="parent"
                 app:srcCompat="@drawable/search"
                 app:tint="@color/black" />
+
+            <FrameLayout
+                android:id="@+id/NotificationIcon"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="8dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="10dp"
+                    android:scaleType="fitCenter"
+                    app:srcCompat="@drawable/notification"
+                    app:tint="@color/black" />
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/post_circular_dot"
+                    android:backgroundTint="#FF4B4B" />
+            </FrameLayout>
 
             <View
                 android:layout_width="match_parent"
@@ -95,6 +122,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
+            android:paddingHorizontal="8dp"
             android:paddingTop="8dp"
             android:paddingBottom="16dp"
             android:overScrollMode="never"/>

@@ -315,12 +315,6 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
             showEditItemSheet();
         });
 
-        sheetView.findViewById(R.id.menuMarkUsed).setOnClickListener(view -> {
-            int currentPos = viewPager.getCurrentItem();
-            transferItem(currentPos, "used_clothes");
-            bottomSheetDialog.dismiss();
-        });
-
         sheetView.findViewById(R.id.menuDelete).setOnClickListener(view -> {
             deleteCurrentImage();
             bottomSheetDialog.dismiss();
@@ -613,6 +607,7 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
 
     private void updateUIWithMetadata(DataSnapshot photoSnap) {
         TextView tvCategoryName = findViewById(R.id.tvcategory);
+        TextView tvUsedStatus = findViewById(R.id.tvUsedStatus);
         TextView tvSizeValue = findViewById(R.id.tvSizeValue);
         View viewColor = findViewById(R.id.viewColor);
         TextView tvColorValue = findViewById(R.id.tvColorValue);
@@ -629,25 +624,21 @@ public class G4_Closet_Category_PhotoViewerActivity extends AppCompatActivity {
         }
 
         // Category
-        String category = photoSnap.child("category").getValue(String.class);
-        if (category == null && !"all_clothes".equals(categoryId)) {
+        String category = photoSnap.child("originalCategory").getValue(String.class);
+        if (category == null) {
+            category = photoSnap.child("category").getValue(String.class);
+        }
+        if (category == null && !"all_clothes".equals(categoryId) && !"used_clothes".equals(categoryId)) {
             category = categoryId; // Fallback to categoryId from intent
         }
         originalCategoryForItem = category;
 
         if (tvCategoryName != null) {
-            String displayCategory = category != null ? category : "Unknown";
-            
-            // If we are in the Used category view, append " Used" to the original category name
-            if ("used_clothes".equals(categoryId)) {
-                if (!displayCategory.equalsIgnoreCase("Used") && !displayCategory.toLowerCase().endsWith(" used")) {
-                    displayCategory = displayCategory + " Used";
-                } else if (displayCategory.equalsIgnoreCase("used_clothes")) {
-                    displayCategory = "Used";
-                }
-            }
-            
-            tvCategoryName.setText(displayCategory);
+            tvCategoryName.setText(category != null ? category : "Unknown");
+        }
+
+        if (tvUsedStatus != null) {
+            tvUsedStatus.setVisibility("used_clothes".equals(categoryId) ? View.VISIBLE : View.GONE);
         }
 
         // Size
