@@ -145,6 +145,16 @@ public class I_UserProfileActivity extends AppCompatActivity {
             userRef.child("FansList").child(currentUser.getUid()).setValue(true);
             updateCount(currentUser.getUid(), "Models", 1);
             updateCount(userId, "Fans", 1);
+            
+            // Add notification
+            myRef.child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot s) {
+                    String myUsername = s.getValue(String.class);
+                    NotificationHelper.sendNotification(userId, "New Fan", (myUsername != null ? myUsername : "Someone") + " started following you!", currentUser.getUid());
+                }
+                @Override public void onCancelled(@NonNull DatabaseError e) {}
+            });
         } else {
             myRef.child("ModelsList").child(userId).removeValue();
             userRef.child("FansList").child(currentUser.getUid()).removeValue();
@@ -218,8 +228,8 @@ public class I_UserProfileActivity extends AppCompatActivity {
             intent = new Intent(this, WardrobeActivity.class);
         } else if (viewId == R.id.calendar_menu) {
             intent = new Intent(this, E_CalendarActivity.class);
-        } else if (viewId == R.id.ai_menu) {
-            intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.discover_menu) {
+            intent = new Intent(this, DiscoverActivity.class);
         } else if (viewId == R.id.profile_menu) {
             intent = new Intent(this, I_ProfileActivity.class);
         }

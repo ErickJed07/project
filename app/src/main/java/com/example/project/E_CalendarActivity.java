@@ -606,8 +606,8 @@ public class E_CalendarActivity extends AppCompatActivity {
             intent = new Intent(this, WardrobeActivity.class);
         } else if (viewId == R.id.calendar_menu) {
             return;
-        } else if (viewId == R.id.ai_menu) {
-            intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.discover_menu) {
+            intent = new Intent(this, DiscoverActivity.class);
         } else if (viewId == R.id.profile_menu) {
             intent = new Intent(this, I_ProfileActivity.class);
         }

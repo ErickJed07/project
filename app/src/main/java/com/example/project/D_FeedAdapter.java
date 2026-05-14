@@ -12,6 +12,9 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -62,7 +65,15 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
 
         holder.menuOptions.setOnClickListener(v -> showPopupMenu(holder.menuOptions, postEvent));
         holder.userNameTextView.setText(postEvent.getUsername());
-        if (holder.captionTextView != null) holder.captionTextView.setText(postEvent.getCaption());
+        if (holder.captionTextView != null) {
+            String caption = postEvent.getCaption();
+            if (caption != null && !caption.trim().isEmpty()) {
+                holder.captionTextView.setText(caption);
+                holder.captionTextView.setVisibility(View.VISIBLE);
+            } else {
+                holder.captionTextView.setVisibility(View.GONE);
+            }
+        }
         if (holder.dateTextView != null) holder.dateTextView.setText(getRelativeTime(postEvent.getDate()));
 
         String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
@@ -89,6 +100,7 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
             // Grid mode: use single ImageView
             if (holder.postMainImage != null) {
                 Glide.with(context).load(firstImageUrl).centerCrop().into(holder.postMainImage);
+                holder.postMainImage.setOnClickListener(v -> showPostDetailDialog(postEvent));
             }
 
             // Compatibility with legacy viewpager if present
@@ -198,6 +210,16 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                     ref.setValue(true);
                     FirebaseDatabase.getInstance().getReference("Users").child(targetId).child("FansList").child(uid).setValue(true);
                     updateCount(uid, "Models", 1); updateCount(targetId, "Fans", 1);
+                    
+                    // Add notification
+                    FirebaseDatabase.getInstance().getReference("Users").child(uid).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot s) {
+                            String myUsername = s.getValue(String.class);
+                            NotificationHelper.sendNotification(targetId, "New Fan", (myUsername != null ? myUsername : "Someone") + " started following you!", uid);
+                        }
+                        @Override public void onCancelled(@NonNull DatabaseError e) {}
+                    });
                 }
             }
             @Override public void onCancelled(@NonNull DatabaseError e) {}
@@ -247,6 +269,53 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
             return !activity.isDestroyed() && !activity.isFinishing();
         }
         return true;
+    }
+
+    private void showPostDetailDialog(I_PostEvent post) {
+        Dialog dialog = new Dialog(context);
+        dialog.setContentView(R.layout.dialog_feed_post_detail);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+
+        ViewPager2 viewPager = dialog.findViewById(R.id.vp_full_post_images);
+        WormDotsIndicator dotsIndicator = dialog.findViewById(R.id.dots_full_post);
+        TextView captionText = dialog.findViewById(R.id.tv_full_post_caption);
+        View closeBtn = dialog.findViewById(R.id.btn_close_dialog);
+
+        if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
+            // Use a simple adapter for the dialog to show images properly (fitCenter)
+            viewPager.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int t) {
+                    ImageView iv = new ImageView(context);
+                    iv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    return new RecyclerView.ViewHolder(iv) {};
+                }
+                @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {
+                    Glide.with(context).load(post.getImageUrls().get(p)).into((ImageView) h.itemView);
+                }
+                @Override public int getItemCount() { return post.getImageUrls().size(); }
+            });
+
+            if (post.getImageUrls().size() > 1) {
+                dotsIndicator.setViewPager2(viewPager);
+                dotsIndicator.setVisibility(View.VISIBLE);
+            } else {
+                dotsIndicator.setVisibility(View.GONE);
+            }
+        }
+
+        if (post.getCaption() != null && !post.getCaption().trim().isEmpty()) {
+            captionText.setText(post.getCaption());
+            captionText.setVisibility(View.VISIBLE);
+        } else {
+            captionText.setVisibility(View.GONE);
+        }
+
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private String formatCount(int count) {

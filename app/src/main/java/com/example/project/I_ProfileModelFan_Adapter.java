@@ -71,6 +71,16 @@ public class I_ProfileModelFan_Adapter extends RecyclerView.Adapter<I_ProfileMod
                 db.child(userid).child("FansList").child(firebaseUser.getUid()).setValue(true);
                 updateCount(firebaseUser.getUid(), "Models", 1);
                 updateCount(userid, "Fans", 1);
+                
+                // Add notification
+                db.child(firebaseUser.getUid()).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot s) {
+                        String myUsername = s.getValue(String.class);
+                        NotificationHelper.sendNotification(userid, "New Fan", (myUsername != null ? myUsername : "Someone") + " started following you!", firebaseUser.getUid());
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError e) {}
+                });
             } else {
                 db.child(firebaseUser.getUid()).child("ModelsList").child(userid).removeValue();
                 db.child(userid).child("FansList").child(firebaseUser.getUid()).removeValue();

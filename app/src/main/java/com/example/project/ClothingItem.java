@@ -1,10 +1,11 @@
 package com.example.project;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class ClothingItem {
+public class ClothingItem implements Serializable {
     private String id;
     private String imageUrl;
     private String categoryId;

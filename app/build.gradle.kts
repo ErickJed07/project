@@ -44,6 +44,7 @@ android {
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME")}\"")
         buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("CLOUDINARY_API_KEY")}\"")
         buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("CLOUDINARY_API_SECRET")}\"")
+        buildConfigField("String", "FAL_KEY", "\"${localProperties.getProperty("FAL_KEY")}\"")
 
     }
 
@@ -123,4 +124,9 @@ dependencies {
 
     // Gemini API
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Fal.ai Client
+    implementation("ai.fal.client:fal-client:0.7.1")
+    implementation("ai.fal.client:fal-client-async:0.7.1")
+    implementation("com.google.code.gson:gson:2.11.0")
 }

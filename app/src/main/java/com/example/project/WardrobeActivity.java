@@ -40,6 +40,7 @@ public class WardrobeActivity extends AppCompatActivity {
     private View cvNoOutfits;
     private TextView tvNoOutfitsTitle, tvNoOutfitsDesc;
     private ImageView ivGenderIcon;
+    private View vNotifBadge;
     private boolean isWoman = true;
 
     @Override
@@ -96,6 +97,13 @@ public class WardrobeActivity extends AppCompatActivity {
             tvWashAll.setOnClickListener(v -> washAllItems());
         }
 
+        View bellIcon = findViewById(R.id.cv_notification);
+        vNotifBadge = findViewById(R.id.v_notif_badge_wardrobe);
+        if (bellIcon != null) {
+            bellIcon.setOnClickListener(v -> startActivity(new Intent(this, NotificationActivity.class)));
+            checkUnreadNotifications();
+        }
+
         fetchGenderAndLoadCategories();
         loadScheduledOutfits();
         loadLaundryStatus();
@@ -119,7 +127,7 @@ public class WardrobeActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 for (DataSnapshot eventSnap : snapshot.getChildren()) {
                     E_Calendar_Event event = eventSnap.getValue(E_Calendar_Event.class);
-                    if (event != null && event.getDate() != null && event.getDate().compareTo(todayStr) < 0) {
+                    if (event != null && event.getDate() != null && event.getDate().compareTo(todayStr) <= 0) {
                         DataSnapshot itemsSnap = eventSnap.child("items");
                         if (itemsSnap.exists()) {
                             for (DataSnapshot itemSnap : itemsSnap.getChildren()) {
@@ -326,6 +334,7 @@ public class WardrobeActivity extends AppCompatActivity {
                                 targetRef.child(itemKey).setValue(cleanData).addOnSuccessListener(aVoid -> {
                                     photoSnap.getRef().removeValue();
                                     FirebaseDatabase.getInstance().getReference("Users").child(uid).child("lastLaundryAt").setValue(now);
+                                    NotificationHelper.sendNotification(uid, "Laundry Ready", "An item was automatically returned to " + originalCat + " after 7 days.", uid);
                                 });
                             }
                         }
@@ -454,16 +463,26 @@ public class WardrobeActivity extends AppCompatActivity {
                 .setMessage("Are you sure you want to return all " + laundryItemsList.size() + " items to your wardrobe?")
                 .setPositiveButton("Wash All", (dialog, which) -> {
                     List<LaundryItem> itemsToWash = new ArrayList<>(laundryItemsList);
+                    int count = itemsToWash.size();
                     for (LaundryItem item : itemsToWash) {
-                        unarchiveItem(item);
+                        unarchiveItemInternal(item, false);
                     }
                     Toast.makeText(this, "Washing process started", Toast.LENGTH_SHORT).show();
+                    
+                    if (mAuth.getCurrentUser() != null) {
+                        String uid = mAuth.getCurrentUser().getUid();
+                        NotificationHelper.sendNotification(uid, "Laundry Done", "All " + count + " items have been returned to your wardrobe.", uid);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
     private void unarchiveItem(LaundryItem item) {
+        unarchiveItemInternal(item, true);
+    }
+
+    private void unarchiveItemInternal(LaundryItem item, boolean showIndividualNotification) {
         if (mAuth.getCurrentUser() == null || item.getId() == null) {
             Toast.makeText(this, "Cannot wash item: missing ID", Toast.LENGTH_SHORT).show();
             return;
@@ -497,10 +516,15 @@ public class WardrobeActivity extends AppCompatActivity {
             // Also try to remove from parent if it was stored directly there
             dbRef.child(uid).child("categories").child("used_clothes").child(item.getId()).removeValue();
             
-            Toast.makeText(this, "Item returned to " + finalCategory, Toast.LENGTH_SHORT).show();
+            if (showIndividualNotification) {
+                Toast.makeText(this, "Item returned to " + finalCategory, Toast.LENGTH_SHORT).show();
+                NotificationHelper.sendNotification(uid, "Item Washed", "An item was returned to " + finalCategory, uid);
+            }
             dbRef.child(uid).child("lastLaundryAt").setValue(System.currentTimeMillis());
         }).addOnFailureListener(e -> {
-            Toast.makeText(this, "Failed to wash item", Toast.LENGTH_SHORT).show();
+            if (showIndividualNotification) {
+                Toast.makeText(this, "Failed to wash item", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -654,6 +678,23 @@ public class WardrobeActivity extends AppCompatActivity {
     }
 
 
+    private void checkUnreadNotifications() {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+        
+        FirebaseDatabase.getInstance().getReference("Notifications").child(uid)
+                .orderByChild("read").equalTo(false)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (vNotifBadge != null) {
+                            vNotifBadge.setVisibility(snapshot.exists() ? View.VISIBLE : View.GONE);
+                        }
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
+                });
+    }
+
     public void onButtonClicked(View view) {
         Intent intent = null;
         int viewId = view.getId();
@@ -664,8 +705,8 @@ public class WardrobeActivity extends AppCompatActivity {
             return;
         } else if (viewId == R.id.calendar_menu) {
             intent = new Intent(this, E_CalendarActivity.class);
-        } else if (viewId == R.id.ai_menu) {
-            intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.discover_menu) {
+            intent = new Intent(this, DiscoverActivity.class);
         } else if (viewId == R.id.profile_menu) {
             intent = new Intent(this, I_ProfileActivity.class);
         }

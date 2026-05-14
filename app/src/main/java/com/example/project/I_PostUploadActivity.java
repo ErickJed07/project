@@ -12,6 +12,7 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 import android.widget.EditText;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -34,6 +35,7 @@ import com.cloudinary.android.callback.UploadCallback;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Locale;
 
 public class I_PostUploadActivity extends AppCompatActivity {
 
@@ -173,9 +175,10 @@ public class I_PostUploadActivity extends AppCompatActivity {
                     userRef.child("posts").setValue((count == null ? 0 : count) + 1);
                     String username = snapshot.child("username").getValue(String.class);
                     String postId = FirebaseDatabase.getInstance().getReference("PostEvents").push().getKey();
-                    String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new Date());
+                    String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(new Date());
                     I_PostEvent postEvent = new I_PostEvent(username != null ? username : "Anonymous", captionEditText.getText().toString().trim(), cloudImageUrls, postId, date, userId, 0, null);
                     FirebaseDatabase.getInstance().getReference("PostEvents").child(postId).setValue(postEvent).addOnSuccessListener(aVoid -> {
+                        notifyFans(userId, username, postId);
                         startActivity(new Intent(I_PostUploadActivity.this, D_FeedActivity.class));
                         finish();
                     });
@@ -183,5 +186,21 @@ public class I_PostUploadActivity extends AppCompatActivity {
             }
             @Override public void onCancelled(DatabaseError error) {}
         });
+    }
+
+    private void notifyFans(String userId, String username, String postId) {
+        FirebaseDatabase.getInstance().getReference("Users").child(userId).child("FansList")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        for (DataSnapshot ds : snapshot.getChildren()) {
+                            String fanId = ds.getKey();
+                            if (fanId != null) {
+                                NotificationHelper.sendNotification(fanId, "New Post", username + " has a new post!", userId);
+                            }
+                        }
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
+                });
     }
 }

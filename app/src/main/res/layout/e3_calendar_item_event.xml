@@ -34,7 +34,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
-                android:src="@drawable/dress" />
+                android:src="@drawable/ic_placeholder_2" />
         </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout

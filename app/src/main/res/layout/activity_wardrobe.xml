@@ -59,6 +59,8 @@
                     android:id="@+id/cv_notification"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
+                    android:clickable="true"
+                    android:focusable="true"
                     app:cardBackgroundColor="@color/white"
                     app:cardCornerRadius="22dp"
                     app:cardElevation="3dp"
@@ -67,12 +69,28 @@
                     app:layout_constraintTop_toTopOf="@id/tv_title"
                     app:strokeWidth="0dp">
 
-                    <ImageView
-                        android:id="@+id/iv_notification"
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:padding="11dp"
-                        android:src="@drawable/notification" />
+                        android:layout_height="match_parent">
+
+                        <ImageView
+                            android:id="@+id/iv_notification"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:padding="11dp"
+                            android:src="@drawable/notification" />
+
+                        <View
+                            android:id="@+id/v_notif_badge_wardrobe"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_gravity="top|end"
+                            android:layout_marginTop="10dp"
+                            android:layout_marginEnd="10dp"
+                            android:background="@drawable/post_circular_dot"
+                            android:backgroundTint="#FF4B4B"
+                            android:visibility="gone" />
+                    </FrameLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- Quick Stats Section -->

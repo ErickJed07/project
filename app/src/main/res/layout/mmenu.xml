@@ -110,9 +110,9 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- AI -->
+        <!-- AI Stylist (Formerly Discover) -->
         <LinearLayout
-            android:id="@+id/ai_menu"
+            android:id="@+id/discover_menu"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -126,7 +126,7 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:contentDescription="AI"
+                android:contentDescription="@string/nav_discover"
                 android:src="@drawable/magic"
                 app:tint="@color/black" />
 
@@ -135,7 +135,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:fontFamily="@font/poppins"
-                android:text="@string/nav_ai_stylist"
+                android:text="@string/nav_discover"
                 android:textColor="@color/black"
                 android:textSize="10sp"
                 android:textStyle="bold" />

@@ -144,8 +144,19 @@ public class I_ProfilePostActivity extends AppCompatActivity {
             holder.favButton.setOnClickListener(v -> toggle(post, postId, "Fav", holder));
             holder.deleteButton.setVisibility(currentUserId.equals(post.getUserId()) ? View.VISIBLE : View.GONE);
             holder.deleteButton.setOnClickListener(v -> delete(position, postId));
+
+            if (holder.captionTextView != null) {
+                String caption = post.getCaption();
+                if (caption != null && !caption.trim().isEmpty()) {
+                    holder.captionTextView.setText(caption);
+                    holder.captionTextView.setVisibility(View.VISIBLE);
+                } else {
+                    holder.captionTextView.setVisibility(View.GONE);
+                }
+            }
+
             holder.shareButton.setOnClickListener(v -> {
-                context.startActivity(android.content.Intent.createChooser(new android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, "Check out this post!"), "Share via"));
+                context.startActivity(android.content.Intent.createChooser(new android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, "Check out this post! " + (post.getCaption() != null ? post.getCaption() : "")), "Share via"));
             });
         }
 
@@ -183,8 +194,8 @@ public class I_ProfilePostActivity extends AppCompatActivity {
         }
 
         static class PostViewHolder extends RecyclerView.ViewHolder {
-            ViewPager2 imagesViewPager; ConstraintLayout heartButton, favButton, shareButton; ImageButton deleteButton; WormDotsIndicator dotsIndicator; TextView photoIndicator;
-            PostViewHolder(View v) { super(v); imagesViewPager = v.findViewById(R.id.inner_images_viewpager); heartButton = v.findViewById(R.id.Heartbutton); favButton = v.findViewById(R.id.Favbutton); shareButton = v.findViewById(R.id.Sharebutton); deleteButton = v.findViewById(R.id.deletebutton); dotsIndicator = v.findViewById(R.id.dotindicatoruploadcontent); photoIndicator = v.findViewById(R.id.photoindicatoruploadcontent); }
+            ViewPager2 imagesViewPager; ConstraintLayout heartButton, favButton, shareButton; ImageButton deleteButton; WormDotsIndicator dotsIndicator; TextView photoIndicator, captionTextView;
+            PostViewHolder(View v) { super(v); imagesViewPager = v.findViewById(R.id.inner_images_viewpager); heartButton = v.findViewById(R.id.Heartbutton); favButton = v.findViewById(R.id.Favbutton); shareButton = v.findViewById(R.id.Sharebutton); deleteButton = v.findViewById(R.id.deletebutton); dotsIndicator = v.findViewById(R.id.dotindicatoruploadcontent); photoIndicator = v.findViewById(R.id.photoindicatoruploadcontent); captionTextView = v.findViewById(R.id.caption_post); }
         }
     }
 

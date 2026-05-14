@@ -69,6 +69,20 @@
             android:paddingVertical="16dp"
             app:layout_constraintBottom_toBottomOf="parent">
 
+            <TextView
+                android:id="@+id/caption_post"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginBottom="12dp"
+                android:fontFamily="@font/poppins"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toTopOf="@+id/dotindicatoruploadcontent"
+                tools:text="Sample caption text..."
+                tools:visibility="visible" />
+
             <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator
                 android:id="@+id/dotindicatoruploadcontent"
                 android:layout_width="wrap_content"

@@ -58,7 +58,7 @@
     <string name="btn_reset">Reset</string>
 
     <!-- AI Screen No Model State -->
-    <string name="ai_no_model_title">Try On Clothes with AI</string>
+    <string name="ai_no_model_title">AI Try-On</string>
     <string name="ai_no_model_desc">Pick an avatar or upload a full photo of yourself to see how clothes look on you.</string>
     <string name="ai_select_model">Select Model</string>
 
@@ -130,7 +130,7 @@
     <string name="no_events_scheduled">No events scheduled</string>
     <string name="nav_feed">Feed</string>
     <string name="nav_wardrobe">Wardrobe</string>
-    <string name="nav_ai_stylist">AI Stylist</string>
+    <string name="nav_ai_stylist">Manual Generate</string>
     <string name="nav_profile">Profile</string>
     <string name="select_a_date">Select a date</string>
     <string name="btn_get_started">GET STARTED</string>
@@ -169,4 +169,18 @@
     <string name="label_gallery">Gallery</string>
     <string name="title_discover_models">Discover Models</string>
     <string name="label_suggested_for_you">Suggested for you</string>
+    <string name="coming_soon">Coming Soon</string>
+    <string name="nav_discover">AI Stylist</string>
+    <string name="discover_coming_soon_title">New Style Explorations</string>
+    <string name="discover_coming_soon_desc">We\'re crafting a new way for you to discover trends and influencers. Stay tuned!</string>
+    <string name="discover_ai_message">Something exciting is brewing! I\'m searching for the best style inspirations just for you. Discover is coming soon!</string>
+    <string name="discover_trends_title">Discover Trends</string>
+    <string name="discover_trends_desc">Explore what\'s new in the world of fashion.</string>
+    <string name="action_explore">Explore</string>
+    <string name="ai_icon">AI Icon</string>
+    <string name="action_history">History</string>
+    <string name="chat_hint">Ask me anything...</string>
+    <string name="action_send">Send</string>
+    <string name="ai_initial_greeting">Hi there! I\'m your AI stylist. How can I help you today?</string>
+    <string name="selected_item_hanger">Selected Hanger</string>
 </resources>

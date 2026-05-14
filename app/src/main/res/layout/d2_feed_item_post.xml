@@ -19,7 +19,6 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:scaleType="centerCrop"
-            android:background="#F0F0F0"
             app:layout_constraintDimensionRatio="3:4"
             app:layout_constraintTop_toTopOf="parent"
             tools:src="@drawable/image1" />
@@ -68,6 +67,30 @@
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Caption Overlay -->
+        <TextView
+            android:id="@+id/caption_post"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginBottom="8dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/poppins"
+            android:maxLines="2"
+            android:padding="4dp"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:shadowColor="#CC000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/post_main_image"
+            app:layout_constraintEnd_toEndOf="@id/post_main_image"
+            app:layout_constraintStart_toStartOf="@id/post_main_image"
+            tools:text="Sample caption text..."
+            tools:visibility="visible" />
 
         <!-- Bottom Actions Bar -->
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -138,7 +161,6 @@
 
         <!-- Compatibility placeholders -->
         <TextView android:id="@+id/postdate" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
-        <TextView android:id="@+id/caption_post" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
         <androidx.viewpager2.widget.ViewPager2 android:id="@+id/post_Pic" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
         <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator android:id="@+id/dotsIndicator" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />
         <TextView android:id="@+id/photoIndicator" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" />

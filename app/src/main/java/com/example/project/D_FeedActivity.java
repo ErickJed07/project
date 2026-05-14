@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,6 +24,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -48,6 +50,7 @@ public class D_FeedActivity extends AppCompatActivity {
     private DatabaseReference postsRef;
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;
+    private View notificationBadge;
 
     private long downloadId = -1;
 
@@ -67,6 +70,22 @@ public class D_FeedActivity extends AppCompatActivity {
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         recyclerView = findViewById(R.id.feedrecyclerView);
         progressBar = findViewById(R.id.my_progress_bar);
+        
+        View notificationIcon = findViewById(R.id.NotificationIcon);
+        if (notificationIcon != null) {
+            notificationIcon.setOnClickListener(v -> {
+                Intent intent = new Intent(D_FeedActivity.this, NotificationActivity.class);
+                startActivity(intent);
+            });
+            
+            if (notificationIcon instanceof android.widget.FrameLayout) {
+                android.widget.FrameLayout fl = (android.widget.FrameLayout) notificationIcon;
+                if (fl.getChildCount() > 1) {
+                    notificationBadge = fl.getChildAt(1);
+                    checkUnreadNotifications();
+                }
+            }
+        }
 
         StaggeredGridLayoutManager layoutManager = new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
@@ -156,6 +175,23 @@ public class D_FeedActivity extends AppCompatActivity {
         });
     }
 
+    private void checkUnreadNotifications() {
+        String uid = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+        if (uid.isEmpty()) return;
+        
+        FirebaseDatabase.getInstance().getReference("Notifications").child(uid)
+                .orderByChild("read").equalTo(false)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (notificationBadge != null) {
+                            notificationBadge.setVisibility(snapshot.exists() ? View.VISIBLE : View.GONE);
+                        }
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
+                });
+    }
+
     private void sortPostsByDate() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
         Collections.sort(postList, (post1, post2) -> {
@@ -177,8 +213,8 @@ public class D_FeedActivity extends AppCompatActivity {
             intent = new Intent(this, WardrobeActivity.class);
         } else if (viewId == R.id.calendar_menu) {
             intent = new Intent(this, E_CalendarActivity.class);
-        } else if (viewId == R.id.ai_menu) {
-            intent = new Intent(this, AiActivity.class);
+        } else if (viewId == R.id.discover_menu) {
+            intent = new Intent(this, DiscoverActivity.class);
         } else if (viewId == R.id.profile_menu) {
             intent = new Intent(this, I_ProfileActivity.class);
         }

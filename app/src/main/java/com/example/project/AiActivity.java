@@ -324,6 +324,15 @@ public class AiActivity extends AppCompatActivity {
         findViewById(R.id.btn_generate_expanded).setOnClickListener(generateListener);
 
         setupRecyclerViews();
+
+        // Handle incoming selected items from DiscoverActivity
+        if (getIntent().hasExtra("SELECTED_ITEMS")) {
+            List<ClothingItem> incomingItems = (List<ClothingItem>) getIntent().getSerializableExtra("SELECTED_ITEMS");
+            if (incomingItems != null) {
+                selectedItems.addAll(incomingItems);
+            }
+        }
+
         setupBottomSheet();
         loadUserGenderAndCategories();
         updatePreview();
@@ -461,6 +470,7 @@ public class AiActivity extends AppCompatActivity {
         resetAvatarBorders();
         highlightAvatarInContainer(llAvatars, avatarMain);
         highlightAvatarInContainer(llNoModelAvatars, null); // Highlight by drawable if needed, but simple for now
+        updatePreview();
     }
 
     private void highlightAvatarInContainer(ViewGroup container, View selected) {
@@ -513,6 +523,7 @@ public class AiActivity extends AppCompatActivity {
         if (avatarView != null) {
             avatarView.setStrokeWidth(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
         }
+        updatePreview();
     }
 
     private void resetAvatarBorders() {
@@ -1145,8 +1156,8 @@ public class AiActivity extends AppCompatActivity {
             tvItemCount.setText(String.valueOf(count));
         }
 
-        // Show entire container if there is at least 1 item
-        if (count >= 1) {
+        // Show entire container if there is at least 1 item and a model is selected
+        if (count >= 1 && (selectedModelUrl != null || selectedModelUri != null)) {
             llPreviewContainer.setVisibility(View.VISIBLE);
 
             // Show Clear All and Toggle button ONLY if there are 2 or more items AND not in result mode
@@ -1320,11 +1331,6 @@ public class AiActivity extends AppCompatActivity {
 
     private void handleImageSelection(Uri uri) {
         if (uri != null) {
-            if (!checkImageResolution(uri)) {
-                Toast.makeText(this, getString(R.string.error_low_resolution), Toast.LENGTH_LONG).show();
-                return;
-            }
-
             Toast.makeText(this, "Scanning for face...", Toast.LENGTH_SHORT).show();
             validateFace(uri, faceValid -> {
                 if (faceValid) {
@@ -1498,6 +1504,7 @@ public class AiActivity extends AppCompatActivity {
                             lastAiResultRaw = null;
 
                             showProgress(false, null, null, 100);
+                            updatePreview();
                         });
                     }
                     @Override public void onError(String requestId, ErrorInfo error) {
@@ -1527,24 +1534,6 @@ public class AiActivity extends AppCompatActivity {
                 }));
     }
 
-    private boolean checkImageResolution(Uri uri) {
-        try {
-            InputStream inputStream = getContentResolver().openInputStream(uri);
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeStream(inputStream, null, options);
-            if (inputStream != null) inputStream.close();
-
-            int width = options.outWidth;
-            int height = options.outHeight;
-
-            // Minimum 720p (1280x720 or 720x1280)
-            return (width >= 720 && height >= 1280) || (width >= 1280 && height >= 720);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
 
     private void validateFace(Uri uri, Consumer<Boolean> callback) {
         try {
@@ -1596,17 +1585,13 @@ public class AiActivity extends AppCompatActivity {
         int[] requiredLandmarks = {
                 PoseLandmark.NOSE,
                 PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER,
-                PoseLandmark.LEFT_ELBOW, PoseLandmark.RIGHT_ELBOW,
-                PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST,
-                PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP,
-                PoseLandmark.LEFT_KNEE, PoseLandmark.RIGHT_KNEE,
-                PoseLandmark.LEFT_ANKLE, PoseLandmark.RIGHT_ANKLE
+                PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP
         };
 
         for (int landmarkType : requiredLandmarks) {
             PoseLandmark landmark = pose.getPoseLandmark(landmarkType);
-            // Stricter check: Landmark must be present and high likelihood
-            if (landmark == null || landmark.getInFrameLikelihood() < 0.7f) {
+            // Relaxed check for blurry images: lower likelihood threshold
+            if (landmark == null || landmark.getInFrameLikelihood() < 0.3f) {
                 return false;
             }
         }
@@ -2310,9 +2295,8 @@ public class AiActivity extends AppCompatActivity {
             intent = new Intent(this, WardrobeActivity.class);
         } else if (viewId == R.id.calendar_menu) {
             intent = new Intent(this, E_CalendarActivity.class);
-        } else if (viewId == R.id.ai_menu) {
-            // Already here
-            return;
+        } else if (viewId == R.id.discover_menu) {
+            intent = new Intent(this, DiscoverActivity.class);
         } else if (viewId == R.id.profile_menu) {
             intent = new Intent(this, I_ProfileActivity.class);
         }
