@@ -1486,7 +1486,7 @@ public class AiActivity extends AppCompatActivity {
                     @Override public void onStart(String requestId) {}
                     @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
                     @Override public void onSuccess(String requestId, Map resultData) {
-                        String url = (String) resultData.get("secure_url");
+                        String url = ensureCompatibleImageUrl((String) resultData.get("secure_url"));
                         saveModelToFirebase(url);
                         runOnUiThread(() -> {
                             Glide.with(AiActivity.this).load(url).into(ivMainModel);
@@ -1921,10 +1921,25 @@ public class AiActivity extends AppCompatActivity {
     }
 
     /**
+     * Ensures that Cloudinary URLs are in a format compatible with Fal.ai (avoiding .heic).
+     */
+    private String ensureCompatibleImageUrl(String url) {
+        if (url != null && url.contains("res.cloudinary.com") && url.toLowerCase().endsWith(".heic")) {
+            String converted = url.substring(0, url.lastIndexOf('.')) + ".jpg";
+            Log.d("AiActivity", "Converting HEIC to JPG for API compatibility: " + converted);
+            return converted;
+        }
+        return url;
+    }
+
+    /**
      * Process the Try-On/Edit request once the Model URL is secured (either from DB or Cloudinary).
      * This method implements the "Strict Rulebook" for different Fal.ai endpoints.
      */
     private void processWithModelUrl(String modelUrl, String garmentUrl, String categoryId) {
+        modelUrl = ensureCompatibleImageUrl(modelUrl);
+        garmentUrl = ensureCompatibleImageUrl(garmentUrl);
+
         String endpoint;
         JSONObject json = new JSONObject();
         

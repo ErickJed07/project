@@ -24,17 +24,18 @@ public class UpdateHelper {
                     try {
                         JSONObject jsonObject = new JSONObject(response);
                         int latestVersion = jsonObject.getInt("version_code");
-                        
-                        // DEBUG LOG:
-                        android.util.Log.d("UpdateHelper", "Current: " + BuildConfig.VERSION_CODE + " | Latest: " + latestVersion);
+                        int currentVersion = BuildConfig.VERSION_CODE;
 
-                        if (latestVersion > BuildConfig.VERSION_CODE) {
+                        // This will show exactly what the app "sees"
+                        Toast.makeText(activity, "Checking: App(" + currentVersion + ") vs GitHub(" + latestVersion + ")", Toast.LENGTH_LONG).show();
+
+                        if (latestVersion > currentVersion) {
                             String apkUrl = jsonObject.getString("apk_url");
                             showForcedUpdateDialog(activity, apkUrl);
                             if (callback != null) callback.onUpdateAvailable(apkUrl);
                         } else {
                             if (callback == null) {
-                                Toast.makeText(activity, "App is up to date! (V" + BuildConfig.VERSION_CODE + ")", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(activity, "No update needed.", Toast.LENGTH_SHORT).show();
                             }
                         }
                     } catch (JSONException e) {
