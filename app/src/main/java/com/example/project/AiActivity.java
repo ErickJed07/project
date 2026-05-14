@@ -2030,21 +2030,20 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private String mapCategory(String categoryId) {
-        if (categoryId == null) return "top";
+        if (categoryId == null) return "tops";
         switch (categoryId) {
             case "Tops":
             case "Outerwear":
-                return "top";
+                return "tops";
             case "Bottoms":
-                return "bottom";
+                return "bottoms";
             case "Dresses":
             case "Swimwear":
-                return "one-piece";
+                return "one-pieces";
             default:
-                return "top";
+                return "tops";
         }
     }
-
     private void submitFalAiJob(String endpoint, JSONObject json) {
         String requestJson = json.toString();
         Log.d("AiActivity", "Fal.ai Queue Submit JSON to " + endpoint + ": " + requestJson);

@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -51,6 +52,8 @@ public class D_FeedActivity extends AppCompatActivity {
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;
     private View notificationBadge;
+    private View updateBanner;
+    private String pendingApkUrl;
 
     private long downloadId = -1;
 
@@ -71,21 +74,36 @@ public class D_FeedActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.feedrecyclerView);
         progressBar = findViewById(R.id.my_progress_bar);
         
+        notificationBadge = findViewById(R.id.notificationBadge);
         View notificationIcon = findViewById(R.id.NotificationIcon);
         if (notificationIcon != null) {
             notificationIcon.setOnClickListener(v -> {
                 Intent intent = new Intent(D_FeedActivity.this, NotificationActivity.class);
                 startActivity(intent);
             });
-            
-            if (notificationIcon instanceof android.widget.FrameLayout) {
-                android.widget.FrameLayout fl = (android.widget.FrameLayout) notificationIcon;
-                if (fl.getChildCount() > 1) {
-                    notificationBadge = fl.getChildAt(1);
-                    checkUnreadNotifications();
-                }
-            }
         }
+        
+        if (notificationBadge != null) {
+            checkUnreadNotifications();
+        }
+
+        /* 
+        updateBanner = findViewById(R.id.updateBanner);
+        Button btnUpdateNow = findViewById(R.id.btnUpdateNow);
+        if (btnUpdateNow != null) {
+            btnUpdateNow.setOnClickListener(v -> {
+                if (pendingApkUrl != null) showUpdateDialog(pendingApkUrl);
+            });
+        }
+
+        View logoFeed = findViewById(R.id.logo_feed);
+        if (logoFeed != null) {
+            logoFeed.setOnClickListener(v -> {
+                Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show();
+                checkForUpdates();
+            });
+        }
+        */
 
         StaggeredGridLayoutManager layoutManager = new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
@@ -99,10 +117,10 @@ public class D_FeedActivity extends AppCompatActivity {
         swipeRefreshLayout.setOnRefreshListener(() -> fetchPostsFromFirebase());
         swipeRefreshLayout.setDistanceToTriggerSync(300);
 
-        checkForUpdates();
+        // checkForUpdates();
         fetchPostsFromFirebase();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED);
         } else {
             registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
@@ -119,7 +137,10 @@ public class D_FeedActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-            if (downloadId == id) installApk();
+            if (downloadId == id) {
+                if (progressBar != null) progressBar.setVisibility(View.GONE);
+                installApk();
+            }
         }
     };
 
@@ -131,7 +152,9 @@ public class D_FeedActivity extends AppCompatActivity {
                     try {
                         JSONObject jsonObject = new JSONObject(response);
                         if (jsonObject.getInt("version_code") > BuildConfig.VERSION_CODE) {
-                            // showUpdateDialog(jsonObject.getString("apk_url"));
+                            pendingApkUrl = jsonObject.getString("apk_url");
+                            if (updateBanner != null) updateBanner.setVisibility(View.VISIBLE);
+                            showUpdateDialog(pendingApkUrl);
                         }
                     } catch (JSONException e) { e.printStackTrace(); }
                 }, error -> {});
@@ -139,12 +162,39 @@ public class D_FeedActivity extends AppCompatActivity {
         queue.add(stringRequest);
     }
 
+    private void showUpdateDialog(String apkUrl) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Update Available")
+                .setMessage("A new version of the app is available. Do you want to update?")
+                .setPositiveButton("Yes", (dialog, which) -> downloadUpdate(apkUrl))
+                .setNegativeButton("No", null)
+                .setCancelable(false)
+                .show();
+    }
+
+    private void downloadUpdate(String apkUrl) {
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+        Toast.makeText(this, "Downloading update...", Toast.LENGTH_SHORT).show();
+
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
+        request.setTitle("App Update");
+        request.setDescription("Downloading new version...");
+        request.setDestinationInExternalFilesDir(this, null, "update.apk");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+
+        DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        if (manager != null) {
+            downloadId = manager.enqueue(request);
+        }
+    }
+
     private void installApk() {
         try {
             File file = new File(getExternalFilesDir(null), "update.apk");
+            if (!file.exists()) return;
             Uri apkUri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".fileprovider", file);
-            Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
-            intent.setData(apkUri);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
             intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         } catch (Exception e) {
