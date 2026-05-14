@@ -48,25 +48,18 @@ public class UpdateHelper {
                 .setTitle("Critical Update Required")
                 .setMessage("A new version of Phindee is available. You must update the app to continue using it.")
                 .setPositiveButton("Update Now", (dialog, which) -> {
-                    downloadUpdate(activity, apkUrl);
-                    // Do not dismiss or allow continuation
+                    // Check if the activity is D_FeedActivity to use its tracking logic
+                    if (activity instanceof D_FeedActivity) {
+                        ((D_FeedActivity) activity).downloadUpdate(apkUrl);
+                    } else {
+                        // Fallback if called from elsewhere
+                        Toast.makeText(activity, "Starting download...", Toast.LENGTH_SHORT).show();
+                        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(apkUrl));
+                        activity.startActivity(intent);
+                    }
                 })
                 .setCancelable(false)
                 .show();
-    }
-
-    private static void downloadUpdate(Context context, String apkUrl) {
-        Toast.makeText(context, "Downloading update...", Toast.LENGTH_SHORT).show();
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
-        request.setTitle("Phindee Update");
-        request.setDescription("Downloading critical update...");
-        request.setDestinationInExternalFilesDir(context, null, "update.apk");
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-
-        DownloadManager manager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-        if (manager != null) {
-            manager.enqueue(request);
-        }
     }
 
     public interface UpdateCallback {

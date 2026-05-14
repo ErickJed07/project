@@ -40,7 +40,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:text="PH"
-                    android:textColor="@color/attribute_bg"
+                    android:textColor="@color/ai_gradient_start"
                     android:textSize="14sp"
                     android:textStyle="bold" />
             </com.google.android.material.card.MaterialCardView>
@@ -59,19 +59,6 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toEndOf="@+id/logo_feed"
                 app:layout_constraintTop_toTopOf="parent" />
-
-            <ImageButton
-                android:id="@+id/UpdateIcon"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="10dp"
-                android:scaleType="fitCenter"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/SearchIcon"
-                app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@android:drawable/stat_sys_download"
-                app:tint="@color/black" />
 
             <ImageButton
                 android:id="@+id/SearchIcon"
@@ -134,29 +121,30 @@
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         android:visibility="gone"
-        app:cardBackgroundColor="#E3F2FD"
+        app:cardBackgroundColor="@color/cat_teal_bg"
         app:cardCornerRadius="8dp"
         app:cardElevation="2dp"
-        app:layout_constraintTop_toBottomOf="@+id/appBarLayout">
+        app:layout_constraintTop_toBottomOf="@+id/appBarLayout"
+        tools:layout_editor_absoluteX="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="12dp"
-            android:gravity="center_vertical">
+            android:padding="12dp">
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/stat_sys_download"
-                app:tint="#1976D2" />
+                app:tint="@color/ai_accent" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:layout_marginStart="12dp"
+                android:layout_weight="1"
                 android:text="New version available!"
                 android:textColor="#1976D2"
                 android:textStyle="bold" />

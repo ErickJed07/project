@@ -91,21 +91,15 @@ public class D_FeedActivity extends AppCompatActivity {
         Button btnUpdateNow = findViewById(R.id.btnUpdateNow);
         if (btnUpdateNow != null) {
             btnUpdateNow.setOnClickListener(v -> {
-                if (pendingApkUrl != null) showUpdateDialog(pendingApkUrl);
+                if (pendingApkUrl != null) {
+                    downloadUpdate(pendingApkUrl);
+                }
             });
         }
 
         View logoFeed = findViewById(R.id.logo_feed);
         if (logoFeed != null) {
             logoFeed.setOnClickListener(v -> {
-                Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show();
-                checkForUpdates();
-            });
-        }
-
-        View updateIcon = findViewById(R.id.UpdateIcon);
-        if (updateIcon != null) {
-            updateIcon.setOnClickListener(v -> {
                 Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show();
                 checkForUpdates();
             });
@@ -143,9 +137,24 @@ public class D_FeedActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-            if (downloadId == id) {
-                if (progressBar != null) progressBar.setVisibility(View.GONE);
-                installApk();
+            if (downloadId == id && id != -1) {
+                DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(id);
+                android.database.Cursor cursor = manager.query(query);
+                
+                if (cursor != null && cursor.moveToFirst()) {
+                    @SuppressLint("Range") int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        installApk();
+                    } else if (status == DownloadManager.STATUS_FAILED) {
+                        @SuppressLint("Range") int reason = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_REASON));
+                        Toast.makeText(context, "Download failed. Reason: " + reason, Toast.LENGTH_LONG).show();
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    }
+                    cursor.close();
+                }
             }
         }
     };
@@ -161,7 +170,11 @@ public class D_FeedActivity extends AppCompatActivity {
         UpdateHelper.showForcedUpdateDialog(this, apkUrl);
     }
 
-    private void downloadUpdate(String apkUrl) {
+    public void downloadUpdate(String apkUrl) {
+        // Delete old update file if it exists to prevent "Unsuccessful" errors
+        File file = new File(getExternalFilesDir(null), "update.apk");
+        if (file.exists()) file.delete();
+
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         Toast.makeText(this, "Downloading update...", Toast.LENGTH_SHORT).show();
 
@@ -181,14 +194,27 @@ public class D_FeedActivity extends AppCompatActivity {
         try {
             File file = new File(getExternalFilesDir(null), "update.apk");
             if (!file.exists()) return;
-            Uri apkUri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".fileprovider", file);
+
+            // Check for "Install Unknown Apps" permission (Android 8+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!getPackageManager().canRequestPackageInstalls()) {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                            .setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                    Toast.makeText(this, "Please allow Phindee to install updates", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            }
+
+            // Use getPackageName() to match the FileProvider authority in Manifest
+            Uri apkUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
             intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Installation failed.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Installation failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
