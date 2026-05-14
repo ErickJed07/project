@@ -1944,6 +1944,7 @@ public class AiActivity extends AppCompatActivity {
                 
                 // 1. ANATOMICAL PLACEMENT & PIXEL FIDELITY PROMPT
                 json.put("prompt", getEditPrompt(categoryId));
+                json.put("category", "others");
                 
                 // 2. REFERENCE FUSION
                 JSONArray images = new JSONArray();
@@ -2001,20 +2002,16 @@ public class AiActivity extends AppCompatActivity {
      * Category Identifier: Routes items to the correct AI engine.
      */
     private boolean isEditApiCategory(String categoryId) {
-        if (categoryId == null) return false;
+        if (categoryId == null) return true;
         switch (categoryId) {
-            case "Socks & Tights":
-            case "Footwear":
-            case "Headwear":
-            case "Eyewear":
-            case "Handwear":
-            case "Jewelry":
-            case "Watches":
-            case "Bags":
-            case "Neckwear":
-                return true;
-            default:
+            case "Tops":
+            case "Bottoms":
+            case "Dresses":
+            case "Outerwear":
+            case "Swimwear":
                 return false;
+            default:
+                return true;
         }
     }
 
@@ -2033,20 +2030,18 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private String mapCategory(String categoryId) {
-        if (categoryId == null) return "auto";
+        if (categoryId == null) return "top";
         switch (categoryId) {
             case "Tops":
             case "Outerwear":
-                return "tops";
+                return "top";
             case "Bottoms":
-                return "bottoms";
+                return "bottom";
             case "Dresses":
             case "Swimwear":
-                return "one-pieces";
-            case "Belts":
-                return "waistwear";
+                return "one-piece";
             default:
-                return "auto";
+                return "top";
         }
     }
 
