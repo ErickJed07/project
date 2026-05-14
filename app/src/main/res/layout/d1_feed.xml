@@ -40,7 +40,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:text="PH"
-                    android:textColor="@color/ai_accent"
+                    android:textColor="@color/ai_chip_unselected_bg"
                     android:textSize="14sp"
                     android:textStyle="bold" />
             </com.google.android.material.card.MaterialCardView>
