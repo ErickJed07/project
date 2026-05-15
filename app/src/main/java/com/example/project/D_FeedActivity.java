@@ -100,8 +100,14 @@ public class D_FeedActivity extends AppCompatActivity {
         View logoFeed = findViewById(R.id.logo_feed);
         if (logoFeed != null) {
             logoFeed.setOnClickListener(v -> {
-                Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show();
                 checkForUpdates();
+            });
+        }
+
+        View searchIcon = findViewById(R.id.SearchIcon);
+        if (searchIcon != null) {
+            searchIcon.setOnClickListener(v -> {
+                startActivity(new Intent(D_FeedActivity.this, D_Feed_SearchActivity.class));
             });
         }
 

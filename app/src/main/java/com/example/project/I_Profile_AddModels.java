@@ -9,6 +9,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ImageButton;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -191,9 +192,9 @@ public class I_Profile_AddModels extends AppCompatActivity {
     // --- ADAPTER CLASS ---
     public static class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
 
-        private android.content.Context mContext;
-        private List<User> mUsers;
-        private FirebaseUser firebaseUser;
+        protected android.content.Context mContext;
+        protected List<User> mUsers;
+        protected FirebaseUser firebaseUser;
 
         public UserAdapter(android.content.Context mContext, List<User> mUsers) {
             this.mContext = mContext;
@@ -261,6 +262,17 @@ public class I_Profile_AddModels extends AppCompatActivity {
                 // 4. UPDATE "Fans" COUNT (+1) for the Target User
                 updateCount(user.getId(), "Fans", 1);
 
+                // 5. Add Notification
+                FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid())
+                        .child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@androidx.annotation.NonNull DataSnapshot s) {
+                                String myUsername = s.getValue(String.class);
+                                NotificationHelper.sendNotification(user.getId(), "New Fan", (myUsername != null ? myUsername : "Someone") + " started following you!", firebaseUser.getUid());
+                            }
+                            @Override public void onCancelled(@androidx.annotation.NonNull DatabaseError e) {}
+                        });
+
                 Toast.makeText(mContext, "You are now following " + user.getUsername(), Toast.LENGTH_SHORT).show();
             });
 
@@ -277,6 +289,54 @@ public class I_Profile_AddModels extends AppCompatActivity {
             holder.itemView.setOnClickListener(profileClick);
             holder.username.setOnClickListener(profileClick);
             holder.image_profile.setOnClickListener(profileClick);
+
+            // Load Post Previews
+            loadPostPreviews(holder.rvPostPreviews, user.getId());
+        }
+
+        private void loadPostPreviews(RecyclerView rv, String userId) {
+            List<String> imageUrls = new ArrayList<>();
+            RecyclerView.Adapter adapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull android.view.ViewGroup p, int t) {
+                    android.widget.ImageView iv = new android.widget.ImageView(mContext);
+                    int size = (int) android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 70, mContext.getResources().getDisplayMetrics());
+                    android.view.ViewGroup.MarginLayoutParams lp = new android.view.ViewGroup.MarginLayoutParams(size, size);
+                    lp.rightMargin = (int) android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 8, mContext.getResources().getDisplayMetrics());
+                    iv.setLayoutParams(lp);
+                    iv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                    com.google.android.material.imageview.ShapeableImageView siv = new com.google.android.material.imageview.ShapeableImageView(mContext);
+                    siv.setLayoutParams(lp);
+                    siv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                    siv.setShapeAppearanceModel(siv.getShapeAppearanceModel().toBuilder().setAllCorners(com.google.android.material.shape.CornerFamily.ROUNDED, 24).build());
+                    return new RecyclerView.ViewHolder(siv) {};
+                }
+                @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {
+                    Glide.with(mContext).load(imageUrls.get(p)).centerCrop().into((android.widget.ImageView) h.itemView);
+                }
+                @Override public int getItemCount() { return imageUrls.size(); }
+            };
+            rv.setLayoutManager(new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, false));
+            rv.setAdapter(adapter);
+
+            FirebaseDatabase.getInstance().getReference("PostEvents")
+                    .orderByChild("userId").equalTo(userId).limitToLast(4)
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@androidx.annotation.NonNull DataSnapshot snapshot) {
+                            imageUrls.clear();
+                            for (DataSnapshot ds : snapshot.getChildren()) {
+                                DataSnapshot urlsNode = ds.child("imageUrls");
+                                if (urlsNode.exists() && urlsNode.getChildrenCount() > 0) {
+                                    String firstUrl = urlsNode.getChildren().iterator().next().getValue(String.class);
+                                    if (firstUrl != null) imageUrls.add(firstUrl);
+                                }
+                            }
+                            Collections.reverse(imageUrls);
+                            adapter.notifyDataSetChanged();
+                            rv.setVisibility(imageUrls.isEmpty() ? View.GONE : View.VISIBLE);
+                        }
+                        @Override public void onCancelled(@androidx.annotation.NonNull DatabaseError error) {}
+                    });
         }
 
         private void updateCount(String userId, String field, int increment) {
@@ -319,12 +379,14 @@ public class I_Profile_AddModels extends AppCompatActivity {
             public TextView username;
             public android.widget.Button btn_follow;
             public ImageView image_profile;
+            public RecyclerView rvPostPreviews;
 
             public ViewHolder(@androidx.annotation.NonNull android.view.View itemView) {
                 super(itemView);
                 username = itemView.findViewById(R.id.username);
                 image_profile = itemView.findViewById(R.id.img_profile);
                 btn_follow = itemView.findViewById(R.id.btn_follow);
+                rvPostPreviews = itemView.findViewById(R.id.rv_user_posts_preview);
             }
         }
 

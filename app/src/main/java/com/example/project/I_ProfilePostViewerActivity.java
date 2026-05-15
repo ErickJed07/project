@@ -249,9 +249,11 @@ public class I_ProfilePostViewerActivity extends AppCompatActivity {
 
         private void toggleInteraction(PostViewHolder holder, I_NewPost_Event post, String postId, String type) {
             DatabaseReference postRef = FirebaseDatabase.getInstance().getReference("PostEvents").child(postId);
+            boolean isAdding;
             if ("Heart".equals(type)) {
                 Map<String, Boolean> likes = post.getHeartLiked();
                 if (likes == null) likes = new HashMap<>();
+                isAdding = !likes.containsKey(currentUserId);
                 if (likes.containsKey(currentUserId)) likes.remove(currentUserId);
                 else likes.put(currentUserId, true);
                 post.setHeartLiked(likes);
@@ -260,13 +262,31 @@ public class I_ProfilePostViewerActivity extends AppCompatActivity {
             } else {
                 Map<String, Boolean> favs = post.getFavList();
                 if (favs == null) favs = new HashMap<>();
+                isAdding = !favs.containsKey(currentUserId);
                 if (favs.containsKey(currentUserId)) favs.remove(currentUserId);
                 else favs.put(currentUserId, true);
                 post.setFavList(favs);
                 post.setFavCount(favs.size());
                 updateIcon(holder.favButton, favs, currentUserId, R.drawable.fav2, R.drawable.fav);
             }
-            postRef.setValue(post);
+            postRef.setValue(post).addOnCompleteListener(task -> {
+                if (task.isSuccessful() && post.getUserId() != null && !post.getUserId().equals(currentUserId)) {
+                    FirebaseDatabase.getInstance().getReference("Users").child(currentUserId).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override public void onDataChange(@NonNull DataSnapshot s) {
+                            String myUsername = s.getValue(String.class);
+                            String name = (myUsername != null ? myUsername : "Someone");
+                            if ("Heart".equals(type)) {
+                                if (isAdding) NotificationHelper.sendNotification(post.getUserId(), "Post Liked", name + " liked your post!", currentUserId);
+                                else NotificationHelper.sendNotification(post.getUserId(), "Post Unliked", name + " removed like from your post.", currentUserId);
+                            } else {
+                                if (isAdding) NotificationHelper.sendNotification(post.getUserId(), "Post Favorited", name + " added your post to favorites!", currentUserId);
+                                else NotificationHelper.sendNotification(post.getUserId(), "Post Unfavorited", name + " removed your post from favorites.", currentUserId);
+                            }
+                        }
+                        @Override public void onCancelled(@NonNull DatabaseError e) {}
+                    });
+                }
+            });
         }
 
         private void updateIcon(ConstraintLayout btn, Map<String, Boolean> map, String uid, int activeRes, int inactiveRes) {

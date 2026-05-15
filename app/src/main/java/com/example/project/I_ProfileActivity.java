@@ -197,10 +197,8 @@ public class I_ProfileActivity extends AppCompatActivity {
         PopupMenu popup = new PopupMenu(this, v);
         popup.getMenu().add(0, 1, 0, "Logout");
         popup.getMenu().add(0, 4, 1, "Theme Settings");
-        popup.getMenu().add(0, 6, 2, "Check for Updates");
-        popup.getMenu().add(0, 5, 3, "Broadcast Update Notification");
-        popup.getMenu().add(0, 3, 4, "Version: " + BuildConfig.VERSION_NAME).setEnabled(false);
-        MenuItem deleteItem = popup.getMenu().add(0, 2, 5, "Delete Account");
+        popup.getMenu().add(0, 3, 2, "Version: " + BuildConfig.VERSION_NAME).setEnabled(false);
+        MenuItem deleteItem = popup.getMenu().add(0, 2, 3, "Delete Account");
         SpannableString s = new SpannableString(deleteItem.getTitle());
         s.setSpan(new ForegroundColorSpan(Color.RED), 0, s.length(), 0);
         deleteItem.setTitle(s);
@@ -214,37 +212,13 @@ public class I_ProfileActivity extends AppCompatActivity {
                 handleDeleteAccount();
             } else if (item.getItemId() == 4) {
                 showThemeSelectionDialog();
-            } else if (item.getItemId() == 5) {
-                handleBroadcastUpdate();
-            } else if (item.getItemId() == 6) {
-                Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show();
-                UpdateHelper.checkForUpdates(this, apkUrl -> {
-                    // UpdateHelper handles the forced dialog
-                });
             }
             return true;
         });
         popup.show();
     }
 
-    private void handleBroadcastUpdate() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) return;
 
-        new AlertDialog.Builder(this)
-                .setTitle("Broadcast Update")
-                .setMessage("Send a notification to ALL users about the new v1.6 update?")
-                .setPositiveButton("Send", (dialog, which) -> {
-                    NotificationHelper.broadcastNotification(
-                            "New Update Available! (v1.6)",
-                            "We've improved the AI Stylist! You can now use any photo even if it's not full-body. Check it out now!",
-                            user.getUid()
-                    );
-                    Toast.makeText(this, "Broadcasting to all users...", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
 
     private void showThemeSelectionDialog() {
         String[] themes = {"Light Mode", "Dark Mode", "System Default"};

@@ -19,6 +19,7 @@ import android.graphics.drawable.ColorDrawable;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.PopupMenu;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -35,6 +36,7 @@ import com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -147,10 +149,26 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                     I_PostEvent p = s.getValue(I_PostEvent.class);
                     if (p == null) return;
                     Map<String, Boolean> likes = p.getHeartLiked() == null ? new HashMap<>() : p.getHeartLiked();
+                    boolean isAdding = !likes.containsKey(finalCurrentUserId);
                     if (likes.containsKey(finalCurrentUserId)) likes.remove(finalCurrentUserId); else likes.put(finalCurrentUserId, true);
                     p.setHeartCount(likes.size()); p.setHeartLiked(likes); ref.setValue(p);
                     holder.heartNumTextView.setText(formatCount(likes.size()));
                     updateHeartIcon(holder.heartButton, holder.heartNumTextView, likes, finalCurrentUserId);
+                    
+                    if (postAuthorId != null && !postAuthorId.equals(finalCurrentUserId)) {
+                        FirebaseDatabase.getInstance().getReference("Users").child(finalCurrentUserId).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override public void onDataChange(@NonNull DataSnapshot s) {
+                                String myUsername = s.getValue(String.class);
+                                String name = (myUsername != null ? myUsername : "Someone");
+                                if (isAdding) {
+                                    NotificationHelper.sendNotification(postAuthorId, "Post Liked", name + " liked your post!", finalCurrentUserId);
+                                } else {
+                                    NotificationHelper.sendNotification(postAuthorId, "Post Unliked", name + " removed like from your post.", finalCurrentUserId);
+                                }
+                            }
+                            @Override public void onCancelled(@NonNull DatabaseError e) {}
+                        });
+                    }
                 }
                 @Override public void onCancelled(DatabaseError e) {}
             });
@@ -164,10 +182,26 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                     I_PostEvent p = s.getValue(I_PostEvent.class);
                     if (p == null) return;
                     Map<String, Boolean> favs = p.getFavList() == null ? new HashMap<>() : p.getFavList();
+                    boolean isAdding = !favs.containsKey(finalCurrentUserId);
                     if (favs.containsKey(finalCurrentUserId)) favs.remove(finalCurrentUserId); else favs.put(finalCurrentUserId, true);
                     p.setFavCount(favs.size()); p.setFavList(favs); ref.setValue(p);
                     holder.favNumTextView.setText(formatCount(favs.size()));
                     updateFavIcon(holder.favButton, holder.favNumTextView, favs, finalCurrentUserId);
+
+                    if (postAuthorId != null && !postAuthorId.equals(finalCurrentUserId)) {
+                        FirebaseDatabase.getInstance().getReference("Users").child(finalCurrentUserId).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override public void onDataChange(@NonNull DataSnapshot s) {
+                                String myUsername = s.getValue(String.class);
+                                String name = (myUsername != null ? myUsername : "Someone");
+                                if (isAdding) {
+                                    NotificationHelper.sendNotification(postAuthorId, "Post Favorited", name + " added your post to favorites!", finalCurrentUserId);
+                                } else {
+                                    NotificationHelper.sendNotification(postAuthorId, "Post Unfavorited", name + " removed your post from favorites.", finalCurrentUserId);
+                                }
+                            }
+                            @Override public void onCancelled(@NonNull DatabaseError e) {}
+                        });
+                    }
                 }
                 @Override public void onCancelled(DatabaseError e) {}
             });
@@ -206,6 +240,16 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
                     ref.removeValue();
                     FirebaseDatabase.getInstance().getReference("Users").child(targetId).child("FansList").child(uid).removeValue();
                     updateCount(uid, "Models", -1); updateCount(targetId, "Fans", -1);
+
+                    // Add notification for Unfollow
+                    FirebaseDatabase.getInstance().getReference("Users").child(uid).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot s) {
+                            String myUsername = s.getValue(String.class);
+                            NotificationHelper.sendNotification(targetId, "Lost a Fan", (myUsername != null ? myUsername : "Someone") + " unfollowed you.", uid);
+                        }
+                        @Override public void onCancelled(@NonNull DatabaseError e) {}
+                    });
                 } else {
                     ref.setValue(true);
                     FirebaseDatabase.getInstance().getReference("Users").child(targetId).child("FansList").child(uid).setValue(true);
@@ -283,14 +327,169 @@ public class D_FeedAdapter extends RecyclerView.Adapter<D_FeedAdapter.PostViewHo
         WormDotsIndicator dotsIndicator = dialog.findViewById(R.id.dots_full_post);
         TextView captionText = dialog.findViewById(R.id.tv_full_post_caption);
         View closeBtn = dialog.findViewById(R.id.btn_close_dialog);
+        
+        // New interactive elements
+        TextView usernameText = dialog.findViewById(R.id.tv_username_dialog);
+        ImageView profilePic = dialog.findViewById(R.id.iv_user_profile_dialog);
+        ImageView likeBtn = dialog.findViewById(R.id.iv_like_dialog);
+        TextView likeCount = dialog.findViewById(R.id.tv_likes_count_dialog);
+        ImageView favBtn = dialog.findViewById(R.id.iv_fav_dialog);
+        TextView favCount = dialog.findViewById(R.id.tv_favs_count_dialog);
+        ImageView shareBtn = dialog.findViewById(R.id.iv_share_dialog);
+
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+
+        // Set User Info
+        if (usernameText != null) usernameText.setText(post.getUsername());
+        if (profilePic != null && post.getUserId() != null) {
+            FirebaseDatabase.getInstance().getReference("Users").child(post.getUserId()).child("profilePhoto").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override public void onDataChange(@NonNull DataSnapshot s) {
+                    if (s.exists()) {
+                        String url = s.getValue(String.class);
+                        Glide.with(context).load(url != null && !url.isEmpty() && !url.equals("default") ? url : R.drawable.ic_placeholder_2).circleCrop().into(profilePic);
+                    }
+                }
+                @Override public void onCancelled(@NonNull DatabaseError e) {}
+            });
+        }
+
+        // Set Interaction States
+        if (likeCount != null) likeCount.setText(formatCount(post.getHeartLiked() != null ? post.getHeartLiked().size() : 0));
+        if (favCount != null) favCount.setText(formatCount(post.getFavList() != null ? post.getFavList().size() : 0));
+        updateHeartIcon(likeBtn, likeCount, post.getHeartLiked(), currentUserId);
+        updateFavIcon(favBtn, favCount, post.getFavList(), currentUserId);
+
+        // Interaction Listeners
+        if (likeBtn != null) {
+            likeBtn.setOnClickListener(v -> {
+                DatabaseReference ref = FirebaseDatabase.getInstance().getReference("PostEvents").child(post.getPostId());
+                ref.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override public void onDataChange(DataSnapshot s) {
+                        I_PostEvent p = s.getValue(I_PostEvent.class);
+                        if (p == null) return;
+                        Map<String, Boolean> likes = p.getHeartLiked() == null ? new HashMap<>() : p.getHeartLiked();
+                        boolean isAdding = !likes.containsKey(currentUserId);
+                        if (likes.containsKey(currentUserId)) likes.remove(currentUserId); else likes.put(currentUserId, true);
+                        p.setHeartCount(likes.size()); p.setHeartLiked(likes); ref.setValue(p);
+                        if (likeCount != null) likeCount.setText(formatCount(likes.size()));
+                        updateHeartIcon(likeBtn, likeCount, likes, currentUserId);
+                        notifyDataSetChanged(); // Sync with main feed
+
+                        if (post.getUserId() != null && !post.getUserId().equals(currentUserId)) {
+                            FirebaseDatabase.getInstance().getReference("Users").child(currentUserId).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override public void onDataChange(@NonNull DataSnapshot s) {
+                                    String myUsername = s.getValue(String.class);
+                                    String name = (myUsername != null ? myUsername : "Someone");
+                                    if (isAdding) NotificationHelper.sendNotification(post.getUserId(), "Post Liked", name + " liked your post!", currentUserId);
+                                    else NotificationHelper.sendNotification(post.getUserId(), "Post Unliked", name + " removed like from your post.", currentUserId);
+                                }
+                                @Override public void onCancelled(@NonNull DatabaseError e) {}
+                            });
+                        }
+                    }
+                    @Override public void onCancelled(DatabaseError e) {}
+                });
+            });
+        }
+
+        if (favBtn != null) {
+            favBtn.setOnClickListener(v -> {
+                DatabaseReference ref = FirebaseDatabase.getInstance().getReference("PostEvents").child(post.getPostId());
+                ref.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override public void onDataChange(DataSnapshot s) {
+                        I_PostEvent p = s.getValue(I_PostEvent.class);
+                        if (p == null) return;
+                        Map<String, Boolean> favs = p.getFavList() == null ? new HashMap<>() : p.getFavList();
+                        boolean isAdding = !favs.containsKey(currentUserId);
+                        if (favs.containsKey(currentUserId)) favs.remove(currentUserId); else favs.put(currentUserId, true);
+                        p.setFavCount(favs.size()); p.setFavList(favs); ref.setValue(p);
+                        if (favCount != null) favCount.setText(formatCount(favs.size()));
+                        updateFavIcon(favBtn, favCount, favs, currentUserId);
+                        notifyDataSetChanged(); // Sync with main feed
+
+                        if (post.getUserId() != null && !post.getUserId().equals(currentUserId)) {
+                            FirebaseDatabase.getInstance().getReference("Users").child(currentUserId).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override public void onDataChange(@NonNull DataSnapshot s) {
+                                    String myUsername = s.getValue(String.class);
+                                    String name = (myUsername != null ? myUsername : "Someone");
+                                    if (isAdding) NotificationHelper.sendNotification(post.getUserId(), "Post Favorited", name + " added your post to favorites!", currentUserId);
+                                    else NotificationHelper.sendNotification(post.getUserId(), "Post Unfavorited", name + " removed your post from favorites.", currentUserId);
+                                }
+                                @Override public void onCancelled(@NonNull DatabaseError e) {}
+                            });
+                        }
+                    }
+                    @Override public void onCancelled(DatabaseError e) {}
+                });
+            });
+        }
+
+        if (shareBtn != null) {
+            shareBtn.setOnClickListener(v -> context.startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, post.getUsername() + " posted: " + post.getCaption()), "Share")));
+        }
+
+        // Load More Posts from User
+        RecyclerView rvMore = dialog.findViewById(R.id.rv_more_posts);
+        TextView moreLabel = dialog.findViewById(R.id.tv_more_from_user);
+        if (moreLabel != null) moreLabel.setText("More from " + post.getUsername());
+        
+        if (rvMore != null && post.getUserId() != null) {
+            List<I_PostEvent> morePosts = new ArrayList<>();
+            RecyclerView.Adapter moreAdapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int t) {
+                    View item = LayoutInflater.from(context).inflate(R.layout.i_profile_contents_gridimage, p, false);
+                    // Adjust size for horizontal preview
+                    ViewGroup.LayoutParams lp = item.getLayoutParams();
+                    lp.width = (int) android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 100, context.getResources().getDisplayMetrics());
+                    item.setLayoutParams(lp);
+                    return new RecyclerView.ViewHolder(item) {};
+                }
+                @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {
+                    I_PostEvent pe = morePosts.get(p);
+                    ImageView iv = h.itemView.findViewById(R.id.gridImageView);
+                    if (pe.getImageUrls() != null && !pe.getImageUrls().isEmpty()) {
+                        Glide.with(context).load(pe.getImageUrls().get(0)).centerCrop().into(iv);
+                    }
+                    iv.setOnClickListener(v -> {
+                        dialog.dismiss();
+                        showPostDetailDialog(pe);
+                    });
+                }
+                @Override public int getItemCount() { return morePosts.size(); }
+            };
+            rvMore.setAdapter(moreAdapter);
+            rvMore.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false));
+
+            FirebaseDatabase.getInstance().getReference("PostEvents")
+                    .orderByChild("userId").equalTo(post.getUserId())
+                    .limitToLast(10)
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            morePosts.clear();
+                            for (DataSnapshot ds : snapshot.getChildren()) {
+                                I_PostEvent p = ds.getValue(I_PostEvent.class);
+                                if (p != null) {
+                                    p.setPostId(ds.getKey());
+                                    if (!p.getPostId().equals(post.getPostId())) morePosts.add(p);
+                                }
+                            }
+                            java.util.Collections.reverse(morePosts);
+                            moreAdapter.notifyDataSetChanged();
+                            if (morePosts.isEmpty()) {
+                                if (moreLabel != null) moreLabel.setVisibility(View.GONE);
+                                rvMore.setVisibility(View.GONE);
+                            }
+                        }
+                        @Override public void onCancelled(@NonNull DatabaseError error) {}
+                    });
+        }
 
         if (post.getImageUrls() != null && !post.getImageUrls().isEmpty()) {
-            // Use a simple adapter for the dialog to show images properly (fitCenter)
             viewPager.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int t) {
                     ImageView iv = new ImageView(context);
                     iv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                    iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     return new RecyclerView.ViewHolder(iv) {};
                 }
                 @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {

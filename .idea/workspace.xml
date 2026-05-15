@@ -232,6 +232,11 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/dialog_feed_post_detail.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/dialog_image_preview.xml">
         <config>
           <theme>@style/Theme.Project</theme>
@@ -402,6 +407,11 @@
           <theme>@style/Theme.Project</theme>
         </config>
       </layout>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/item_notification.xml">
+        <config>
+          <theme>@style/Theme.Project</theme>
+        </config>
+      </layout>
       <layout url="file://$PROJECT_DIR$/app/src/main/res/layout/item_selection_tray.xml">
         <config>
           <theme>@style/Theme.Project</theme>
@@ -438,6 +448,21 @@
       <change beforePath="$PROJECT_DIR$/app-updates/version.json" beforeDir="false" afterPath="$PROJECT_DIR$/app-updates/version.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_FeedAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_Feed_SearchActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/D_Feed_SearchActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_UploadActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_NewPost_UploadActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfilePostActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfilePostActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfilePostViewerActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfilePostViewerActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileSocialAdapter.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_ProfileSocialAdapter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_AddModels.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_Profile_AddModels.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_UserProfileActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/I_UserProfileActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/UpdateHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/UpdateHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/project/WardrobeActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/example/project/WardrobeActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/d4_feed_search_bar.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/d4_feed_search_bar.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/dialog_feed_post_detail.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/dialog_feed_post_detail.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_user.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/i_profile_modelfan_user.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -480,6 +505,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="9ac1d4276cfc9564dac3424c5ca498eee0458d68" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -612,6 +642,11 @@
       </method>
     </configuration>
   </component>
+  <component name="ShelveChangesManager" show_recycled="true">
+    <option name="groupingKeys">
+      <option value="module" />
+    </option>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -685,7 +720,87 @@
       <option name="project" value="LOCAL" />
       <updated>1778769027899</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778774347646</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1778774347646</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778775033480</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1778775033480</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778775083917</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1778775083917</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778775213832</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1778775213832</updated>
+    </task>
+    <task id="LOCAL-00013" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778775399400</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1778775399400</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778775427041</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1778775427041</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778775529360</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1778775529360</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778775688760</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1778775688760</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778778906768</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1778778906768</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Finished 4v">
+      <option name="closed" value="true" />
+      <created>1778779674750</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1778779674750</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -760,12 +875,12 @@
       <map>
         <entry key="com.example.project">
           <value>
-            <CheckInfo lastCheckTimestamp="1778688480795" />
+            <CheckInfo lastCheckTimestamp="1778774991663" />
           </value>
         </entry>
         <entry key="com.example.project.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1778688480795" />
+            <CheckInfo lastCheckTimestamp="1778774991670" />
           </value>
         </entry>
       </map>

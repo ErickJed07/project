@@ -26,26 +26,15 @@ public class UpdateHelper {
                         int latestVersion = jsonObject.getInt("version_code");
                         int currentVersion = BuildConfig.VERSION_CODE;
 
-                        // This will show exactly what the app "sees"
-                        Toast.makeText(activity, "Checking: App(" + currentVersion + ") vs GitHub(" + latestVersion + ")", Toast.LENGTH_LONG).show();
-
                         if (latestVersion > currentVersion) {
                             String apkUrl = jsonObject.getString("apk_url");
                             showForcedUpdateDialog(activity, apkUrl);
                             if (callback != null) callback.onUpdateAvailable(apkUrl);
-                        } else {
-                            if (callback == null) {
-                                Toast.makeText(activity, "No update needed.", Toast.LENGTH_SHORT).show();
-                            }
                         }
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        Toast.makeText(activity, "Update check error: JSON Error", Toast.LENGTH_SHORT).show();
                     }
-                }, error -> {
-                    error.printStackTrace();
-                    Toast.makeText(activity, "Update check error: Network Failed", Toast.LENGTH_SHORT).show();
-                });
+                }, Throwable::printStackTrace);
         stringRequest.setShouldCache(false);
         queue.add(stringRequest);
     }

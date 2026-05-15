@@ -80,6 +80,7 @@
         <activity android:name=".I_Profile_AddModels" android:exported="true" />
         <activity android:name=".I_UserProfileActivity" android:exported="true" />
         <activity android:name=".NotificationActivity" android:exported="false" />
+        <activity android:name=".D_Feed_SearchActivity" android:exported="false" />
 
         <!-- Combined Viewer Activity -->
         <activity android:name=".I_ProfilePostActivity" android:exported="true" />

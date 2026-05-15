@@ -37,7 +37,7 @@ public class WardrobeActivity extends AppCompatActivity {
     private DatabaseReference dbRef;
     private TextView tvTotalItems, tvUsedItems, tvScheduledLabel, tvLaundryLabel, tvWashAll;
     private TextView tvLaundryVal;
-    private View cvNoOutfits;
+    private View cvNoOutfits, cvNoLaundry;
     private TextView tvNoOutfitsTitle, tvNoOutfitsDesc;
     private ImageView ivGenderIcon;
     private View vNotifBadge;
@@ -58,6 +58,7 @@ public class WardrobeActivity extends AppCompatActivity {
         tvLaundryLabel = findViewById(R.id.tv_laundry_label);
         tvWashAll = findViewById(R.id.tv_wash_all);
         cvNoOutfits = findViewById(R.id.cv_no_outfits);
+        cvNoLaundry = findViewById(R.id.cv_no_laundry);
         tvNoOutfitsTitle = findViewById(R.id.tv_no_outfits_title);
         tvNoOutfitsDesc = findViewById(R.id.tv_no_outfits_desc);
         ivGenderIcon = findViewById(R.id.iv_gender_icon);
@@ -119,7 +120,7 @@ public class WardrobeActivity extends AppCompatActivity {
         DatabaseReference eventsRef = FirebaseDatabase.getInstance().getReference("Users").child(uid).child("Events");
 
         java.util.Calendar cal = java.util.Calendar.getInstance();
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
         String todayStr = sdf.format(cal.getTime());
 
         eventsRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -389,9 +390,11 @@ public class WardrobeActivity extends AppCompatActivity {
 
                 if (laundryItemsList.isEmpty()) {
                     rvLaundryItems.setVisibility(View.GONE);
+                    if (cvNoLaundry != null) cvNoLaundry.setVisibility(View.VISIBLE);
                     if (tvWashAll != null) tvWashAll.setVisibility(View.GONE);
                 } else {
                     rvLaundryItems.setVisibility(View.VISIBLE);
+                    if (cvNoLaundry != null) cvNoLaundry.setVisibility(View.GONE);
                     if (tvWashAll != null) tvWashAll.setVisibility(View.VISIBLE);
                 }
                 updateScheduleEmptyState();
@@ -561,7 +564,7 @@ public class WardrobeActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 java.util.Calendar cal = java.util.Calendar.getInstance();
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
                 
                 String todayStr = sdf.format(cal.getTime());
                 cal.add(java.util.Calendar.DAY_OF_YEAR, -1);
@@ -599,17 +602,12 @@ public class WardrobeActivity extends AppCompatActivity {
 
                 if (scheduledEventsList.isEmpty()) {
                     rvScheduledEvents.setVisibility(View.GONE);
+                    cvNoOutfits.setVisibility(View.VISIBLE);
+                    tvNoOutfitsTitle.setText("No Outfits Scheduled");
+                    tvNoOutfitsDesc.setText("Plan your future looks and keep\nyour style organized.");
                 } else {
                     rvScheduledEvents.setVisibility(View.VISIBLE);
                     scheduledEventsAdapter.notifyDataSetChanged();
-                }
-                
-                // Show "No Outfits Scheduled" if TODAY is empty
-                if (todayEvents.isEmpty()) {
-                    cvNoOutfits.setVisibility(View.VISIBLE);
-                    tvNoOutfitsTitle.setText("No Outfits Scheduled Today");
-                    tvNoOutfitsDesc.setText("Plan your look for today or check upcoming outfits below.");
-                } else {
                     cvNoOutfits.setVisibility(View.GONE);
                 }
             }

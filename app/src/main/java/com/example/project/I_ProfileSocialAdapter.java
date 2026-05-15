@@ -71,11 +71,31 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
                 db.child(userid).child("FansList").child(firebaseUser.getUid()).setValue(true);
                 updateCount(firebaseUser.getUid(), "Models", 1);
                 updateCount(userid, "Fans", 1);
+
+                // Add notification for Follow
+                db.child(firebaseUser.getUid()).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot s) {
+                        String myUsername = s.getValue(String.class);
+                        NotificationHelper.sendNotification(userid, "New Fan", (myUsername != null ? myUsername : "Someone") + " started following you!", firebaseUser.getUid());
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError e) {}
+                });
             } else {
                 db.child(firebaseUser.getUid()).child("ModelsList").child(userid).removeValue();
                 db.child(userid).child("FansList").child(firebaseUser.getUid()).removeValue();
                 updateCount(firebaseUser.getUid(), "Models", -1);
                 updateCount(userid, "Fans", -1);
+
+                // Add notification for Unfollow
+                db.child(firebaseUser.getUid()).child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot s) {
+                        String myUsername = s.getValue(String.class);
+                        NotificationHelper.sendNotification(userid, "Lost a Fan", (myUsername != null ? myUsername : "Someone") + " unfollowed you.", firebaseUser.getUid());
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError e) {}
+                });
             }
         });
 
@@ -92,6 +112,51 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
         holder.itemView.setOnClickListener(profileClick);
         holder.username.setOnClickListener(profileClick);
         holder.img_profile.setOnClickListener(profileClick);
+
+        // Load Post Previews
+        loadPostPreviews(holder.rvPostPreviews, userid);
+    }
+
+    private void loadPostPreviews(RecyclerView rv, String userId) {
+        java.util.List<String> imageUrls = new java.util.ArrayList<>();
+        RecyclerView.Adapter adapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull android.view.ViewGroup p, int t) {
+                com.google.android.material.imageview.ShapeableImageView siv = new com.google.android.material.imageview.ShapeableImageView(mContext);
+                int size = (int) android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 70, mContext.getResources().getDisplayMetrics());
+                android.view.ViewGroup.MarginLayoutParams lp = new android.view.ViewGroup.MarginLayoutParams(size, size);
+                lp.rightMargin = (int) android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP, 8, mContext.getResources().getDisplayMetrics());
+                siv.setLayoutParams(lp);
+                siv.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                siv.setShapeAppearanceModel(siv.getShapeAppearanceModel().toBuilder().setAllCorners(com.google.android.material.shape.CornerFamily.ROUNDED, 24).build());
+                return new RecyclerView.ViewHolder(siv) {};
+            }
+            @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {
+                Glide.with(mContext).load(imageUrls.get(p)).centerCrop().into((android.widget.ImageView) h.itemView);
+            }
+            @Override public int getItemCount() { return imageUrls.size(); }
+        };
+        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(mContext, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false));
+        rv.setAdapter(adapter);
+
+        FirebaseDatabase.getInstance().getReference("PostEvents")
+                .orderByChild("userId").equalTo(userId).limitToLast(4)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        imageUrls.clear();
+                        for (DataSnapshot ds : snapshot.getChildren()) {
+                            DataSnapshot urlsNode = ds.child("imageUrls");
+                            if (urlsNode.exists() && urlsNode.getChildrenCount() > 0) {
+                                String firstUrl = urlsNode.getChildren().iterator().next().getValue(String.class);
+                                if (firstUrl != null) imageUrls.add(firstUrl);
+                            }
+                        }
+                        java.util.Collections.reverse(imageUrls);
+                        adapter.notifyDataSetChanged();
+                        rv.setVisibility(imageUrls.isEmpty() ? View.GONE : View.VISIBLE);
+                    }
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
+                });
     }
 
     @Override
@@ -101,11 +166,13 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
         public TextView username;
         public Button btn_follow;
         public ImageView img_profile;
+        public RecyclerView rvPostPreviews;
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             username = itemView.findViewById(R.id.username);
             btn_follow = itemView.findViewById(R.id.btn_follow);
             img_profile = itemView.findViewById(R.id.img_profile);
+            rvPostPreviews = itemView.findViewById(R.id.rv_user_posts_preview);
         }
     }
 

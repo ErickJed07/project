@@ -160,6 +160,16 @@ public class I_UserProfileActivity extends AppCompatActivity {
             userRef.child("FansList").child(currentUser.getUid()).removeValue();
             updateCount(currentUser.getUid(), "Models", -1);
             updateCount(userId, "Fans", -1);
+
+            // Add notification for Unfollow
+            myRef.child("username").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot s) {
+                    String myUsername = s.getValue(String.class);
+                    NotificationHelper.sendNotification(userId, "Lost a Fan", (myUsername != null ? myUsername : "Someone") + " unfollowed you.", currentUser.getUid());
+                }
+                @Override public void onCancelled(@NonNull DatabaseError e) {}
+            });
         }
     }
 

@@ -272,10 +272,8 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
                     userRef.child("posts").setValue(currentPostCount + 1);
 
                     // Fetch the username from Firebase
-                    String username = dataSnapshot.child("username").getValue(String.class);
-                    if (username == null) {
-                        username = "Anonymous"; // Fallback if username is not found
-                    }
+                    String tempUsername = dataSnapshot.child("username").getValue(String.class);
+                    final String username = (tempUsername != null) ? tempUsername : "Anonymous";
 
                     // Generate post ID
                     String postId = FirebaseDatabase.getInstance().getReference("PostEvents").push().getKey();
@@ -294,6 +292,7 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
                             .child(postId)  // Save directly under postId
                             .setValue(postEvent)
                             .addOnSuccessListener(aVoid -> {
+                                notifyFollowers(userId, username);
                                 Toast.makeText(I_NewPost_UploadActivity.this, "Post saved successfully!", Toast.LENGTH_SHORT).show();
 
                                 // Navigate to FeedActivity after saving the post
@@ -317,6 +316,22 @@ public class I_NewPost_UploadActivity extends AppCompatActivity {
                 Toast.makeText(I_NewPost_UploadActivity.this, "Failed to fetch user data", Toast.LENGTH_SHORT).show();
                 savePostButton.setEnabled(true);
             }
+        });
+    }
+
+    private void notifyFollowers(String userId, String username) {
+        DatabaseReference fansRef = FirebaseDatabase.getInstance().getReference("Users").child(userId).child("FansList");
+        fansRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    String fanId = ds.getKey();
+                    if (fanId != null) {
+                        NotificationHelper.sendNotification(fanId, "New Post", username + " just posted something new!", userId);
+                    }
+                }
+            }
+            @Override public void onCancelled(DatabaseError error) {}
         });
     }
 }
