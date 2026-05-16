@@ -31,6 +31,10 @@ public class D_Feed_ImageViewAdapter extends RecyclerView.Adapter<D_Feed_ImageVi
     @Override
     public void onBindViewHolder(ImageViewHolder holder, int position) {
         String imageUrl = imageUrls.get(position);
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+        }
         Glide.with(context).load(imageUrl).into(holder.feedItemImageView);
     }
 

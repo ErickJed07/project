@@ -141,6 +141,7 @@ public class OutfitDetailsActivity extends AppCompatActivity {
     }
 
     private void showFullScreenImage() {
+        if (!isValidContextForGlide(this)) return;
         if (imageUrl == null || imageUrl.isEmpty()) {
             Toast.makeText(this, "No image to show", Toast.LENGTH_SHORT).show();
             return;
@@ -159,6 +160,7 @@ public class OutfitDetailsActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
+        if (!isValidContextForGlide(this)) return;
         tvOutfitTitle.setText(title != null ? title : "Outfit");
         String formattedDateTime = formatDateTime(date, time);
         tvOutfitDateTime.setText(formattedDateTime);
@@ -461,4 +463,12 @@ public class OutfitDetailsActivity extends AppCompatActivity {
         });
     }
 
+    private boolean isValidContextForGlide(android.content.Context context) {
+        if (context == null) return false;
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            return !activity.isDestroyed() && !activity.isFinishing();
+        }
+        return true;
+    }
 }

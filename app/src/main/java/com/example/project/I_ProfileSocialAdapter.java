@@ -131,6 +131,7 @@ public class I_ProfileSocialAdapter extends RecyclerView.Adapter<I_ProfileSocial
                 return new RecyclerView.ViewHolder(siv) {};
             }
             @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {
+                if (!isValidContextForGlide(mContext)) return;
                 Glide.with(mContext).load(imageUrls.get(p)).centerCrop().into((android.widget.ImageView) h.itemView);
             }
             @Override public int getItemCount() { return imageUrls.size(); }

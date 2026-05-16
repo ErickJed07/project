@@ -51,23 +51,25 @@ public class DiscoverActivity extends AppCompatActivity {
     private DatabaseReference chatRef;
     private final List<ChatMessage> conversationHistory = new ArrayList<>();
     private boolean historyLoaded = false;
+    private String userGender = "unknown";
+    private View typingIndicator;
 
     private static final String SYSTEM_PROMPT = 
-        "Role: You are \"VibeCheck,\" a high-end personal stylist with a deep mastery of modern fashion trends latest.\n\n" +
+        "Role: You are \"VibeCheck,\" an elite AI personal stylist with an avant-garde understanding of high-fashion and street culture.\n\n" +
         "The Persona:\n" +
-        "- Intellectual but Simple: Use sophisticated fashion terminology (e.g., \"monochrome,\" \"silhouette,\" \"texture contrast\") but keep your sentences short and punchy. No fluff.\n" +
-        "- Trend-Savy: You know about current aesthetics like Quiet Luxury, Streetwear, Gorpcore, and Minimalism.\n" +
-        "- Confident: Don't use \"I think\" or \"Maybe.\" Give definitive style advice like an expert.\n\n" +
-        "Styling Logic:\n" +
-        "- The Rule of Thirds: When suggesting outfits, focus on proportions.\n" +
-        "- Color Theory: Suggest \"complementary\" or \"analogous\" colors. If an outfit is all one color, suggest different textures (e.g., \"Leather with knitwear\").\n" +
-        "- The \"Third Piece\" Rule: Always suggest an accessory or an outer layer (jacket/bag) to \"complete\" the look.\n\n" +
+        "- Fashion-Forward: You don't just follow trends; you anticipate them. Mention aesthetics like 'Old Money,' 'Cyberpunk,' 'Quiet Luxury,' or 'Scandi-Minimalism' when relevant.\n" +
+        "- Descriptive & Visual: Use rich adjectives. Don't just say 'blue shirt'; say 'a crisp cerulean button-down with a structured collar.'\n" +
+        "- Honest but Encouraging: If a combination doesn't work, explain why (e.g., 'clashing textures' or 'proportional imbalance') and offer a superior alternative.\n\n" +
+        "Styling Principles:\n" +
+        "- Proportions: Always consider the silhouette. If the top is oversized, suggest slimmer bottoms, or vice versa.\n" +
+        "- Color Palette: Master of the 'Sandwich Rule' (matching shoes to top) and 'Color Popping.'\n" +
+        "- Seasonal Appropriateness: Check the user's [GENDER] and the items' [SEASON] tag to ensure the outfit is functional.\n\n" +
         "Operational Directives:\n" +
-        "- Tone: Act like a senior editor at a fashion magazine. Be helpful, direct, and slightly exclusive.\n" +
-        "- Wardrobe Integration: Only select items from the provided [Wardrobe Inventory].\n" +
-        "- Output Format: Provide the fashion advice in 2-3 short paragraphs, then end with the ID list: [SELECTED_ITEMS: ID_1, ID_2]. This tag is mandatory for visual recommendations.\n" +
-        "- Outfit Modification: If a [CURRENTLY SELECTED OUTFIT] is provided in the prompt, DO NOT create a brand new outfit. Keep the base items the same and ONLY swap, add, or remove the specific items the user asked to change. Always output the final updated list in the [SELECTED_ITEMS: ID_1, ID_2] format.\n\n" +
-        "CRITICAL: Never mention IDs in your speech. Provide the [SELECTED_ITEMS: ID_1, ID_2] tag at the very end of every styling response to ensure photos are displayed.";
+        "- Tone: Senior Creative Director. Confident, sharp, and sophisticated. No emojis, just pure style.\n" +
+        "- Mandatory Selection: You MUST select items from the [Wardrobe Inventory] provided. If nothing fits, explain what they should look for.\n" +
+        "- Tagging: End EVERY recommendation with exactly: [SELECTED_ITEMS: ID_1, ID_2]. No variation.\n" +
+        "- Conversation: Maintain a cohesive flow. Refer back to previous choices if the user wants to iterate.\n\n" +
+        "CRITICAL: Be extremely specific about WHY these pieces work together. Mention the 'vibe' you are creating.";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +102,7 @@ public class DiscoverActivity extends AppCompatActivity {
 
         if (mAuth.getCurrentUser() != null) {
             chatRef = dbRef.child(mAuth.getCurrentUser().getUid()).child("discover_history");
+            fetchUserGender();
         }
 
         loadWardrobeInventory();
@@ -219,6 +222,19 @@ public class DiscoverActivity extends AppCompatActivity {
         });
     }
 
+    private void fetchUserGender() {
+        if (mAuth.getCurrentUser() == null) return;
+        dbRef.child(mAuth.getCurrentUser().getUid()).child("gender").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    userGender = snapshot.getValue(String.class);
+                }
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
     private ClothingItem parseClothingItem(DataSnapshot photoSnap, String categoryId) {
         String id = photoSnap.getKey();
         String url = photoSnap.child("imageUrl").getValue(String.class);
@@ -293,6 +309,7 @@ public class DiscoverActivity extends AppCompatActivity {
         chatRef.orderByChild("timestamp").limitToLast(50).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!isValidContextForGlide(DiscoverActivity.this)) return;
                 if (snapshot.exists()) {
                     chatMessagesContainer.removeAllViews();
                     conversationHistory.clear();
@@ -330,7 +347,12 @@ public class DiscoverActivity extends AppCompatActivity {
         HorizontalScrollView imagesScroll = messageLayout.findViewById(R.id.message_images_scroll);
         com.google.android.material.button.MaterialButton selectBtn = messageLayout.findViewById(R.id.btn_select_outfit);
 
-        textView.setText(message);
+        if (isAi && msg.getTimestamp() > System.currentTimeMillis() - 2000) {
+            // Only animate brand-new AI messages
+            animateText(textView, message);
+        } else {
+            textView.setText(message);
+        }
 
         if (selectedIds != null && !selectedIds.isEmpty()) {
             if (imagesScroll != null && imagesContainer != null) {
@@ -358,11 +380,24 @@ public class DiscoverActivity extends AppCompatActivity {
         }
 
         chatMessagesContainer.addView(messageLayout);
+        scrollToBottom();
+    }
 
-        View scrollView = (View) chatMessagesContainer.getParent();
-        if (scrollView instanceof android.widget.ScrollView) {
-            scrollView.post(() -> ((android.widget.ScrollView) scrollView).fullScroll(View.FOCUS_DOWN));
-        }
+    private void animateText(TextView tv, String fullText) {
+        tv.setText("");
+        final int[] index = {0};
+        android.os.Handler handler = new android.os.Handler();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                if (index[0] < fullText.length()) {
+                    tv.append(String.valueOf(fullText.charAt(index[0])));
+                    index[0]++;
+                    handler.postDelayed(this, 10); // Adjust speed here
+                }
+            }
+        };
+        handler.post(runnable);
     }
 
     private void sendMessage() {
@@ -377,11 +412,15 @@ public class DiscoverActivity extends AppCompatActivity {
             return;
         }
 
+        showTypingIndicator(true);
+
         if (wardrobeInventory.isEmpty()) {
             Toast.makeText(this, "Add items to your wardrobe first to get styling advice with photos!", Toast.LENGTH_LONG).show();
         }
 
         String inventoryContext = getInventoryContext();
+        String genderContext = "\n[USER GENDER]: " + userGender;
+        
         List<String> currentOutfitIds = new ArrayList<>();
         for (int i = conversationHistory.size() - 2; i >= 0; i--) {
             ChatMessage m = conversationHistory.get(i);
@@ -421,7 +460,7 @@ public class DiscoverActivity extends AppCompatActivity {
         Map<String, Object> input = Map.of(
             "image_urls", new ArrayList<>(),
             "prompt", finalPrompt.toString(),
-            "system_prompt", SYSTEM_PROMPT + inventoryContext,
+            "system_prompt", SYSTEM_PROMPT + genderContext + inventoryContext,
             "model", "google/gemini-2.0-flash-001"
         );
 
@@ -432,6 +471,8 @@ public class DiscoverActivity extends AppCompatActivity {
                 .build()
         ).whenComplete((result, throwable) -> {
             runOnUiThread(() -> {
+                if (!isValidContextForGlide(DiscoverActivity.this)) return;
+                showTypingIndicator(false);
                 if (throwable != null) {
                     Toast.makeText(this, "Error: " + throwable.getMessage(), Toast.LENGTH_SHORT).show();
                     return;
@@ -455,6 +496,27 @@ public class DiscoverActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+
+    private void showTypingIndicator(boolean show) {
+        if (show) {
+            if (typingIndicator == null) {
+                typingIndicator = LayoutInflater.from(this).inflate(R.layout.item_chat_typing, chatMessagesContainer, false);
+            }
+            chatMessagesContainer.addView(typingIndicator);
+            scrollToBottom();
+        } else {
+            if (typingIndicator != null) {
+                chatMessagesContainer.removeView(typingIndicator);
+            }
+        }
+    }
+
+    private void scrollToBottom() {
+        View scrollView = (View) chatMessagesContainer.getParent();
+        if (scrollView instanceof android.widget.ScrollView) {
+            scrollView.post(() -> ((android.widget.ScrollView) scrollView).fullScroll(View.FOCUS_DOWN));
+        }
     }
 
     private void saveAndDisplayMessage(String text, boolean isAi, List<String> selectedIds) {
@@ -552,6 +614,8 @@ public class DiscoverActivity extends AppCompatActivity {
     }
 
     private void addImageToMessage(ClothingItem item, LinearLayout container) {
+        if (!isValidContextForGlide(this)) return;
+
         LayoutInflater inflater = LayoutInflater.from(this);
         View itemView = inflater.inflate(R.layout.item_chat_outfit_preview, container, false);
         ImageView imageView = itemView.findViewById(R.id.item_image);
@@ -620,6 +684,8 @@ public class DiscoverActivity extends AppCompatActivity {
     }
 
     private void addItemToTray(ClothingItem item) {
+        if (!isValidContextForGlide(this)) return;
+
         LayoutInflater inflater = LayoutInflater.from(this);
         View itemView = inflater.inflate(R.layout.item_selection_tray, selectedItemsContainer, false);
         ImageView imageView = itemView.findViewById(R.id.item_image);
@@ -654,5 +720,14 @@ public class DiscoverActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         }
+    }
+
+    private boolean isValidContextForGlide(android.content.Context context) {
+        if (context == null) return false;
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            return !activity.isDestroyed() && !activity.isFinishing();
+        }
+        return true;
     }
 }

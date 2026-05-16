@@ -80,7 +80,13 @@ public class OutfitItemAdapter extends RecyclerView.Adapter<OutfitItemAdapter.Vi
         }
         holder.itemSubtitle.setText(subtitle.toString());
 
-        Glide.with(holder.itemView.getContext())
+        android.content.Context context = holder.itemView.getContext();
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+        }
+
+        Glide.with(context)
                 .load(item.getImageUrl())
                 .placeholder(R.drawable.ic_placeholder)
                 .error(R.drawable.ic_placeholder)

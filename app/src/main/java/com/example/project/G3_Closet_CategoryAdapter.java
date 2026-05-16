@@ -83,6 +83,13 @@ public class G3_Closet_CategoryAdapter extends RecyclerView.Adapter<G3_Closet_Ca
     public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
         String url = imageUrls.get(position);
 
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            if (activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+        }
+
         Glide.with(context)
                 .load(url)
                 .placeholder(R.drawable.box_background)

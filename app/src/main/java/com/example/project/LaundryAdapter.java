@@ -59,7 +59,13 @@ public class LaundryAdapter extends RecyclerView.Adapter<LaundryAdapter.LaundryV
             holder.tvCleanTimer.setText("Ready to clean");
         }
 
-        Glide.with(holder.itemView.getContext())
+        android.content.Context context = holder.itemView.getContext();
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+        }
+
+        Glide.with(context)
                 .load(item.getImageUrl())
                 .placeholder(R.drawable.dress)
                 .into(holder.ivItemPhoto);

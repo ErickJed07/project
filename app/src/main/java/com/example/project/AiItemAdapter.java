@@ -91,6 +91,13 @@ public class AiItemAdapter extends RecyclerView.Adapter<AiItemAdapter.ViewHolder
 
         ClothingItem item = itemList.get(position);
         
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            if (activity.isFinishing() || activity.isDestroyed()) {
+                return;
+            }
+        }
+
         Glide.with(context)
                 .load(item.getImageUrl())
                 .placeholder(R.drawable.box_background)

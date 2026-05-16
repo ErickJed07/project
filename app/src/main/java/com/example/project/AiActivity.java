@@ -367,6 +367,7 @@ public class AiActivity extends AppCompatActivity {
         dbRef.child(uid).child("ai_models").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!isValidContextForGlide(AiActivity.this)) return;
                 decrementLoading();
                 // Clear existing dynamic avatars in both containers
                 int childCount = llAvatars.getChildCount();
@@ -487,6 +488,8 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void addModelToAvatarList(AiModel model) {
+        if (!isValidContextForGlide(this)) return;
+
         // Add to top-right container
         ShapeableImageView topAvatar = createAvatarView();
         Glide.with(this).load(model.url).into(topAvatar);
@@ -1419,7 +1422,9 @@ public class AiActivity extends AppCompatActivity {
             ImageView ivResultPreview = findViewById(R.id.iv_result_preview);
             if (ivResultPreview != null) {
                 if (originalModelUrl != null) {
-                    Glide.with(this).load(originalModelUrl).into(ivResultPreview);
+                    if (!isFinishing() && !isDestroyed()) {
+                        Glide.with(this).load(originalModelUrl).into(ivResultPreview);
+                    }
                 } else {
                     ivResultPreview.setImageResource(R.drawable.user_2);
                 }
@@ -1500,6 +1505,7 @@ public class AiActivity extends AppCompatActivity {
                         String url = ensureCompatibleImageUrl((String) resultData.get("secure_url"));
                         saveModelToFirebase(url, modelSize);
                         runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
                             Glide.with(AiActivity.this).load(url).into(ivMainModel);
                             setNoModelVisible(false);
                             selectedModelUrl = url;
@@ -1721,6 +1727,7 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void setResultMode(boolean isResultMode) {
+        if (!isValidContextForGlide(this)) return;
         this.isInResultMode = isResultMode;
         if (previewAdapter != null) {
             previewAdapter.setResultMode(isResultMode);
@@ -1809,6 +1816,7 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void resetToSelectionMode() {
+        if (!isValidContextForGlide(this)) return;
         setResultMode(false);
         if (btnGenerateCollapsed != null) btnGenerateCollapsed.setEnabled(true);
         if (btnGenerateExpanded != null) btnGenerateExpanded.setEnabled(true);
@@ -2237,6 +2245,8 @@ public class AiActivity extends AppCompatActivity {
                     Log.d("AiActivity", "Success! Result Image URL: " + resultUrl);
 
                     runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed()) return;
+
                         Glide.with(AiActivity.this).load(resultUrl).into(ivMainModel);
                         setNoModelVisible(false);
                         
@@ -2374,5 +2384,14 @@ public class AiActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         }
+    }
+
+    private boolean isValidContextForGlide(android.content.Context context) {
+        if (context == null) return false;
+        if (context instanceof android.app.Activity) {
+            android.app.Activity activity = (android.app.Activity) context;
+            return !activity.isDestroyed() && !activity.isFinishing();
+        }
+        return true;
     }
 }
