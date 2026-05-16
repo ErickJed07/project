@@ -67,6 +67,12 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
+import ai.fal.client.AsyncFalClient;
+import ai.fal.client.ClientConfig;
+import ai.fal.client.SubscribeOptions;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
 import android.graphics.Canvas;
 import java.io.FileOutputStream;
 import android.util.Log;
@@ -84,6 +90,8 @@ public class AddItemActivity extends AppCompatActivity {
     private ImageView ivPhotoPreview;
     private MaterialCardView cvRemovePhoto;
     private View clPreviewContainer;
+    private EditText etName;
+    private AsyncFalClient falClient;
     private Uri currentPhotoUri;
     private List<ColorOption> selectedColorOptions = new ArrayList<>();
     private String selectedCategoryId = "";
@@ -140,6 +148,18 @@ public class AddItemActivity extends AppCompatActivity {
         ivPhotoPreview = findViewById(R.id.iv_photo_preview);
         cvRemovePhoto = findViewById(R.id.cv_remove_photo);
         clPreviewContainer = findViewById(R.id.cl_preview_container);
+        etName = findViewById(R.id.et_name);
+
+        // Initialize FalClient
+        try {
+            falClient = AsyncFalClient.withConfig(
+                    ClientConfig.builder()
+                            .withCredentials(() -> BuildConfig.FAL_KEY)
+                            .build()
+            );
+        } catch (Exception e) {
+            Log.e("AddItemActivity", "Failed to initialize FalClient", e);
+        }
 
         // Initialize Cloudinary
         try {
@@ -545,7 +565,178 @@ public class AddItemActivity extends AppCompatActivity {
                 .skipMemoryCache(true)
                 .signature(new ObjectKey(System.currentTimeMillis()))
                 .into(ivPhotoPreview);
+
+        analyzeImageWithAI(uri);
     }
+
+    private void analyzeImageWithAI(Uri uri) {
+        View aiInsight = findViewById(R.id.cv_ai_insight);
+        TextView tvAiStatus = findViewById(R.id.tv_ai_status);
+        TextView tvAiMessage = findViewById(R.id.tv_ai_message);
+        View pbAiLoading = findViewById(R.id.pb_ai_loading);
+
+        aiInsight.setVisibility(View.VISIBLE);
+        tvAiStatus.setText("AI is analyzing your item...");
+        tvAiMessage.setText("Hang tight! I'm identifying the name, colors, and best occasions for this piece.");
+        pbAiLoading.setVisibility(View.VISIBLE);
+
+        // We need a URL for Fal.ai Vision. Upload to Cloudinary first.
+        MediaManager.get().upload(uri)
+                .option("folder", "TempAIAnalysis")
+                .callback(new UploadCallback() {
+                    @Override
+                    public void onStart(String requestId) {}
+
+                    @Override
+                    public void onProgress(String requestId, long bytes, long totalBytes) {}
+
+                    @Override
+                    public void onSuccess(String requestId, Map resultData) {
+                        String imageUrl = (String) resultData.get("secure_url");
+                        callAiVisionAPI(imageUrl);
+                    }
+
+                    @Override
+                    public void onError(String requestId, ErrorInfo error) {
+                        runOnUiThread(() -> {
+                            tvAiStatus.setText("AI Analysis failed");
+                            tvAiMessage.setText("Could not upload image for analysis.");
+                            pbAiLoading.setVisibility(View.GONE);
+                        });
+                    }
+
+                    @Override
+                    public void onReschedule(String requestId, ErrorInfo error) {}
+                })
+                .dispatch();
+    }
+
+    private void callAiVisionAPI(String imageUrl) {
+        if (falClient == null) return;
+
+        String prompt = "Analyze this clothing item image and provide details. " +
+                "Respond ONLY with a JSON object in this format: " +
+                "{\"name\": \"short descriptive name\", \"color\": \"one main color name\", " +
+                "\"colorHex\": \"#HEXCODE\", \"season\": \"Spring/Summer/Fall/Winter\", " +
+                "\"occasions\": [\"Casual\", \"Formal\", \"Work\", \"Party\", \"Sport\"] (select relevant)}";
+
+        List<String> imageUrls = new ArrayList<>();
+        imageUrls.add(imageUrl);
+
+        Map<String, Object> input = new HashMap<>();
+        input.put("image_urls", imageUrls);
+        input.put("prompt", prompt);
+        input.put("model", "google/gemini-2.0-flash-001");
+
+        falClient.subscribe("openrouter/router/vision",
+                SubscribeOptions.<JsonObject>builder()
+                        .input(input)
+                        .resultType(JsonObject.class)
+                        .build()
+        ).whenComplete((result, throwable) -> {
+            runOnUiThread(() -> {
+                View pbAiLoading = findViewById(R.id.pb_ai_loading);
+                TextView tvAiStatus = findViewById(R.id.tv_ai_status);
+                TextView tvAiMessage = findViewById(R.id.tv_ai_message);
+                View ivCloseAi = findViewById(R.id.iv_close_ai);
+                pbAiLoading.setVisibility(View.GONE);
+                ivCloseAi.setVisibility(View.VISIBLE);
+                
+                ivCloseAi.setOnClickListener(v -> {
+                    findViewById(R.id.cv_ai_insight).setVisibility(View.GONE);
+                });
+
+                if (throwable != null) {
+                    tvAiStatus.setText("AI Analysis failed");
+                    tvAiMessage.setText("Error: " + throwable.getMessage());
+                    return;
+                }
+
+                if (result != null && result.getData().has("output")) {
+                    try {
+                        String aiResponse = result.getData().get("output").getAsString();
+                        // Strip potential markdown code blocks
+                        aiResponse = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
+                        
+                        JsonObject json = JsonParser.parseString(aiResponse).getAsJsonObject();
+                        applyAiResults(json);
+
+                        tvAiStatus.setText("Analysis Complete!");
+                        tvAiMessage.setText("I've filled in the details for you. Feel free to adjust them!");
+                        
+                        // Auto-hide after 5 seconds
+                        new android.os.Handler().postDelayed(() -> {
+                            findViewById(R.id.cv_ai_insight).animate().alpha(0f).setDuration(500).withEndAction(() -> {
+                                findViewById(R.id.cv_ai_insight).setVisibility(View.GONE);
+                                findViewById(R.id.cv_ai_insight).setAlpha(1f);
+                            }).start();
+                        }, 5000);
+
+                    } catch (Exception e) {
+                        tvAiStatus.setText("AI Analysis Error");
+                        tvAiMessage.setText("Could not parse AI response.");
+                        Log.e("AddItemActivity", "JSON Parse Error: " + e.getMessage());
+                    }
+                }
+            });
+        });
+    }
+
+    private void applyAiResults(JsonObject json) {
+        // Clear previous AI or manual selections to avoid mixing
+        ChipGroup cgSeasons = findViewById(R.id.cg_seasons);
+        ChipGroup cgOccasions = findViewById(R.id.cg_occasions);
+        cgSeasons.clearCheck();
+        cgOccasions.clearCheck();
+
+        // Name
+        if (json.has("name")) {
+            etName.setText(json.get("name").getAsString());
+        }
+
+        // Color
+        if (json.has("color") && json.has("colorHex")) {
+            String colorName = json.get("color").getAsString();
+            String colorHex = json.get("colorHex").getAsString();
+            
+            // Check if color name is valid/standard or just add it
+            selectedColorOptions.clear();
+            selectedColorOptions.add(new ColorOption(colorName, colorHex));
+            updateColorDisplay();
+        }
+
+        // Season
+        if (json.has("season")) {
+            String season = json.get("season").getAsString();
+            for (int i = 0; i < cgSeasons.getChildCount(); i++) {
+                View child = cgSeasons.getChildAt(i);
+                if (child instanceof Chip) {
+                    Chip chip = (Chip) child;
+                    if (chip.getText().toString().equalsIgnoreCase(season)) {
+                        chip.setChecked(true);
+                    }
+                }
+            }
+        }
+
+        // Occasions
+        if (json.has("occasions")) {
+            JsonArray occasions = json.getAsJsonArray("occasions");
+            for (int j = 0; j < occasions.size(); j++) {
+                String occName = occasions.get(j).getAsString();
+                for (int i = 0; i < cgOccasions.getChildCount(); i++) {
+                    View child = cgOccasions.getChildAt(i);
+                    if (child instanceof Chip) {
+                        Chip chip = (Chip) child;
+                        if (chip.getText().toString().equalsIgnoreCase(occName)) {
+                            chip.setChecked(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
 
     private void resetPhotoError() {
@@ -559,7 +750,18 @@ public class AddItemActivity extends AppCompatActivity {
 
     private boolean validateFields() {
         boolean isValid = true;
-        
+
+        // Name check
+        String name = etName.getText().toString().trim();
+        if (name.isEmpty()) {
+            findViewById(R.id.tv_name_asterisk).setVisibility(View.VISIBLE);
+            etName.setBackgroundResource(R.drawable.bg_input_field_error);
+            isValid = false;
+        } else {
+            findViewById(R.id.tv_name_asterisk).setVisibility(View.GONE);
+            etName.setBackgroundResource(R.drawable.bg_input_field);
+        }
+
         // Photo check
         if (!isPhotoSelected) {
             findViewById(R.id.tv_photo_asterisk).setVisibility(View.VISIBLE);
@@ -852,6 +1054,7 @@ public class AddItemActivity extends AppCompatActivity {
         findViewById(R.id.btn_save).setEnabled(false);
         Toast.makeText(this, "Uploading item...", Toast.LENGTH_SHORT).show();
 
+        String name = etName.getText().toString().trim();
         String category = ((TextView) findViewById(R.id.tv_category)).getText().toString();
         String size = ((TextView) findViewById(R.id.tv_size)).getText().toString();
         List<String> colors = selectedColorOptions.stream().map(ColorOption::getName).collect(Collectors.toList());
@@ -870,7 +1073,7 @@ public class AddItemActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(String requestId, Map resultData) {
                         String secureUrl = (String) resultData.get("secure_url");
-                        saveToFirebase(secureUrl, category, size, colors, seasons, occasions);
+                        saveToFirebase(secureUrl, name, category, size, colors, seasons, occasions);
                     }
 
                     @Override
@@ -887,7 +1090,7 @@ public class AddItemActivity extends AppCompatActivity {
                 .dispatch();
     }
 
-    private void saveToFirebase(String imageUrl, String category, String size, List<String> colors, List<String> seasons, List<String> occasions) {
+    private void saveToFirebase(String imageUrl, String name, String category, String size, List<String> colors, List<String> seasons, List<String> occasions) {
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             Toast.makeText(this, "User not authenticated", Toast.LENGTH_SHORT).show();
             findViewById(R.id.btn_save).setEnabled(true);
@@ -904,6 +1107,7 @@ public class AddItemActivity extends AppCompatActivity {
 
         Map<String, Object> data = new HashMap<>();
         data.put("imageUrl", imageUrl);
+        data.put("name", name);
         data.put("category", category); // Store the display name
         data.put("categoryId", selectedCategoryId); // Store the ID too
         data.put("size", size);
@@ -911,7 +1115,6 @@ public class AddItemActivity extends AppCompatActivity {
         data.put("season", seasons);
         data.put("occasions", occasions);
         data.put("timestamp", System.currentTimeMillis());
-        data.put("name", "");
 
         ref.setValue(data).addOnSuccessListener(aVoid -> {
             Toast.makeText(this, "Item Saved Successfully", Toast.LENGTH_SHORT).show();

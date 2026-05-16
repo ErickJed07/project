@@ -142,6 +142,7 @@ public class AiActivity extends AppCompatActivity {
 
     private String selectedModelUrl = null;
     private Uri selectedModelUri = null;
+    private String selectedModelSize = "M"; // Default avatar size
     private static final String FAL_KEY = "14732117-ce26-436f-ac91-bb9d5d311539:244d86639b02ef3ed0d782990dc1a681";
 
     // Chain Generation State
@@ -457,6 +458,7 @@ public class AiActivity extends AppCompatActivity {
         ivMainModel.setImageResource(R.drawable.user_2);
         selectedModelUrl = "https://idm-vton.github.io/inthewild/4/h/0.jpeg"; // Default public model URL
         selectedModelUri = null;
+        selectedModelSize = "M"; // Default size for main avatar
         
         originalModelUrl = selectedModelUrl;
         originalModelUri = null;
@@ -510,6 +512,7 @@ public class AiActivity extends AppCompatActivity {
         Glide.with(this).load(model.url).into(ivMainModel);
         selectedModelUrl = model.url;
         selectedModelUri = null;
+        selectedModelSize = model.size != null ? model.size : "M";
         
         originalModelUrl = selectedModelUrl;
         originalModelUri = null;
@@ -1479,6 +1482,14 @@ public class AiActivity extends AppCompatActivity {
     }
 
     private void uploadModelToCloudinary(Uri uri) {
+        // First, ask for the avatar's size
+        SizeSelectionBottomSheet bottomSheet = SizeSelectionBottomSheet.newInstance("M", size -> {
+            performUploadWithModelSize(uri, size);
+        });
+        bottomSheet.show(getSupportFragmentManager(), "AvatarSizeSelection");
+    }
+
+    private void performUploadWithModelSize(Uri uri, String modelSize) {
         showProgress(true, "Uploading model...", null, 20);
         MediaManager.get().upload(uri)
                 .option("folder", "Models")
@@ -1487,12 +1498,13 @@ public class AiActivity extends AppCompatActivity {
                     @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
                     @Override public void onSuccess(String requestId, Map resultData) {
                         String url = ensureCompatibleImageUrl((String) resultData.get("secure_url"));
-                        saveModelToFirebase(url);
+                        saveModelToFirebase(url, modelSize);
                         runOnUiThread(() -> {
                             Glide.with(AiActivity.this).load(url).into(ivMainModel);
                             setNoModelVisible(false);
                             selectedModelUrl = url;
                             selectedModelUri = null;
+                            selectedModelSize = modelSize;
 
                             originalModelUrl = url;
                             originalModelUri = null;
@@ -1513,12 +1525,12 @@ public class AiActivity extends AppCompatActivity {
                 }).dispatch();
     }
 
-    private void saveModelToFirebase(String url) {
+    private void saveModelToFirebase(String url, String size) {
         if (mAuth.getCurrentUser() == null) return;
         String uid = mAuth.getCurrentUser().getUid();
         String id = dbRef.child(uid).child("ai_models").push().getKey();
         if (id == null) return;
-        AiModel model = new AiModel(id, url);
+        AiModel model = new AiModel(id, url, size);
 
         dbRef.child(uid).child("ai_models").child(id).setValue(model)
                 .addOnSuccessListener(aVoid -> runOnUiThread(() -> {
@@ -1917,7 +1929,48 @@ public class AiActivity extends AppCompatActivity {
         showProgress(true, mainMsg, stepMsg, progress);
         
         Log.d("AiActivity", "Processing item " + (currentChainIndex + 1) + "/" + chainQueue.size() + ": " + categoryId);
-        processWithModelUrl(modelUrl, garmentUrl, categoryId);
+        processWithModelUrl(modelUrl, garmentUrl, garment);
+    }
+
+    private int sizeToScore(String size) {
+        if (size == null) return 3;
+        switch (size.toUpperCase().trim()) {
+            case "XXS": return 0;
+            case "XS": return 1;
+            case "S": return 2;
+            case "M": return 3;
+            case "L": return 4;
+            case "XL": return 5;
+            case "XXL": return 6;
+            default: return 3;
+        }
+    }
+
+    private String getFitDescription(ClothingItem item) {
+        String garmentSize = item.getSize();
+        if (garmentSize == null || garmentSize.isEmpty()) return "";
+
+        int gScore = sizeToScore(garmentSize);
+        int aScore = sizeToScore(selectedModelSize);
+
+        int diff = gScore - aScore;
+
+        if (diff >= 2) {
+            return "very loose, oversized baggy fit";
+        } else if (diff == 1) {
+            return "slightly loose, comfortable fit";
+        } else if (diff == -1) {
+            return "tight, form-fitting slim fit";
+        } else if (diff <= -2) {
+            return "very tight, stretched skin-tight fit";
+        } else {
+            // Check for specific keywords in custom sizes
+            String lower = garmentSize.toLowerCase();
+            if (lower.contains("oversize")) return "loose, oversized baggy fit";
+            if (lower.contains("crop")) return "cropped short fit";
+            
+            return "standard fit";
+        }
     }
 
     /**
@@ -1936,12 +1989,14 @@ public class AiActivity extends AppCompatActivity {
      * Process the Try-On/Edit request once the Model URL is secured (either from DB or Cloudinary).
      * This method implements the "Strict Rulebook" for different Fal.ai endpoints.
      */
-    private void processWithModelUrl(String modelUrl, String garmentUrl, String categoryId) {
+    private void processWithModelUrl(String modelUrl, String garmentUrl, ClothingItem item) {
+        String categoryId = item.getCategoryId();
         modelUrl = ensureCompatibleImageUrl(modelUrl);
         garmentUrl = ensureCompatibleImageUrl(garmentUrl);
 
         String endpoint;
         JSONObject json = new JSONObject();
+        String fitInfo = getFitDescription(item);
         
         try {
             if (isEditApiCategory(categoryId)) {
@@ -1949,7 +2004,11 @@ public class AiActivity extends AppCompatActivity {
                 endpoint = "https://queue.fal.run/fal-ai/nano-banana-pro/edit";
                 
                 // 1. ANATOMICAL PLACEMENT & PIXEL FIDELITY PROMPT
-                json.put("prompt", getEditPrompt(categoryId));
+                String prompt = getEditPrompt(categoryId);
+                if (!fitInfo.isEmpty()) {
+                    prompt += " Ensure a " + fitInfo + ".";
+                }
+                json.put("prompt", prompt);
                 json.put("category", "others");
                 
                 // 2. REFERENCE FUSION
@@ -1977,9 +2036,19 @@ public class AiActivity extends AppCompatActivity {
                 json.put("garment_photo_type", "auto");
                 json.put("nsfw_filter", true);
 
-                // Styling Hint for Outerwear (to see the shirt inside)
+                // Fitting and Styling Hint
+                String description = "";
                 if (isOuterwear(categoryId)) {
-                    json.put("prompt", "open jacket over the shirt");
+                    description = "open jacket over the shirt";
+                }
+                
+                if (!fitInfo.isEmpty()) {
+                    description = (description.isEmpty()) ? fitInfo : description + ", " + fitInfo;
+                }
+                
+                if (!description.isEmpty()) {
+                    // Try-On API uses 'description' for guidance
+                    json.put("description", description);
                 }
 
                 // Support for long items (Long Coats, Dresses)
